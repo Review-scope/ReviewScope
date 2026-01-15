@@ -1,0 +1,47 @@
+{
+  "name": "reviewscope",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run dev --workspaces --if-present --parallel",
+    "dev:api": "npm run dev -w @reviewscope/api",
+    "dev:worker": "npm run dev -w @reviewscope/worker",
+    "dev:dashboard": "npm run dev -w @reviewscope/dashboard",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "npm run db:generate -w @reviewscope/api",
+    "db:migrate": "npm run db:migrate -w @reviewscope/api",
+    "db:push": "npm run db:push -w @reviewscope/api",
+    "db:studio": "npm run db:studio -w @reviewscope/api",
+    "db:drop": "npm run db:drop -w @reviewscope/api"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.3.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "dependencies": {
+    "@qdrant/js-client-rest": "^1.16.2",
+    "dotenv": "^17.2.3"
+  }
+}

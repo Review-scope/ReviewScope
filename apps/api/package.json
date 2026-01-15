@@ -1,0 +1,35 @@
+{
+  "name": "@reviewscope/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate:pg --schema ./src/db/schema.ts --out ./drizzle/migrations",
+    "db:migrate": "drizzle-kit migrate:pg",
+    "db:push": "drizzle-kit push:pg",
+    "db:studio": "drizzle-kit studio",
+    "db:drop": "drizzle-kit drop"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.8.0",
+    "@octokit/app": "^14.0.0",
+    "@octokit/webhooks": "^12.0.0",
+    "@upstash/redis": "^1.28.0",
+    "bullmq": "^5.0.0",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.29.5",
+    "hono": "^4.0.0",
+    "pg": "^8.16.3",
+    "postgres": "^3.4.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.16.0",
+    "drizzle-kit": "^0.20.18",
+    "tsx": "^4.21.0"
+  }
+}
