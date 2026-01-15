@@ -1,0 +1,207 @@
+'use server';
+
+import { db, configs, installations, repositories } from '@/lib/db';
+import { eq, and } from 'drizzle-orm';
+import { z } from 'zod';
+import { encrypt, decrypt } from '@reviewscope/security';
+import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../../api/auth/[...nextauth]/route';
+import { enqueueIndexingJob } from '@/../../api/src/lib/queue';
+import { redirect } from 'next/navigation';
+import { createProvider } from '@reviewscope/llm-core';
+
+const configSchema = z.object({
+  provider: z.enum(['gemini', 'openai']),
+  model: z.string().min(1),
+  customPrompt: z.string().optional(),
+  apiKey: z.string().optional(),
+});
+
+export async function verifyApiKey(provider: string, model: string, apiKey: string = '', installationId?: string) {
+  let keyToUse = apiKey;
+
+  // Utilize stored key if authorized and no new key provided
+  if (!keyToUse && installationId) {
+    const installation = await verifyOwnership(installationId);
+    if (installation) {
+      const [config] = await db.select().from(configs).where(eq(configs.installationId, installationId));
+      if (config?.apiKeyEncrypted) {
+        const secret = process.env.ENCRYPTION_KEY;
+        if (secret) {
+          keyToUse = decrypt(config.apiKeyEncrypted, secret);
+        }
+      }
+    }
+  }
+
+  if (!keyToUse || keyToUse.trim() === '') return { error: 'API Key is required to verify' };
+  if (!model || model.trim() === '') return { error: 'Model name is required' };
+
+  try {
+    const llm = createProvider(provider as 'openai' | 'gemini', keyToUse);
+    
+    // We try to perform a minimal chat completion with the USER SPECIFIED model
+    // to verify both the key AND the model access.
+    try {
+      if (provider === 'gemini') {
+        // Gemini verification
+        await llm.chat([{ role: 'user', content: 'Hi' }], { model: model, maxTokens: 1 });
+      } else {
+        // OpenAI verification
+        await llm.chat([{ role: 'user', content: 'Hi' }], { model: model, maxTokens: 1 });
+      }
+    } catch (modelError: any) {
+      // If the specific model fails, we try a fallback check to see if it's just the model name
+      console.warn(`[Verify] Specific model "${model}" failed, trying fallback check:`, modelError.message);
+      
+      try {
+        if (provider === 'gemini') {
+          await llm.embed('Verification test', { model: 'text-embedding-004' });
+        } else {
+          await llm.chat([{ role: 'user', content: 'Hi' }], { model: 'gpt-3.5-turbo', maxTokens: 1 });
+        }
+        return { 
+          success: false, 
+          error: `API Key is valid, but model "${model}" could not be reached. Error: ${modelError.message}` 
+        };
+      } catch (keyError: any) {
+        return { success: false, error: `Invalid API Key for ${provider}. Error: ${keyError.message}` };
+      }
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error(`[Verify] Cryptic failure:`, error.message);
+    return { error: error.message || 'System error during verification' };
+  }
+}
+
+async function verifyOwnership(installationId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return null;
+
+  // @ts-expect-error session.user.id
+  const githubUserId = parseInt(session.user.id);
+
+  const [installation] = await db
+    .select()
+    .from(installations)
+    .where(and(
+      eq(installations.id, installationId),
+      eq(installations.githubAccountId, githubUserId)
+    ))
+    .limit(1);
+
+  return installation;
+}
+
+export async function updateConfig(installationId: string, formData: FormData) {
+  const installation = await verifyOwnership(installationId);
+  if (!installation) {
+    return { error: 'Unauthorized' };
+  }
+
+  const validatedFields = configSchema.safeParse({
+    provider: formData.get('provider'),
+    model: formData.get('model'),
+    customPrompt: formData.get('customPrompt'),
+    apiKey: formData.get('apiKey'),
+  });
+
+  if (!validatedFields.success) {
+    return { error: 'Invalid fields' };
+  }
+
+  const { provider, model, customPrompt, apiKey } = validatedFields.data;
+
+  try {
+    const existingConfig = await db.query.configs.findFirst({
+      where: eq(configs.installationId, installationId),
+    });
+
+    let apiKeyEncrypted = existingConfig?.apiKeyEncrypted;
+    let apiKeyChanged = false;
+
+    if (apiKey && apiKey.trim() !== '') {
+      const secret = process.env.ENCRYPTION_KEY;
+      if (!secret) {
+        throw new Error('ENCRYPTION_KEY not configured');
+      }
+      apiKeyEncrypted = encrypt(apiKey, secret);
+      apiKeyChanged = true;
+    }
+
+    if (existingConfig) {
+      await db
+        .update(configs)
+        .set({
+          provider,
+          model,
+          customPrompt: customPrompt || null,
+          apiKeyEncrypted: apiKeyEncrypted || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(configs.installationId, installationId));
+    } else {
+      await db.insert(configs).values({
+        installationId,
+        provider,
+        model,
+        customPrompt: customPrompt || null,
+        apiKeyEncrypted: apiKeyEncrypted || null,
+      });
+    }
+
+    // Trigger Indexing if API key was provided/updated
+    const shouldIndex = apiKeyChanged || (!existingConfig?.apiKeyEncrypted && apiKeyEncrypted);
+    console.warn(`[Config] Update successful. apiKeyChanged: ${apiKeyChanged}, newlyAdded: ${!existingConfig?.apiKeyEncrypted && !!apiKeyEncrypted}, shouldIndex: ${shouldIndex}`);
+
+    if (shouldIndex) {
+      const repos = await db.select().from(repositories).where(eq(repositories.installationId, installationId));
+      
+      console.warn(`[Config] Found ${repos.length} repositories to re-index for installation ${installationId}`);
+      
+      for (const repo of repos) {
+        console.warn(`[Config] Enqueueing indexing for ${repo.fullName} (ID: ${repo.githubRepoId})`);
+        await enqueueIndexingJob({
+          installationId: installation.githubInstallationId,
+          repositoryId: repo.githubRepoId,
+          repositoryFullName: repo.fullName,
+        });
+      }
+    }
+
+    revalidatePath(`/settings/${installationId}/config`);
+    revalidatePath(`/settings`);
+  } catch (error) {
+    console.error('Failed to update config:', error);
+    return { error: 'Failed to update configuration' };
+  }
+
+  redirect('/dashboard');
+}
+
+export async function deleteApiKey(installationId: string) {
+  const githubUserId = await verifyOwnership(installationId);
+  if (!githubUserId) {
+    return { error: 'Unauthorized' };
+  }
+
+  try {
+    await db
+      .update(configs)
+      .set({
+        apiKeyEncrypted: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(configs.installationId, installationId));
+
+    revalidatePath(`/settings/${installationId}/config`);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete API key:', error);
+    return { error: 'Failed to delete API key' };
+  }
+}
+
