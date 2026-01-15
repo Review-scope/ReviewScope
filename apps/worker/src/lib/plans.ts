@@ -30,8 +30,13 @@ export function getTier(planId: number | null): PlanTier {
   return PLAN_ID_MAP[planId] || PlanTier.FREE;
 }
 
-export function getPlanLimits(planId: number | null): PlanLimits {
+export function getPlanLimits(planId: number | null, expiresAt?: Date | null): PlanLimits {
   const tier = getTier(planId);
+
+  // If plan has expired, downgrade to FREE
+  if (expiresAt && expiresAt < new Date()) {
+    return getPlanLimits(3, null); // Fallback to Free plan
+  }
 
   switch (tier) {
     case PlanTier.TEAM:

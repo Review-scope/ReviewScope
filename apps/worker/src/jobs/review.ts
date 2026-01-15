@@ -2,6 +2,7 @@ import { GitHubClient } from '../lib/github.js';
 import { parseDiff, filterNoise } from '../lib/parser.js';
 import { parseIssueReferences, fetchIssueContext } from '../lib/issue.js';
 import { fetchConfig } from '../lib/config.js';
+import { calculateComplexity } from '../lib/complexity.js';
 import { runRules } from '@reviewscope/rules-engine';
 import { RAGRetriever, RAGIndexer } from '@reviewscope/context-engine';
 import { createConfiguredProvider, runAIReview } from '../lib/ai-review.js';
@@ -264,6 +265,17 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
       }
     }
 
+    // Phase 8.5 - Complexity Scoring
+    const complexityScore = calculateComplexity(
+      filteredFiles.length,
+      filteredFiles.map(f => ({
+        path: f.path,
+        additions: f.additions.map(a => a.content)
+      }))
+    );
+    const complexity = complexityScore.tier;
+    console.warn(`[Complexity] Score: ${complexityScore.score}/10 → ${complexity} (${complexityScore.reason})`);
+
     // Phase 9 - AI Review
     let aiComments: any[] = [];
     let contextHash = 'filtered-empty';
@@ -315,6 +327,8 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
               diff: batchDiff,
               issueContext: issueContext,
               ragContext: ragContext,
+              ruleViolations: ruleViolations,
+              complexity: complexity,
             }, {
               model: config?.ai?.model,
               temperature: config?.ai?.temperature,
@@ -344,6 +358,8 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
             diff: optimizedDiff, 
             issueContext: issueContext,
             ragContext: ragContext,
+            ruleViolations: ruleViolations,
+            complexity: complexity,
           }, {
             model: config?.ai?.model,
             temperature: config?.ai?.temperature,

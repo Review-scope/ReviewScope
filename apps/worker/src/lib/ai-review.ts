@@ -5,9 +5,11 @@ import {
   issueIntentLayer,
   ragContextLayer,
   prDiffLayer,
-  userPromptLayer
+  userPromptLayer,
+  webContextLayer
 } from '@reviewscope/context-engine';
 import { createProvider, parseReviewResponse, type ReviewComment, type LLMProvider, REVIEW_SYSTEM_PROMPT } from '@reviewscope/llm-core';
+import { selectModel } from '@reviewscope/llm-core';
 import { db, configs } from '../../../api/src/db/index.js';
 import { eq } from 'drizzle-orm';
 import { decrypt } from '@reviewscope/security';
@@ -63,6 +65,8 @@ interface AIReviewInput {
   diff: string;
   issueContext?: string;
   ragContext?: string; // Pre-fetched RAG context if any
+  ruleViolations?: any[]; // Static rule violations for LLM validation
+  complexity?: 'trivial' | 'simple' | 'complex'; // Complexity tier for model routing
 }
 
 export interface AIReviewResult {
@@ -82,8 +86,22 @@ export interface AIReviewOptions {
 }
 
 export async function runAIReview(input: AIReviewInput, options: AIReviewOptions = {}): Promise<AIReviewResult> {
-  const modelName = options.model || 'gemini-2.5-flash';
   const provider = await createConfiguredProvider(input.installationId);
+  
+  // Determine model based on complexity
+  let modelName = options.model || 'gemini-2.5-flash';
+  
+  // If complexity provided, use intelligent routing
+  if (input.complexity) {
+    const hasGemini = !!(GEMINI_API_KEY || (options.model?.includes('gemini')));
+    const hasOpenAI = !!(OPENAI_API_KEY || (options.model?.includes('gpt')));
+    
+    const route = selectModel({ hasGemini, hasOpenAI }, input.complexity);
+    if (route.model !== 'none') {
+      modelName = route.model;
+      console.warn(`[Model Routing] Complexity: ${input.complexity} → ${route.model} (${route.reason})`);
+    }
+  }
   
   // 1. Assemble Context
   const assembler = new ContextAssembler();
@@ -91,6 +109,7 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
   assembler.addLayer(repoMetadataLayer);
   assembler.addLayer(issueIntentLayer);
   assembler.addLayer(ragContextLayer);
+  assembler.addLayer(webContextLayer);
   assembler.addLayer(prDiffLayer);
   assembler.addLayer(userPromptLayer);
 
@@ -103,7 +122,8 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
     issueContext: input.issueContext,
     ragContext: input.ragContext,
     userPrompt: options.userGuidelines, // Pass user guidelines as userPrompt
-  }, modelName);
+    ruleViolations: input.ruleViolations, // Static rules for LLM validation
+  }, modelName, input.complexity);
 
   console.warn(`Context assembled: ${assembled.usedTokens} tokens (Budget: ${assembled.budgetTokens})`);
 

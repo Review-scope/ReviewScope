@@ -88,12 +88,10 @@ export class RedisCache<K extends string, V> {
     // Try to initialize Redis (optional)
     try {
       if (process.env.REDIS_URL) {
-        // Lazy-load redis client to avoid hard dependency
-        // In production: const redis = require('redis');
-        // const client = redis.createClient({ url: process.env.REDIS_URL });
-        // this.client = client;
-        // this.enabled = true;
-        this.enabled = false; // Disabled until redis is added to deps
+        const redis = require('redis');
+        const client = redis.createClient({ url: process.env.REDIS_URL });
+        this.client = client;
+        this.enabled = true;
       }
     } catch {
       this.enabled = false;

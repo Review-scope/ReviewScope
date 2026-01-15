@@ -16,6 +16,7 @@ export const installations = pgTable('installations', {
   planId: integer('plan_id').default(0), // Default to FREE (0)
   planName: text('plan_name').default('Free'), // Default tier name
   billingCycle: text('billing_cycle'), // monthly, yearly
+  expiresAt: timestamp('expires_at'), // Plan expiration date
   
   // Status tracking
   status: text('status', { enum: ['active', 'suspended', 'deleted', 'inactive'] }).default('active').notNull(),
@@ -163,3 +164,25 @@ export const configs = pgTable('configs', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+/**
+ * API Usage Logs
+ * Tracks external API calls (npm registry, security advisories, etc.)
+ * Used for rate limiting enforcement per plan tier
+ */
+export const apiUsageLogs = pgTable('api_usage_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  installationId: uuid('installation_id').references(() => installations.id, { onDelete: 'cascade' }).notNull(),
+  repositoryId: uuid('repository_id').references(() => repositories.id, { onDelete: 'cascade' }),
+  
+  // Query details
+  query: text('query').notNull(), // npm package name, etc.
+  apiService: text('api_service').notNull(), // 'npm', 'security-advisory', 'github', etc.
+  
+  // Metrics
+  tokensUsed: integer('tokens_used').default(0),
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  installationDateIdx: uniqueIndex('api_usage_installation_date_idx').on(table.installationId, table.createdAt),
+}));

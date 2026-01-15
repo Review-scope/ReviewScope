@@ -1,5 +1,6 @@
 import type { ContextLayer, ContextInput } from '../layers.js';
 import { webContextCache } from '../rag/cache.js';
+import axios from 'axios';
 
 /**
  * Web Context Layer
@@ -60,13 +61,36 @@ class WebContextProvider {
     }
 
     try {
-      // Note: In production, this would use axios or node-fetch to call:
-      // GET https://registry.npmjs.org/{packageName}
-      // GET https://api.github.com/repos/npm/npm/security/advisories?affected_package={packageName}
-      //
-      // For now, return null (feature flag: disabled until dependencies added)
-      return null;
-    } catch {
+      // Fetch from npm registry
+      const response = await axios.get(`https://registry.npmjs.org/${encodeURIComponent(packageName)}`, {
+        timeout: 5000,
+      });
+      
+      const latest = response.data['dist-tags']?.latest;
+      if (!latest) return null;
+
+      // Fetch security advisories (optional - may fail if service unavailable)
+      let vulnerabilities: PackageInfo['vulnerabilities'] = [];
+      try {
+        // Security advisory check via npm audit API or GitHub GraphQL
+        // For now, skip as it requires additional auth setup
+      } catch {
+        // Security advisory fetch failed - continue without it
+      }
+
+      const info: PackageInfo = {
+        name: packageName,
+        version: latest,
+        latestVersion: latest,
+        vulnerabilities: vulnerabilities,
+      };
+
+      // Cache (TTL configured in webContextCache)
+      await webContextCache.set(cacheKey, info);
+      
+      return info;
+    } catch (error) {
+      console.warn(`[Web Context] Failed to fetch npm info for ${packageName}:`, error instanceof Error ? error.message : error);
       return null;
     }
   }

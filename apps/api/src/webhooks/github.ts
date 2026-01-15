@@ -8,8 +8,8 @@ import {
   getIndexingQueue,
   getChatQueue 
 } from '../lib/queue.js';
-import { db, installations, repositories, marketplaceEvents, configs } from '../db/index.js';
-import { eq, and } from 'drizzle-orm';
+import { db, installations, repositories, marketplaceEvents, configs, reviews } from '../db/index.js';
+import { eq, and, gte } from 'drizzle-orm';
 import { GitHubClient } from '../../../worker/src/lib/github.js';
 import { getPlanLimits } from '../../../worker/src/lib/plans.js';
 import { QdrantClient } from '@qdrant/js-client-rest';
@@ -37,6 +37,32 @@ function getWebhooks() {
     webhooksInstance = new Webhooks({ secret });
   }
   return webhooksInstance;
+}
+
+/**
+ * Check if installation has exceeded daily review limit for their plan tier
+ */
+async function checkDailyLimit(installationId: string, planLimits: ReturnType<typeof getPlanLimits>): Promise<boolean> {
+  // Unlimited tier doesn't need limit checks
+  if (planLimits.chatPerPRLimit === 'unlimited') {
+    return false; // No limit exceeded
+  }
+
+  // Get today's date at 00:00 UTC
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  // Count reviews created today
+  const todayReviews = await db.select().from(reviews)
+    .innerJoin(repositories, eq(reviews.repositoryId, repositories.id))
+    .where(
+      and(
+        eq(repositories.installationId, installationId),
+        gte(reviews.createdAt, today)
+      )
+    );
+
+  return todayReviews.length >= (planLimits.chatPerPRLimit as number);
 }
 
 export const githubWebhook = new Hono();
@@ -106,12 +132,14 @@ githubWebhook.post('/', async (c) => {
       await db.update(installations).set({
         planId: mp.plan.id,
         planName: mp.plan.name,
+        expiresAt: mp.ends_at ? new Date(mp.ends_at) : null,
         updatedAt: new Date(),
       }).where(eq(installations.accountName, account.login));
     } else if (action === 'cancelled') {
       await db.update(installations).set({
         planId: null,
         planName: 'Free',
+        expiresAt: null,
         updatedAt: new Date(),
       }).where(eq(installations.accountName, account.login));
     }
@@ -213,6 +241,23 @@ AI-powered review was skipped because no API key has been configured for this in
 Please [setup your API key in the dashboard](http://localhost:3000/users/${dbInst.id}/config) to enable automated reviews.`,
       });
       return c.json({ status: 'skipped_no_config' });
+    }
+
+    // Check daily limit
+    const limitExceeded = await checkDailyLimit(dbInst.id, limits);
+    if (limitExceeded) {
+      console.warn(`[Webhook] Daily limit exceeded for installation ${dbInst.id} (${limits.tier} tier)`);
+      const octokit = await gh.getInstallationClient(installation.id);
+      await octokit.rest.issues.createComment({
+        owner: repo.owner.login,
+        repo: repo.name,
+        issue_number: pr.number,
+        body: `### 📊 ReviewScope Daily Limit Reached
+Your **${limits.tier}** plan allows **${limits.chatPerPRLimit}** reviews per day. You've reached today's limit.
+
+Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${process.env.DASHBOARD_URL || '#'}/pricing) for higher limits.`,
+      });
+      return c.json({ status: 'daily_limit_exceeded' });
     }
 
     await enqueueReviewJob({
