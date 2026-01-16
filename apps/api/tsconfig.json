@@ -2,8 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "../../apps"
+    "rootDir": "../../"
   },
-  "include": ["src/**/*", "../../worker/src/**/*"],
+  "include": ["src", "../../apps/worker/src/lib/github.ts", "../../apps/worker/src/lib/plans.ts"],
   "exclude": ["node_modules", "dist"]
 }
