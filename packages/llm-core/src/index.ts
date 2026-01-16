@@ -19,13 +19,13 @@ export {
 } from './prompts.js';
 
 // Providers
-export { OpenAIProvider } from './providers/openai.js';
-export { GeminiProvider } from './providers/gemini.js';
+import { OpenAIProvider } from './providers/openai.js';
+import { GeminiProvider } from './providers/gemini.js';
+
+export { OpenAIProvider, GeminiProvider };
 
 // Provider factory
 import type { LLMProvider } from './types.js';
-import { OpenAIProvider } from './providers/openai.js';
-import { GeminiProvider } from './providers/gemini.js';
 
 export type ProviderName = 'openai' | 'gemini';
 

@@ -20,16 +20,16 @@
     "noFallthroughCasesInSwitch": true,
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "@reviewscope/api": ["./apps/api/dist/index.d.ts"],
-      "@reviewscope/api/*": ["./apps/api/dist/*"],
-      "@reviewscope/security": ["./packages/security/dist/index.d.ts"],
-      "@reviewscope/security/*": ["./packages/security/dist/*"],
-      "@reviewscope/llm-core": ["./packages/llm-core/dist/index.d.ts"],
-      "@reviewscope/llm-core/*": ["./packages/llm-core/dist/*"],
-      "@reviewscope/context-engine": ["./packages/context-engine/dist/index.d.ts"],
-      "@reviewscope/context-engine/*": ["./packages/context-engine/dist/*"],
-      "@reviewscope/rules-engine": ["./packages/rules-engine/dist/index.d.ts"],
-      "@reviewscope/rules-engine/*": ["./packages/rules-engine/dist/*"]
+      "@reviewscope/api": ["./apps/api"],
+      "@reviewscope/api/*": ["./apps/api/*"],
+      "@reviewscope/security": ["./packages/security"],
+      "@reviewscope/security/*": ["./packages/security/*"],
+      "@reviewscope/llm-core": ["./packages/llm-core"],
+      "@reviewscope/llm-core/*": ["./packages/llm-core/*"],
+      "@reviewscope/context-engine": ["./packages/context-engine"],
+      "@reviewscope/context-engine/*": ["./packages/context-engine/*"],
+      "@reviewscope/rules-engine": ["./packages/rules-engine"],
+      "@reviewscope/rules-engine/*": ["./packages/rules-engine/*"]
     }
   },
   "exclude": ["node_modules", "dist"]
