@@ -21,13 +21,18 @@ app.route('/api/v1/config', configRoutes);
 // Root
 app.get('/', (c) => c.json({ name: 'ReviewScope API', version: '0.0.1' }));
 
-const port = parseInt(process.env.PORT || '3000', 10);
+if (!process.env.PORT) {
+  throw new Error('PORT is not defined in the environment');
+}
 
-console.warn(`🚀 ReviewScope API running on http://localhost:${port}`);
+const port = parseInt(process.env.PORT, 10);
+
+console.warn(`🚀 ReviewScope API running on port ${port}`);
 
 const server = serve({
   fetch: app.fetch,
   port,
+  hostname: '0.0.0.0',
 });
 
 const shutdown = () => {
