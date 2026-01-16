@@ -1,6 +1,6 @@
 'use client'
 
-export default function GlobalError({
+export default function Error({
   error,
   reset,
 }: {
@@ -8,17 +8,13 @@ export default function GlobalError({
   reset: () => void
 }) {
   return (
-    <html>
-      <body>
-        <div style={{ padding: 24 }}>
-          <h1>Something went wrong</h1>
-          <p>{error.message}</p>
+    <div style={{ padding: 24 }}>
+      <h1>Something went wrong</h1>
+      <p>{error.message}</p>
 
-          <button onClick={() => reset()}>
-            Try again
-          </button>
-        </div>
-      </body>
-    </html>
+      <button onClick={reset}>
+        Try again
+      </button>
+    </div>
   )
 }
