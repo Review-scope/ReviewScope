@@ -25,9 +25,20 @@ const port = parseInt(process.env.PORT || '3000', 10);
 
 console.warn(`🚀 ReviewScope API running on http://localhost:${port}`);
 
-serve({
+const server = serve({
   fetch: app.fetch,
   port,
 });
+
+const shutdown = () => {
+  console.log('Shutting down API server...');
+  server.close(() => {
+    console.log('API server closed');
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 export default app;

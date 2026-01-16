@@ -6,6 +6,7 @@ import { processChatJob } from './jobs/chat.js';
 import type { ReviewJobData } from './jobs/review.js';
 import type { IndexingJobData } from './jobs/index.js';
 import type { ChatJobData } from './jobs/chat.js';
+import http from 'http';
 
 // Handle uncaught connection errors gracefully (ECONNRESET from idle connections)
 process.on('uncaughtException', (err) => {
@@ -31,6 +32,7 @@ process.on('unhandledRejection', (reason, promise) => {
 let workerInstance: Worker | null = null;
 let indexWorkerInstance: Worker | null = null;
 let chatWorkerInstance: Worker | null = null;
+let httpServer: http.Server | null = null;
 
 export async function startWorker() {
   if (workerInstance) return workerInstance;
@@ -105,6 +107,20 @@ export async function startWorker() {
   await chatWorkerInstance.waitUntilReady();
 
   console.warn('🚀 All ReviewScope Workers started');
+  const portEnv = process.env.PORT || '';
+  const portNum = parseInt(portEnv, 10);
+  if (!Number.isNaN(portNum) && (process.env.NODE_ENV || '') !== 'development') {
+    httpServer = http.createServer((req, res) => {
+      if (req.url && req.url.startsWith('/health')) {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok' }));
+        return;
+      }
+      res.writeHead(200);
+      res.end('OK');
+    });
+    httpServer.listen(portNum);
+  }
   return workerInstance;
 }
 
@@ -121,5 +137,8 @@ process.on('SIGTERM', async () => {
   await workerInstance?.close();
   await indexWorkerInstance?.close();
   await chatWorkerInstance?.close();
+  if (httpServer) {
+    await new Promise<void>((resolve) => httpServer!.close(() => resolve()));
+  }
   process.exit(0);
 });
