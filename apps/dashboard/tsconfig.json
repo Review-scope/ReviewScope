@@ -13,16 +13,25 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "baseUrl": "../../",
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@reviewscope/api/*": ["../api/src/*"]
-    },
-    "rootDir": "../../",
+      "@/*": ["./apps/dashboard/src/*"],
+      "@reviewscope/api": ["./apps/api/dist/index.d.ts"],
+      "@reviewscope/api/*": ["./apps/api/dist/*"],
+      "@reviewscope/security": ["./packages/security/dist/index.d.ts"],
+      "@reviewscope/security/*": ["./packages/security/dist/*"],
+      "@reviewscope/llm-core": ["./packages/llm-core/dist/index.d.ts"],
+      "@reviewscope/llm-core/*": ["./packages/llm-core/dist/*"],
+      "@reviewscope/context-engine": ["./packages/context-engine/dist/index.d.ts"],
+      "@reviewscope/context-engine/*": ["./packages/context-engine/dist/*"],
+      "@reviewscope/rules-engine": ["./packages/rules-engine/dist/index.d.ts"],
+      "@reviewscope/rules-engine/*": ["./packages/rules-engine/dist/*"]
+    }
   },
   "include": [
     "next-env.d.ts",

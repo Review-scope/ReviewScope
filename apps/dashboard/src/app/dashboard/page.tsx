@@ -6,11 +6,11 @@ import { eq, isNotNull, and, count, desc } from 'drizzle-orm';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-// Plan limits mapping
+// Plan limits mapping (match worker/lib/plans.ts)
 const planLimits: { [key: string]: { maxRepos: number } } = {
-  'Free': { maxRepos: 3 },
-  'Pro': { maxRepos: 15 },
-  'Team': { maxRepos: 50 }
+  Free: { maxRepos: 3 },
+  Pro: { maxRepos: 5 },
+  Team: { maxRepos: 999999 }
 };
 
 export const dynamic = 'force-dynamic';
@@ -271,21 +271,48 @@ export default async function DashboardPage() {
               </Link>
             ))}
 
-            {/* Empty State Add Card */}
-            <a 
-              href={`https://github.com/apps/review-scope/installations/new`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative border-2 border-dashed border-border rounded-[2rem] p-8 flex flex-col items-center justify-center text-center space-y-4 hover:border-primary/50 hover:bg-primary/5 transition-all min-h-[250px]"
-            >
-              <div className="w-16 h-16 rounded-3xl bg-muted group-hover:bg-primary/10 group-hover:text-primary flex items-center justify-center transition-all">
-                <Sparkles className="w-8 h-8" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-black text-lg uppercase tracking-tight italic">Connect New <br />Repository</h3>
-                <p className="text-xs text-muted-foreground font-medium max-w-[180px]">Expand your AI coverage by installing the GitHub App.</p>
-              </div>
-            </a>
+            {/* Connect New Repository / Upgrade CTA based on quota */}
+            {(() => {
+              // If any installation has remaining capacity, allow connect; otherwise show upgrade CTA
+              const installCap = userInstallations.map(inst => {
+                const limit = planLimits[inst.planName || 'Free'].maxRepos;
+                const count = userRepos.filter(r => r.installationId === inst.id).length;
+                return count < limit;
+              });
+              const canConnect = installCap.includes(true);
+              if (canConnect) {
+                return (
+                  <a 
+                    href={`https://github.com/apps/review-scope/installations/new`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative border-2 border-dashed border-border rounded-[2rem] p-8 flex flex-col items-center justify-center text-center space-y-4 hover:border-primary/50 hover:bg-primary/5 transition-all min-h-[250px]"
+                  >
+                    <div className="w-16 h-16 rounded-3xl bg-muted group-hover:bg-primary/10 group-hover:text-primary flex items-center justify-center transition-all">
+                      <Sparkles className="w-8 h-8" />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="font-black text-lg uppercase tracking-tight italic">Connect New <br />Repository</h3>
+                      <p className="text-xs text-muted-foreground font-medium max-w-[180px]">Expand your AI coverage by installing the GitHub App.</p>
+                    </div>
+                  </a>
+                );
+              }
+              return (
+                <Link 
+                  href="/pricing"
+                  className="group relative border-2 border-dashed border-amber-300 rounded-[2rem] p-8 flex flex-col items-center justify-center text-center space-y-4 bg-amber-50/50 hover:bg-amber-100 transition-all min-h-[250px]"
+                >
+                  <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-700 flex items-center justify-center transition-all">
+                    <AlertCircle className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-black text-lg uppercase tracking-tight italic text-amber-900">Repository Limit Reached</h3>
+                    <p className="text-xs text-amber-800 font-medium max-w-[220px]">Upgrade your plan to add more repositories to ReviewScope.</p>
+                  </div>
+                </Link>
+              );
+            })()}
           </div>
         </section>
 
@@ -324,6 +351,14 @@ export default async function DashboardPage() {
                       </div>
 
                       <div className="space-y-3">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <Github className="w-3.5 h-3.5 text-purple-500" />
+                            <span className="font-medium">Repos</span>
+                          </div>
+                          <span className="font-bold">{userRepos.filter(r => r.installationId === inst.id).length}/{limits?.repos}</span>
+                        </div>
+
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
                             <Gauge className="w-3.5 h-3.5 text-primary" />

@@ -8,7 +8,7 @@ config({ path: resolve(__dirname, "../../.env") });
 const nextConfig: NextConfig = {
   output: 'standalone',
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   experimental: {
     cpus: 1

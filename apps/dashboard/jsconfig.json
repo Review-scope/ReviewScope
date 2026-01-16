@@ -1,25 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "lib": ["ES2022"],
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "allowSyntheticDefaultImports": true,
+    "baseUrl": "../../",
     "paths": {
+      "@/*": ["./apps/dashboard/src/*"],
       "@reviewscope/api": ["./apps/api/dist/index.d.ts"],
       "@reviewscope/api/*": ["./apps/api/dist/*"],
       "@reviewscope/security": ["./packages/security/dist/index.d.ts"],
@@ -31,6 +14,5 @@
       "@reviewscope/rules-engine": ["./packages/rules-engine/dist/index.d.ts"],
       "@reviewscope/rules-engine/*": ["./packages/rules-engine/dist/*"]
     }
-  },
-  "exclude": ["node_modules", "dist"]
+  }
 }

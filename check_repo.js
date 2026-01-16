@@ -1,4 +1,8 @@
-import { db, repositories } from './apps/api/src/db/index.js';
+// Load environment variables from .env at repo root
+import 'dotenv/config';
+
+// Use built JS from the API package (compiled to dist)
+import { db, repositories } from './apps/api/dist/db/index.js';
 import { eq } from 'drizzle-orm';
 
 async function check() {

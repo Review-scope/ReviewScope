@@ -13,6 +13,7 @@ import { eq, and, gte } from 'drizzle-orm';
 import { GitHubClient } from '../../../worker/src/lib/github.js';
 import { getPlanLimits } from '../../../worker/src/lib/plans.js';
 import { QdrantClient } from '@qdrant/js-client-rest';
+import { assertRepoQuotaByInstallationId, QuotaError } from '../lib/quota.js';
 
 
 const gh = new GitHubClient();
@@ -463,16 +464,30 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
       const hasUserKey = !!config?.apiKeyEncrypted;
       const hasServerKey = !!(process.env.GOOGLE_API_KEY || process.env.OPENAI_API_KEY);
       const canIndex = hasUserKey || hasServerKey;
+      const limits = getPlanLimits(dbInst.planId);
       
       for (const repo of repositories_added) {
-        await db.insert(repositories).values({
-          installationId: dbInst.id,
-          githubRepoId: repo.id,
-          fullName: repo.full_name,
-        }).onConflictDoUpdate({
-          target: repositories.githubRepoId,
-          set: { fullName: repo.full_name, installationId: dbInst.id },
-        });
+        // Enforce max repos before adding
+        try {
+          await assertRepoQuotaByInstallationId(dbInst.id);
+        } catch (e) {
+          const err = e as QuotaError;
+          console.warn(`[Webhook] Repo add blocked by quota: ${repo.full_name} — ${err.message}`);
+          // Skip insertion; report limit status
+          continue;
+        }
+
+        await db
+          .insert(repositories)
+          .values({
+            installationId: dbInst.id,
+            githubRepoId: repo.id,
+            fullName: repo.full_name,
+          })
+          .onConflictDoUpdate({
+            target: repositories.githubRepoId,
+            set: { fullName: repo.full_name, installationId: dbInst.id },
+          });
 
         // If any API key exists (user or server), trigger indexing
         if (canIndex) {
@@ -489,7 +504,13 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
         console.warn(`[Webhook] Skipping indexing - no API key configured (user or server)`);
       }
 
-      return c.json({ status: 'repositories_added', count: repositories_added.length, indexed: canIndex });
+      // Provide feedback including limit info
+      return c.json({ 
+        status: 'repositories_added', 
+        count: repositories_added.length, 
+        indexed: canIndex,
+        maxRepos: limits.maxRepos,
+      });
     }
 
     if (action === 'removed' && repositories_removed) {

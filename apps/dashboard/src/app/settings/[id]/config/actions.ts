@@ -7,7 +7,6 @@ import { encrypt, decrypt } from '@reviewscope/security';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../api/auth/[...nextauth]/route';
-import { enqueueIndexingJob } from '@/../../api/src/lib/queue';
 import { redirect } from 'next/navigation';
 import { createProvider } from '@reviewscope/llm-core';
 
@@ -158,18 +157,9 @@ export async function updateConfig(installationId: string, formData: FormData) {
     console.warn(`[Config] Update successful. apiKeyChanged: ${apiKeyChanged}, newlyAdded: ${!existingConfig?.apiKeyEncrypted && !!apiKeyEncrypted}, shouldIndex: ${shouldIndex}`);
 
     if (shouldIndex) {
-      const repos = await db.select().from(repositories).where(eq(repositories.installationId, installationId));
-      
-      console.warn(`[Config] Found ${repos.length} repositories to re-index for installation ${installationId}`);
-      
-      for (const repo of repos) {
-        console.warn(`[Config] Enqueueing indexing for ${repo.fullName} (ID: ${repo.githubRepoId})`);
-        await enqueueIndexingJob({
-          installationId: installation.githubInstallationId,
-          repositoryId: repo.githubRepoId,
-          repositoryFullName: repo.fullName,
-        });
-      }
+      // Indexing is now handled automatically by the GitHub webhook
+      // when configuration is updated, or can be manually triggered via API
+      console.info(`[Config] Configuration updated for installation ${installationId}. Indexing will be triggered via webhook.`);
     }
 
     revalidatePath(`/settings/${installationId}/config`);

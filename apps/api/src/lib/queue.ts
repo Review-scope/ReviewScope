@@ -1,4 +1,5 @@
 import { Queue } from 'bullmq';
+import { assertRepoQuotaByGithubInstallationId } from './quota.js';
 
 export interface ReviewJobData {
   jobVersion: 1;
@@ -111,6 +112,8 @@ export async function enqueueIndexingJob(data: IndexingJobData): Promise<string>
   const jobId = `index-${data.repositoryId}-${Date.now()}`;
   console.warn(`[Queue] Attempting to enqueue Indexing Job: ${jobId} for repo ${data.repositoryFullName}`);
   try {
+    // Enforce repository quota before enqueuing indexing
+    await assertRepoQuotaByGithubInstallationId(data.installationId);
     const job = await queue.add('process-indexing', data, { jobId });
     console.warn(`[Queue] Successfully enqueued Indexing Job: ${job.id}`);
     return job.id || jobId;
