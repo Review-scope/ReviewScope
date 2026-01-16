@@ -1,15 +1,17 @@
 'use client';
 
-import Link from 'next/link'
-
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px]">
-      <h2 className="text-2xl font-bold mb-4">Not Found</h2>
-      <p className="text-muted-foreground mb-4">Could not find requested resource</p>
-      <Link href="/" className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
-        Return Home
-      </Link>
-    </div>
+    <html>
+      <body>
+        <div style={{ padding: 24 }}>
+          <h2>Not Found</h2>
+          <p>Could not find requested resource</p>
+          <a href="/" style={{ padding: '8px 16px', backgroundColor: '#000', color: '#fff', borderRadius: '4px', textDecoration: 'none' }}>
+            Return Home
+          </a>
+        </div>
+      </body>
+    </html>
   )
 }
