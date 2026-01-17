@@ -164,6 +164,7 @@ export const configs = pgTable('configs', {
   provider: text('provider').default('gemini').notNull(),
   model: text('model').default('gemini-2.5-flash').notNull(),
   apiKeyEncrypted: text('api_key_encrypted'), 
+  smartRouting: boolean('smart_routing').default(false).notNull(),
   
   // Review Customization
   customPrompt: text('custom_prompt'),

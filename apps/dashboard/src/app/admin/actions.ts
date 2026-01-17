@@ -6,6 +6,23 @@ import { revalidatePath } from 'next/cache';
 import { Queue } from 'bullmq';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import Redis from 'ioredis';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../api/auth/[...nextauth]/route';
+
+// Admin GitHub IDs - restricted access
+const ADMIN_GITHUB_IDS = [
+  '134628559', // paras-verma7454
+];
+
+async function requireAdmin() {
+  const session = await getServerSession(authOptions);
+  // @ts-expect-error session.user.id
+  const userId = session?.user?.id;
+  
+  if (!session?.user || !ADMIN_GITHUB_IDS.includes(userId)) {
+    throw new Error("Unauthorized: Admin access required");
+  }
+}
 
 // Redis connection for BullMQ
 function getRedisConnection() {
@@ -21,7 +38,16 @@ function getRedisConnection() {
 
 // Redis client for settings
 function getRedisClient() {
-  return new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+  const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    maxRetriesPerRequest: 1,
+    connectTimeout: 5000,
+  });
+  
+  redis.on('error', (err) => {
+    console.error('[Admin] Redis Client Error:', err.message);
+  });
+  
+  return redis;
 }
 
 // Qdrant client
@@ -48,6 +74,7 @@ function getIndexingQueue() {
 }
 
 export async function reindexInstallation(installationId: string) {
+  await requireAdmin();
   console.log(`[Admin] Reindex requested for installation: ${installationId}`);
   
   // Get the installation
@@ -59,9 +86,10 @@ export async function reindexInstallation(installationId: string) {
   // Get all repos for this installation
   const repos = await db.select().from(repositories).where(eq(repositories.installationId, installationId));
   
-  // Reset indexedAt and enqueue indexing jobs
+  // Reset indexedAt and enqueue indexing jobs in parallel
   const queue = getIndexingQueue();
-  for (const repo of repos) {
+  
+  await Promise.all(repos.map(async (repo) => {
     await db.update(repositories).set({
       indexedAt: null,
     }).where(eq(repositories.id, repo.id));
@@ -73,13 +101,14 @@ export async function reindexInstallation(installationId: string) {
       repositoryFullName: repo.fullName,
     });
     console.log(`[Admin] Enqueued indexing job for ${repo.fullName}`);
-  }
+  }));
   
   revalidatePath('/admin');
   return { success: true, reposCount: repos.length };
 }
 
 export async function disableInstallation(installationId: string) {
+  await requireAdmin();
   console.log(`[Admin] Disable requested for installation: ${installationId}`);
   
   // Get the installation
@@ -94,24 +123,28 @@ export async function disableInstallation(installationId: string) {
   // Clear vectors for all repos
   try {
     const qdrant = getQdrantClient();
-    for (const repo of repos) {
-      await qdrant.delete(COLLECTION_NAME, {
+    // Delete in parallel
+    await Promise.all(repos.map(repo => 
+      qdrant.delete(COLLECTION_NAME, {
         filter: {
           must: [
             { key: 'repoId', match: { value: repo.githubRepoId } }
           ]
         }
-      });
-    }
+      })
+    ));
     console.log(`[Admin] Cleared vectors for ${repos.length} repos`);
   } catch (error) {
     console.error(`[Admin] Failed to clear vectors:`, error);
   }
 
   // Delete all repos (cascades from schema)
-  for (const repo of repos) {
-    await db.delete(repositories).where(eq(repositories.id, repo.id));
-  }
+  // We can do this in parallel too, though DB might lock. Sequential delete for DB safety is often fine, 
+  // but let's assume parallel is okay for these unrelated rows or use a batch delete if Drizzle supports it.
+  // For safety/simplicity in this fix, we'll keep the loop or use Promise.all.
+  await Promise.all(repos.map(repo => 
+    db.delete(repositories).where(eq(repositories.id, repo.id))
+  ));
   console.log(`[Admin] Deleted ${repos.length} repositories`);
 
   // Delete the installation
@@ -123,6 +156,7 @@ export async function disableInstallation(installationId: string) {
 }
 
 export async function reindexRepository(repositoryId: string) {
+  await requireAdmin();
   console.log(`[Admin] Reindex requested for repository: ${repositoryId}`);
   
   // Get the repository with installation
@@ -155,6 +189,7 @@ export async function reindexRepository(repositoryId: string) {
 }
 
 export async function clearRepositoryVectors(repositoryId: string) {
+  await requireAdmin();
   console.log(`[Admin] Clear vectors requested for repository: ${repositoryId}`);
   
   // Get the repository
@@ -189,6 +224,7 @@ export async function clearRepositoryVectors(repositoryId: string) {
 }
 
 export async function toggleGlobalReviews(enabled: boolean) {
+  await requireAdmin();
   console.log(`[Admin] Global reviews ${enabled ? 'enabled' : 'disabled'}`);
   
   try {
@@ -206,6 +242,7 @@ export async function toggleGlobalReviews(enabled: boolean) {
 }
 
 export async function toggleGlobalIndexing(enabled: boolean) {
+  await requireAdmin();
   console.log(`[Admin] Global indexing ${enabled ? 'enabled' : 'disabled'}`);
   
   try {
@@ -224,6 +261,7 @@ export async function toggleGlobalIndexing(enabled: boolean) {
 
 // Helper to check global settings (for use in worker)
 export async function getGlobalSettings() {
+  // No admin check needed here as this is a read-only helper for workers/internals
   try {
     const redis = getRedisClient();
     const reviewsEnabled = await redis.get('reviewscope:global:reviews_enabled');
@@ -238,4 +276,20 @@ export async function getGlobalSettings() {
     console.error(`[Admin] Failed to get settings from Redis:`, error);
     return { reviewsEnabled: true, indexingEnabled: true };
   }
+}
+
+export async function getSystemConfigStatus() {
+  await requireAdmin();
+  
+  return {
+    DATABASE_URL: !!process.env.DATABASE_URL,
+    REDIS_URL: !!process.env.REDIS_URL,
+    QDRANT_URL: !!process.env.QDRANT_URL,
+    GITHUB_APP_ID: !!process.env.GITHUB_APP_ID,
+    GITHUB_PRIVATE_KEY: !!process.env.GITHUB_PRIVATE_KEY,
+    ENCRYPTION_KEY: !!process.env.ENCRYPTION_KEY,
+    NEXTAUTH_SECRET: !!process.env.NEXTAUTH_SECRET,
+    GOOGLE_API_KEY: !!process.env.GOOGLE_API_KEY,
+    OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+  };
 }

@@ -1,9 +1,6 @@
 'use client';
 
-import { Inter } from 'next/font/google';
 import './globals.css';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export default function GlobalError({
   error,
@@ -14,7 +11,7 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-8 text-center`}>
+      <body className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-8 text-center">
         <div className="space-y-6 max-w-md">
           <div className="p-4 bg-red-100 rounded-2xl w-fit mx-auto">
             <svg
@@ -33,7 +30,7 @@ export default function GlobalError({
           </div>
           <h1 className="text-4xl font-black tracking-tight italic uppercase">System Failure</h1>
           <p className="text-muted-foreground font-medium">
-            An unexpected error occurred in the intelligence dashboard. Our engineering team has been notified.
+            An unexpected error occurred in the intelligence dashboard.
           </p>
           <div className="p-4 bg-zinc-100 rounded-xl font-mono text-[10px] text-zinc-500 break-all">
             {error.message || 'Unknown Error'} {error.digest && `(Digest: ${error.digest})`}

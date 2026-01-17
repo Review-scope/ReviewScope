@@ -68,7 +68,7 @@ To continue the discussion or ask more questions, please [upgrade to the Pro or 
     
     let ragContext = '';
     if (dbRepo?.indexedAt) {
-      const provider = await createConfiguredProvider(dbInst.id);
+      const { provider } = await createConfiguredProvider(dbInst.id);
       
       // Ensure index exists (fixes the 400 error)
       const indexer = new RAGIndexer(provider);
@@ -80,7 +80,7 @@ To continue the discussion or ask more questions, please [upgrade to the Pro or 
     }
 
     // 2. Call LLM
-    const llmProvider = await createConfiguredProvider(dbInst.id);
+    const { provider: llmProvider } = await createConfiguredProvider(dbInst.id);
     const messages = [
       { role: 'system' as const, content: CHAT_SYSTEM_PROMPT },
       { role: 'user' as const, content: `

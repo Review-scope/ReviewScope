@@ -23,22 +23,31 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-dev-key-change-me-
 console.warn(`[LLM] Encryption Key Status: ${process.env.ENCRYPTION_KEY ? 'LOADED' : 'MISSING (Using Fallback)'}`);
 
 // Factory to get provider based on config (could be dynamic per repo later)
-export async function createConfiguredProvider(installationId?: string): Promise<LLMProvider> {
+export async function createConfiguredProvider(installationId?: string): Promise<{ provider: LLMProvider, smartRouting: boolean }> {
+  let smartRouting = false;
+
   // 1. Try to fetch user-provided config from DB
   if (installationId) {
     console.warn(`[LLM] Fetching config for installation: ${installationId}`);
     const [userConfig] = await db.select().from(configs).where(eq(configs.installationId, installationId));
     
-    if (userConfig?.apiKeyEncrypted) {
-      try {
-        const decryptedKey = decrypt(userConfig.apiKeyEncrypted, ENCRYPTION_KEY);
-        console.warn(`[LLM] Using CUSTOM ${userConfig.provider} key for installation ${installationId} (Prefix: ${decryptedKey.substring(0, 6)}...)`);
-        return createProvider(userConfig.provider as 'openai' | 'gemini', decryptedKey);
-      } catch (e: any) {
-        console.error(`[LLM] Failed to decrypt user API key for installation ${installationId}. Error: ${e.message}`);
+    if (userConfig) {
+      smartRouting = userConfig.smartRouting;
+
+      if (userConfig.apiKeyEncrypted) {
+        try {
+          const decryptedKey = decrypt(userConfig.apiKeyEncrypted, ENCRYPTION_KEY);
+          console.warn(`[LLM] Using CUSTOM ${userConfig.provider} key for installation ${installationId} (Prefix: ${decryptedKey.substring(0, 6)}...)`);
+          return {
+            provider: createProvider(userConfig.provider as 'openai' | 'gemini', decryptedKey),
+            smartRouting
+          };
+        } catch (e: any) {
+          console.error(`[LLM] Failed to decrypt user API key for installation ${installationId}. Error: ${e.message}`);
+        }
+      } else {
+        console.warn(`[LLM] No custom API key found in DB for installation ${installationId}`);
       }
-    } else {
-      console.warn(`[LLM] No custom API key found in DB for installation ${installationId}`);
     }
   } else {
     console.warn(`[LLM] No installationId provided to createConfiguredProvider`);
@@ -47,11 +56,11 @@ export async function createConfiguredProvider(installationId?: string): Promise
   // 2. Fallback to server defaults
   if (GEMINI_API_KEY) {
     console.warn(`[LLM] Falling back to SERVER DEFAULT gemini key (Prefix: ${GEMINI_API_KEY.substring(0, 6)}...)`);
-    return createProvider('gemini', GEMINI_API_KEY);
+    return { provider: createProvider('gemini', GEMINI_API_KEY), smartRouting };
   }
   if (OPENAI_API_KEY) {
     console.warn(`[LLM] Falling back to SERVER DEFAULT openai key (Prefix: ${OPENAI_API_KEY.substring(0, 6)}...)`);
-    return createProvider('openai', OPENAI_API_KEY);
+    return { provider: createProvider('openai', OPENAI_API_KEY), smartRouting };
   }
   throw new Error('No valid LLM API key found (OPENAI_API_KEY or GOOGLE_API_KEY)');
 }
@@ -86,13 +95,14 @@ export interface AIReviewOptions {
 }
 
 export async function runAIReview(input: AIReviewInput, options: AIReviewOptions = {}): Promise<AIReviewResult> {
-  const provider = await createConfiguredProvider(input.installationId);
+  const { provider, smartRouting } = await createConfiguredProvider(input.installationId);
   
   // Determine model based on complexity
   let modelName = options.model || 'gemini-2.5-flash';
   
-  // If complexity provided, use intelligent routing
-  if (input.complexity) {
+  // LOGIC: Use intelligent routing ONLY if smartRouting is enabled (explicit user opt-in)
+  // OR if no model is specified at all (fallback to smart defaults).
+  if (input.complexity && (smartRouting || !options.model)) {
     const hasGemini = !!(GEMINI_API_KEY || (options.model?.includes('gemini')));
     const hasOpenAI = !!(OPENAI_API_KEY || (options.model?.includes('gpt')));
     

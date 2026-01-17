@@ -13,27 +13,27 @@ export default async function LandingPage() {
   return (
     <div className="flex flex-col items-center pb-20 overflow-x-hidden">
       {/* Premium Hero Section */}
-      <section className="relative w-full pt-20 md:pt-32 pb-20 px-8 flex flex-col items-center text-center">
+      <section className="relative w-full pt-16 md:pt-32 pb-16 md:pb-24 px-4 md:px-8 flex flex-col items-center text-center">
         {/* Abstract Background Elements */}
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-primary/10 via-background to-background"></div>
-        <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-size-[44px_44px] mask-[radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+        <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,#8080800a_3px,transparent_3px),linear-gradient(to_bottom,#8080800a_3px,transparent_3px)] bg-size-[44px_44px] mask-[radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
 
         <div className="animate-in fade-in slide-in-from-top-4 duration-1000">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold tracking-wider mb-8 uppercase">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] md:text-xs font-bold tracking-wider mb-8 uppercase">
             <Sparkles className="w-3 h-3" />
             Empowering 1000+ developers
           </div>
         </div>
 
 
-        <div className="max-w-4xl space-y-8 relative">
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.1] md:leading-[1.05]">
-            Engineering Quality <br />
+        <div className="max-w-4xl space-y-6 md:space-y-8 relative">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.1] md:leading-[1.05]">
+            Engineering Quality <br className="hidden sm:block" />
             <span className="bg-clip-text text-transparent bg-linear-to-r from-primary via-blue-500 to-indigo-600 animate-gradient">
               on Autopilot.
             </span>
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium">
+          <p className="text-lg md:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium px-4">
             Professional AI code reviews that understand your context. 
             Secure, logic-aware, and powered by <span className="text-foreground font-bold">your own API keys.</span>
           </p>
@@ -107,13 +107,13 @@ export default async function LandingPage() {
       </section>
 
       {/* Global Features Section */}
-      <section className="w-full bg-accent/30 py-24 border-y">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="text-center mb-16 space-y-4">
-            <h2 className="text-3xl font-bold tracking-tight">Enterprise Features</h2>
-            <p className="text-muted-foreground">The core features that make ReviewScope elite.</p>
+      <section className="w-full bg-accent/30 py-16 md:py-24 border-y">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="text-center mb-12 md:mb-16 space-y-4">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Enterprise Features</h2>
+            <p className="text-sm md:text-base text-muted-foreground px-4">The core features that make ReviewScope elite.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 text-left">
             {[
               { 
                 icon: <Key className="w-6 h-6" />, 
@@ -146,12 +146,12 @@ export default async function LandingPage() {
                 desc: "Seamless upgrades via GitHub. Plan expiration tracking with auto-downgrade to Free." 
               }
             ].map((feat) => (
-              <div key={feat.title} className="group p-6 border rounded-2xl bg-card hover:border-primary/50 transition-colors shadow-sm">
-                <div className="mb-4 text-primary bg-primary/10 w-fit p-3 rounded-xl group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+              <div key={feat.title} className="group p-5 md:p-6 border rounded-2xl bg-card hover:border-primary/50 transition-colors shadow-sm">
+                <div className="mb-4 text-primary bg-primary/10 w-fit p-3 rounded-xl group-hover:bg-primary group-hover:text-primary-foreground transition-colors transition-all duration-300">
                   {feat.icon}
                 </div>
-                <h3 className="font-bold text-lg mb-2">{feat.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{feat.desc}</p>
+                <h3 className="font-bold text-base md:text-lg mb-2">{feat.title}</h3>
+                <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">{feat.desc}</p>
               </div>
             ))}
           </div>
@@ -159,13 +159,13 @@ export default async function LandingPage() {
       </section>
 
       {/* How It Works Section */}
-      <section className="w-full py-24 px-8">
+      <section className="w-full py-16 md:py-24 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16 space-y-4">
-            <h2 className="text-3xl font-bold tracking-tight">How ReviewScope Works</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">A multi-layer review pipeline that combines static analysis, context awareness, and intelligent AI.</p>
+          <div className="text-center mb-12 md:mb-16 space-y-4">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">How ReviewScope Works</h2>
+            <p className="text-sm md:text-base text-muted-foreground max-w-2xl mx-auto px-4">A multi-layer review pipeline that combines static analysis, context awareness, and intelligent AI.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { 
                 step: "1", 
@@ -189,15 +189,15 @@ export default async function LandingPage() {
               }
             ].map((item) => (
               <div key={item.step} className="relative">
-                <div className="bg-card border rounded-2xl p-8 h-full">
-                  <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-black text-lg mb-4">
+                <div className="bg-card border rounded-2xl p-6 md:p-8 h-full flex flex-col items-center sm:items-start text-center sm:text-left">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-black text-base md:text-lg mb-4 shrink-0 shadow-lg shadow-primary/20">
                     {item.step}
                   </div>
-                  <h3 className="font-bold text-lg mb-3">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+                  <h3 className="font-bold text-base md:text-lg mb-3">{item.title}</h3>
+                  <p className="text-xs md:text-sm text-muted-foreground">{item.desc}</p>
                 </div>
                 {parseInt(item.step) < 4 && (
-                  <div className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10">
+                  <div className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 transition-transform duration-500">
                     <ArrowRight className="w-6 h-6 text-primary/50" />
                   </div>
                 )}
@@ -470,4 +470,3 @@ export default async function LandingPage() {
     </div>
   );
 }
-

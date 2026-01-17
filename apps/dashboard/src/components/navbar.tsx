@@ -1,11 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutDashboard, Users, LogIn, LogOut, ShieldCheck, HelpCircle, Shield, CreditCard } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  LogIn, 
+  LogOut, 
+  HelpCircle, 
+  CreditCard,
+  Menu,
+  X,
+  Settings,
+  Shield
+} from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
 import { useSession, signOut } from 'next-auth/react';
 import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 
 // Admin GitHub IDs - must match admin/page.tsx
 const ADMIN_GITHUB_IDS = ['134628559'];
@@ -13,82 +24,69 @@ const ADMIN_GITHUB_IDS = ['134628559'];
 export function Navbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // @ts-expect-error session.user.id exists
   const isAdmin = session?.user?.id && ADMIN_GITHUB_IDS.includes(session.user.id);
 
+  // Close mobile menu on path change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  const navLinks = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/pricing", label: "Pricing", icon: CreditCard },
+    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/support", label: "Support", icon: HelpCircle },
+  ];
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
-      <div className="flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto">
-        <Link href="/" className="flex items-center gap-2 font-bold text-2xl mr-8 hover:opacity-80 transition-opacity">
+      <div className="flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
+        <Link href="/" className="flex items-center gap-2 font-bold text-xl md:text-2xl hover:opacity-80 transition-opacity shrink-0">
           <img src="/logo1.png" alt="ReviewScope" className="w-8 h-8 object-contain" />
           <span className="tracking-tighter italic uppercase font-black">Review<span className="text-primary">Scope</span></span>
         </Link>
         
-        <div className="flex gap-1 md:gap-4 flex-1">
-          <Link 
-            href="/dashboard" 
-            className={clsx(
-              "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all hover:bg-accent hover:text-accent-foreground",
-              pathname === "/dashboard" ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-            )}
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            <span className="hidden sm:inline">Repositories</span>
-          </Link>
-          <Link 
-            href="/pricing" 
-            className={clsx(
-              "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all hover:bg-accent hover:text-accent-foreground",
-              pathname === "/pricing" ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-            )}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span className="hidden sm:inline">Pricing</span>
-          </Link>
-          <Link 
-            href="/settings" 
-            className={clsx(
-              "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all hover:bg-accent hover:text-accent-foreground",
-              pathname.startsWith("/settings") ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-            )}
-          >
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Settings</span>
-          </Link>
-          <Link 
-            href="/support" 
-            className={clsx(
-              "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all hover:bg-accent hover:text-accent-foreground",
-              pathname === "/support" ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-            )}
-          >
-            <HelpCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">Support</span>
-          </Link>
+        {/* Desktop Nav */}
+        <div className="hidden lg:flex gap-1 md:gap-2 flex-1 ml-8">
+          {navLinks.map((link) => (
+            <Link 
+              key={link.href}
+              href={link.href} 
+              className={clsx(
+                "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all hover:bg-accent hover:text-accent-foreground",
+                pathname.startsWith(link.href) ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+              )}
+            >
+              <link.icon className="w-4 h-4" />
+              <span>{link.label}</span>
+            </Link>
+          ))}
           {isAdmin && (
             <Link 
               href="/admin" 
               className={clsx(
-                "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all hover:bg-accent hover:text-accent-foreground",
+                "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all hover:bg-accent hover:text-accent-foreground",
                 pathname === "/admin" ? "bg-accent text-accent-foreground" : "text-orange-500"
               )}
             >
               <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Admin</span>
+              <span>Admin</span>
             </Link>
           )}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           {session ? (
-            <div className="flex items-center gap-4">
-              <div className="hidden md:flex flex-col items-end">
-                <span className="text-sm font-semibold leading-none mb-1">{session.user?.name}</span>
-                <span className="text-xs text-muted-foreground">{session.user?.email}</span>
+            <div className="flex items-center gap-2 md:gap-4">
+              <div className="hidden sm:flex flex-col items-end mr-1">
+                <span className="text-xs font-semibold leading-none mb-1 text-foreground">{session.user?.name}</span>
+                <span className="text-[10px] text-muted-foreground line-clamp-1">{session.user?.email}</span>
               </div>
               {session.user?.image && (
-                <div className="relative w-8 h-8 rounded-full border bg-accent overflow-hidden shadow-sm">
+                <div className="relative w-8 h-8 rounded-full border bg-accent overflow-hidden shadow-sm shrink-0">
                   <img 
                     src={session.user.image} 
                     alt="Avatar" 
@@ -113,14 +111,64 @@ export function Navbar() {
           ) : (
             <Link
               href="/signin"
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-all shadow-sm"
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-all shadow-sm"
             >
               <LogIn className="w-4 h-4" />
               Sign In
             </Link>
           )}
+
+          {/* Mobile Menu Toggle */}
+          <button 
+            className="lg:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden absolute top-full left-0 w-full bg-background border-b animate-in fade-in slide-in-from-top-2 duration-200 shadow-xl overflow-hidden">
+          <div className="flex flex-col p-4 gap-2">
+            {!session && (
+              <Link
+                href="/signin"
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground text-sm font-bold rounded-xl mb-2"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign In to ReviewScope
+              </Link>
+            )}
+            {navLinks.map((link) => (
+              <Link 
+                key={link.href}
+                href={link.href} 
+                className={clsx(
+                  "flex items-center gap-3 px-4 py-3 text-base font-semibold rounded-xl transition-all",
+                  pathname.startsWith(link.href) ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <link.icon className="w-5 h-5" />
+                <span>{link.label}</span>
+              </Link>
+            ))}
+            {isAdmin && (
+              <Link 
+                href="/admin" 
+                className={clsx(
+                  "flex items-center gap-3 px-4 py-3 text-base font-semibold rounded-xl border border-orange-500/20 bg-orange-500/5 transition-all text-orange-500",
+                  pathname === "/admin" ? "bg-orange-500/10" : ""
+                )}
+              >
+                <Shield className="w-5 h-5" />
+                <span>Admin Panel</span>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

@@ -1,5 +1,5 @@
 # To run:
-# docker compose -f docker-compose.dev.yml up --build
+# docker compose -f docker-compose.dev.yml up -d --build
 
 # To stop:
 # docker compose -f docker-compose.dev.yml down
@@ -28,7 +28,8 @@ services:
       - NODE_ENV=development
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=${DATABASE_URL}
-    command: npm run dev -w @reviewscope/api
+    # command: npm run dev -w 
+    command: sh -c "npm ci && npm run dev -w @reviewscope/api"
     depends_on:
       - redis
 
@@ -44,7 +45,7 @@ services:
       - NODE_ENV=development
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=${DATABASE_URL}
-    command: npm run dev -w @reviewscope/worker
+    command: sh -c "npm ci && npm run dev -w @reviewscope/worker"
     depends_on:
       - redis
 
@@ -63,9 +64,6 @@ services:
       - NODE_ENV=development
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=${DATABASE_URL}
-    command: npm run dev -w @reviewscope/dashboard
-    depends_on:
-      - redis
-
-volumes:
+    command: sh -c "npm ci && npm run dev -w @reviewscope/dashboard"
+s:
   redis_data_dev:

@@ -65,8 +65,8 @@ export async function processIndexingJob(data: IndexingJobData): Promise<void> {
     const files = await gh.getRepositoryFiles(data.installationId, owner, repo);
     
     // 2. Setup RAG Indexer
-    const llmProvider = await createConfiguredProvider(dbInst.id);
-    const indexer = new RAGIndexer(llmProvider);
+    const { provider } = await createConfiguredProvider(dbInst.id);
+    const indexer = new RAGIndexer(provider);
 
     // 3. Index into Qdrant
     console.warn(`Indexing ${files.length} files into vector database...`);

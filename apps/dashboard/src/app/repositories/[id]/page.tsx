@@ -7,6 +7,8 @@ import { ChevronLeft, GitPullRequest, CheckCircle2, XCircle, Clock, ExternalLink
 import Link from 'next/link';
 import { clsx } from 'clsx';
 
+import { ActivationToggle } from './activation-toggle';
+
 export const dynamic = 'force-dynamic';
 
 export default async function RepositoryPage({ params }: { params: { id: string } }) {
@@ -64,6 +66,7 @@ export default async function RepositoryPage({ params }: { params: { id: string 
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <ActivationToggle repoId={repo.id} isActive={repo.isActive} />
             <a 
               href={`https://github.com/${repo.fullName}`}
               target="_blank"

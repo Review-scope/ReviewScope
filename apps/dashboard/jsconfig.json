@@ -3,16 +3,16 @@
     "baseUrl": "../../",
     "paths": {
       "@/*": ["./apps/dashboard/src/*"],
-      "@reviewscope/api": ["./apps/api/dist/index.d.ts"],
-      "@reviewscope/api/*": ["./apps/api/dist/*"],
-      "@reviewscope/security": ["./packages/security/dist/index.d.ts"],
-      "@reviewscope/security/*": ["./packages/security/dist/*"],
-      "@reviewscope/llm-core": ["./packages/llm-core/dist/index.d.ts"],
-      "@reviewscope/llm-core/*": ["./packages/llm-core/dist/*"],
-      "@reviewscope/context-engine": ["./packages/context-engine/dist/index.d.ts"],
-      "@reviewscope/context-engine/*": ["./packages/context-engine/dist/*"],
-      "@reviewscope/rules-engine": ["./packages/rules-engine/dist/index.d.ts"],
-      "@reviewscope/rules-engine/*": ["./packages/rules-engine/dist/*"]
+      "@reviewscope/api": ["./apps/api/src/index.ts"],
+      "@reviewscope/api/*": ["./apps/api/src/*"],
+      "@reviewscope/security": ["./packages/security/src/index.ts"],
+      "@reviewscope/security/*": ["./packages/security/src/*"],
+      "@reviewscope/llm-core": ["./packages/llm-core/src/index.ts"],
+      "@reviewscope/llm-core/*": ["./packages/llm-core/src/*"],
+      "@reviewscope/context-engine": ["./packages/context-engine/src/index.ts"],
+      "@reviewscope/context-engine/*": ["./packages/context-engine/src/*"],
+      "@reviewscope/rules-engine": ["./packages/rules-engine/src/index.ts"],
+      "@reviewscope/rules-engine/*": ["./packages/rules-engine/src/*"]
     }
   }
 }

@@ -5,9 +5,13 @@ import { AlertTriangle, Power, Pause, Play, Shield } from 'lucide-react';
 import { toggleGlobalReviews, toggleGlobalIndexing } from './actions';
 import { toast } from 'sonner';
 
-export function SafetyControls() {
-  const [reviewsEnabled, setReviewsEnabled] = useState(true);
-  const [indexingEnabled, setIndexingEnabled] = useState(true);
+export function SafetyControls({ 
+  initialSettings 
+}: { 
+  initialSettings: { reviewsEnabled: boolean; indexingEnabled: boolean } 
+}) {
+  const [reviewsEnabled, setReviewsEnabled] = useState(initialSettings.reviewsEnabled);
+  const [indexingEnabled, setIndexingEnabled] = useState(initialSettings.indexingEnabled);
   const [confirming, setConfirming] = useState<string | null>(null);
 
   const handleToggleReviews = async () => {

@@ -245,7 +245,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     let ragContext = '';
     if (dbRepo.indexedAt && limits.allowRAG) {
       try {
-        const provider = await createConfiguredProvider(dbInst.id);
+        const { provider } = await createConfiguredProvider(dbInst.id);
         
         // Ensure index exists
         const indexer = new RAGIndexer(provider);

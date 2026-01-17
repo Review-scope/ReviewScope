@@ -22,6 +22,7 @@ import { AdminView } from './admin-view';
 import { ReviewActivity } from './review-activity';
 import { SafetyControls } from './safety-controls';
 import { SystemInfo } from './system-info';
+import { getGlobalSettings, getSystemConfigStatus } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,12 +59,16 @@ export default async function AdminPage({
 
   const whereClause = query ? or(
     ilike(installations.accountName, `%${query}%`),
-    sql`EXISTS (
-      SELECT 1 FROM ${repositories} 
-      WHERE ${repositories.installationId} = ${installations.id} 
-      AND ${repositories.fullName} ILIKE ${`%${query}%`}
+    // Search by numeric ID if query is a number
+    !isNaN(Number(query)) ? eq(installations.githubInstallationId, Number(query)) : undefined,
+    // Search by repository name
+    sql`${installations.id} IN (
+      SELECT installation_id FROM repositories 
+      WHERE full_name ILIKE ${`%${query}%`}
     )`
   ) : undefined;
+
+  const repoWhereClause = query ? ilike(repositories.fullName, `%${query}%`) : undefined;
 
   // Fetch comprehensive stats
   const [
@@ -79,7 +84,9 @@ export default async function AdminPage({
     failedReviewsData,
     pendingReviewsData,
     completedReviewsData,
-    totalItemsData
+    totalItemsData,
+    systemConfig,
+    globalSettings
   ] = await Promise.all([
     db.select({ count: count() }).from(installations),
     db.select({ count: count() }).from(repositories),
@@ -92,19 +99,15 @@ export default async function AdminPage({
         limit: ITEMS_PER_PAGE,
         offset: offset,
         orderBy: [desc(installations.createdAt)],
-        // Start of Selection
         with: {
             repositories: {
+                where: repoWhereClause,
                 orderBy: [desc(repositories.indexedAt)]
             }
         }
     }),
     
-    // We still need all repositories for stats, but typically we shouldn't fetch ALL if not needed.
-    // The previous code fetched limit(50). We can keep that for the 'Repositories' table if we keep it, 
-    // OR we remove the RepositoriesTable and just use the grouped view.
-    // The user asked to "group installation and repositries".
-    // I will replace the InstallationsTable and RepositoriesTable with the new AdminView (grouped).
+    // Stats repos
     db.select({
       id: repositories.id,
       installationId: repositories.installationId,
@@ -115,7 +118,7 @@ export default async function AdminPage({
       createdAt: repositories.createdAt,
     }).from(repositories).orderBy(desc(repositories.createdAt)).limit(50),
     
-    // Recent reviews with repo info
+    // Recent reviews
     db.select({
       id: reviews.id,
       repositoryId: reviews.repositoryId,
@@ -126,29 +129,26 @@ export default async function AdminPage({
       processedAt: reviews.processedAt,
     }).from(reviews).orderBy(desc(reviews.createdAt)).limit(20),
     
-    // Reviews today
+    // Stats reviews
     db.select({ count: count() }).from(reviews).where(gte(reviews.createdAt, todayStart)),
-    
-    // Reviews this week
     db.select({ count: count() }).from(reviews).where(gte(reviews.createdAt, weekStart)),
-    
-    // Failed reviews
     db.select({ count: count() }).from(reviews).where(eq(reviews.status, 'failed')),
-    
-    // Pending reviews
     db.select({ count: count() }).from(reviews).where(eq(reviews.status, 'pending')),
-    
-    // Completed reviews
     db.select({ count: count() }).from(reviews).where(eq(reviews.status, 'completed')),
 
-    // Total filtered count for pagination
+    // Pagination count
     db.select({ value: count() })
       .from(installations)
-      .where(whereClause)
+      .where(whereClause),
+
+    // Statuses
+    getSystemConfigStatus(),
+    getGlobalSettings()
   ]);
 
   const totalItems = totalItemsData[0]?.value || 0;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
 
   // Get config info for PAGINATED installations only
   const installationIds = paginatedInstallations.map(i => i.id);
@@ -185,6 +185,7 @@ export default async function AdminPage({
         fullName: repo.fullName,
         isPrivate: !!repo.isPrivate, // ensure boolean
         status: repo.status || 'active', // default if missing
+        isActive: repo.isActive,
         indexedAt: repo.indexedAt,
         lastReviewAt: null // repo.lastReviewAt is not in schema/query unless we fetch it. AdminView handles null.
       }))
@@ -354,7 +355,7 @@ export default async function AdminPage({
           <AlertOctagon className="w-5 h-5 text-yellow-500" />
           Safety Controls
         </h2>
-        <SafetyControls />
+        <SafetyControls initialSettings={globalSettings} />
       </section>
 
       {/* System Info */}
@@ -363,7 +364,7 @@ export default async function AdminPage({
           <Server className="w-5 h-5 text-primary" />
           System Information
         </h2>
-        <SystemInfo />
+        <SystemInfo config={systemConfig} />
       </section>
 
       {/* Quick Actions */}

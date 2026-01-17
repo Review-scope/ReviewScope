@@ -2,7 +2,11 @@
 
 import { CheckCircle, XCircle, Server, Database, Cpu, GitBranch } from 'lucide-react';
 
-export function SystemInfo() {
+export function SystemInfo({ 
+  config 
+}: { 
+  config: Record<string, boolean> 
+}) {
   const info = {
     appVersion: '0.0.1',
     workerVersion: '0.0.1',
@@ -40,10 +44,10 @@ export function SystemInfo() {
       <div className="mt-6 pt-6 border-t">
         <h4 className="text-sm font-medium mb-4">Service Status</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatusBadge label="Database" status="connected" />
-          <StatusBadge label="Redis Queue" status="connected" />
-          <StatusBadge label="Vector DB" status="connected" />
-          <StatusBadge label="GitHub API" status="connected" />
+          <StatusBadge label="Database" status={config.DATABASE_URL ? 'connected' : 'disconnected'} />
+          <StatusBadge label="Redis Queue" status={config.REDIS_URL ? 'connected' : 'disconnected'} />
+          <StatusBadge label="Vector DB" status={config.QDRANT_URL ? 'connected' : 'disconnected'} />
+          <StatusBadge label="GitHub API" status={config.GITHUB_APP_ID && config.GITHUB_PRIVATE_KEY ? 'connected' : 'disconnected'} />
         </div>
       </div>
 
@@ -51,15 +55,15 @@ export function SystemInfo() {
       <div className="mt-6 pt-6 border-t">
         <h4 className="text-sm font-medium mb-4">Configuration Check</h4>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-          <EnvCheck label="DATABASE_URL" />
-          <EnvCheck label="REDIS_URL" />
-          <EnvCheck label="QDRANT_URL" />
-          <EnvCheck label="GITHUB_APP_ID" />
-          <EnvCheck label="GITHUB_PRIVATE_KEY" />
-          <EnvCheck label="ENCRYPTION_KEY" />
-          <EnvCheck label="NEXTAUTH_SECRET" />
-          <EnvCheck label="GOOGLE_API_KEY" />
-          <EnvCheck label="OPENAI_API_KEY" />
+          <EnvCheck label="DATABASE_URL" isSet={config.DATABASE_URL} />
+          <EnvCheck label="REDIS_URL" isSet={config.REDIS_URL} />
+          <EnvCheck label="QDRANT_URL" isSet={config.QDRANT_URL} />
+          <EnvCheck label="GITHUB_APP_ID" isSet={config.GITHUB_APP_ID} />
+          <EnvCheck label="GITHUB_PRIVATE_KEY" isSet={config.GITHUB_PRIVATE_KEY} />
+          <EnvCheck label="ENCRYPTION_KEY" isSet={config.ENCRYPTION_KEY} />
+          <EnvCheck label="NEXTAUTH_SECRET" isSet={config.NEXTAUTH_SECRET} />
+          <EnvCheck label="GOOGLE_API_KEY" isSet={config.GOOGLE_API_KEY} />
+          <EnvCheck label="OPENAI_API_KEY" isSet={config.OPENAI_API_KEY} />
         </div>
       </div>
     </div>
@@ -103,11 +107,7 @@ function StatusBadge({ label, status }: { label: string; status: 'connected' | '
   );
 }
 
-function EnvCheck({ label }: { label: string }) {
-  // In client component, we can't check env vars directly
-  // This would need to be passed from server component
-  const isSet = true; // Placeholder - would be checked server-side
-  
+function EnvCheck({ label, isSet }: { label: string; isSet: boolean }) {
   return (
     <div className="flex items-center gap-2 p-2 rounded bg-muted/30">
       {isSet ? (

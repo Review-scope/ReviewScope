@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ChevronDown, 
@@ -41,6 +41,7 @@ type Repo = {
   fullName: string;
   isPrivate: boolean;
   status: 'active' | 'removed' | 'deleted';
+  isActive: boolean;
   indexedAt: Date | null;
   lastReviewAt: Date | null;
 };
@@ -73,14 +74,24 @@ export function AdminView({
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const [isLoading, setIsLoading] = useState<string | null>(null);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams(searchParams.toString()); // Clone existing params
-    if (searchTerm) params.set('q', searchTerm);
-    else params.delete('q');
-    params.set('page', '1'); // Reset to page 1 on search
-    router.push(`?${params.toString()}`);
-  };
+  // Debounce search update
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      const currentQ = searchParams.get('q') || '';
+      if (currentQ === searchTerm) return; // Prevent redundant update
+
+      const params = new URLSearchParams(searchParams.toString());
+      if (searchTerm) {
+        params.set('q', searchTerm);
+      } else {
+        params.delete('q');
+      }
+      params.set('page', '1'); // Reset to page 1 on search
+      router.replace(`?${params.toString()}`); // Use replace to avoid history stack spam
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm, router, searchParams]);
 
   const toggleExpand = (id: string) => {
     const newExpanded = new Set(expandedIds);
@@ -110,7 +121,7 @@ export function AdminView({
   return (
     <div className="space-y-6">
       {/* --- Search Bar --- */}
-      <form onSubmit={handleSearch} className="flex gap-2">
+      <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
@@ -121,10 +132,7 @@ export function AdminView({
             className="w-full pl-9 pr-4 py-2 bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         </div>
-        <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 font-medium">
-          Search
-        </button>
-      </form>
+      </div>
 
       {/* --- Main Installations Table --- */}
       <div className="bg-card border rounded-lg overflow-hidden shadow-sm">
@@ -237,9 +245,11 @@ export function AdminView({
                             </td>
                             <td className="py-2">
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-medium ${
-                                repo.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                repo.status !== 'active' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                                !repo.isActive ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400' :
+                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
                               }`}>
-                                {repo.status}
+                                {repo.status !== 'active' ? repo.status : (!repo.isActive ? 'inactive' : 'active')}
                               </span>
                             </td>
                             <td className="py-2 text-muted-foreground text-xs">

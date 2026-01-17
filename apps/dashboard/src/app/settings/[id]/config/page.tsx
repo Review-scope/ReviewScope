@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { notFound, redirect } from 'next/navigation';
 import { ChevronLeft, Settings2, ShieldCheck, Zap, Sparkles } from 'lucide-react';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import Link from 'next/link';
 import { ConfigForm } from './config-form';
 
@@ -100,6 +100,7 @@ export default async function ConfigPage({ params }: { params: { id: string } })
               model: config.model,
               customPrompt: config.customPrompt,
               apiKeyEncrypted: config.apiKeyEncrypted,
+              smartRouting: config.smartRouting,
             } : undefined} 
           />
         </div>

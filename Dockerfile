@@ -2,6 +2,9 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
+# Ensure .env files exist so scripts using --env-file flag don't crash when the file is missing
+RUN mkdir -p apps/api apps/worker apps/dashboard && \
+    touch apps/api/.env apps/worker/.env apps/dashboard/.env
 
 # --- Builder Stage ---
 FROM base AS builder
@@ -38,7 +41,7 @@ COPY --from=api-builder /app/apps/api ./apps/api
 COPY --from=api-builder /app/packages ./packages
 
 EXPOSE 3000
-CMD ["sh", "-c", "npm run db:migrate -w @reviewscope/api && node apps/api/dist/apps/api/src/index.js"]
+CMD ["sh", "-c", "npm run db:push -w @reviewscope/api && node apps/api/dist/apps/api/src/index.js"]
 
 # --- Worker Stage ---
 FROM builder AS worker-builder
@@ -60,6 +63,7 @@ RUN npm run build -w @reviewscope/dashboard
 FROM base AS dashboard
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 # Copy standalone build
 COPY --from=dashboard-builder /app/apps/dashboard/.next/standalone ./
