@@ -19,8 +19,7 @@ build/
 *.swp
 *.swo
 
-.dockerignore
-dockerfile
+
 
 # OS
 .DS_Store

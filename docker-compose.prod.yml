@@ -16,7 +16,8 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: Dockerfile
+      target: api
     container_name: reviewscope-api
     restart: always
     ports:
@@ -41,7 +42,8 @@ services:
   worker:
     build:
       context: .
-      dockerfile: apps/worker/Dockerfile
+      dockerfile: Dockerfile
+      target: worker
     container_name: reviewscope-worker
     restart: always
     environment:
@@ -61,7 +63,8 @@ services:
   dashboard:
     build:
       context: .
-      dockerfile: apps/dashboard/Dockerfile
+      dockerfile: Dockerfile
+      target: dashboard
     container_name: reviewscope-dashboard
     restart: always
     ports:
