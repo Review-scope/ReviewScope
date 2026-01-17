@@ -7,13 +7,13 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/index.ts",
-    "start": "node dist/apps/api/src/index.js",
-    "db:generate": "drizzle-kit generate:pg --schema ./src/db/schema.ts --out ./drizzle/migrations",
-    "db:migrate": "drizzle-kit migrate:pg",
-    "db:push": "drizzle-kit push:pg",
-    "db:studio": "drizzle-kit studio",
-    "db:drop": "drizzle-kit drop"
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "start": "node --env-file=.env dist/apps/api/src/index.js",
+    "db:generate": "node --env-file=.env node_modules/drizzle-kit/bin.js generate:pg --schema ./src/db/schema.ts --out ./drizzle/migrations",
+    "db:migrate": "node --env-file=.env node_modules/drizzle-kit/bin.js migrate:pg",
+    "db:push": "node --env-file=.env node_modules/drizzle-kit/bin.js push:pg",
+    "db:studio": "node --env-file=.env node_modules/drizzle-kit/bin.js studio",
+    "db:drop": "node --env-file=.env node_modules/drizzle-kit/bin.js drop"
   },
   "dependencies": {
     "@hono/node-server": "^1.8.0",
@@ -21,7 +21,6 @@
     "@octokit/webhooks": "^12.0.0",
     "@upstash/redis": "^1.28.0",
     "bullmq": "^5.0.0",
-    "dotenv": "^17.2.3",
     "drizzle-orm": "^0.29.5",
     "hono": "^4.0.0",
     "pg": "^8.16.3",

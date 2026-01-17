@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, timestamp, jsonb, uniqueIndex, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 /**
@@ -24,6 +24,10 @@ export const installations = pgTable('installations', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   settings: jsonb('settings').default({}),
+
+  // Limit enforcement
+  swapCount: integer('swap_count').default(0).notNull(),
+  lastSwapReset: timestamp('last_swap_reset').defaultNow(),
 });
 
 export const installationsRelations = relations(installations, ({ many }) => ({
@@ -59,6 +63,9 @@ export const repositories = pgTable('repositories', {
   // Status tracking: active (normal), removed (from app), deleted (repo gone)
   status: text('status', { enum: ['active', 'removed', 'deleted'] }).default('active').notNull(),
   
+  // Manual activation switch
+  isActive: boolean('is_active').default(false).notNull(),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   settings: jsonb('settings').default({}),

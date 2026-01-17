@@ -1,4 +1,3 @@
-import './env.js';
 import { Worker } from 'bullmq';
 import { processReviewJob } from './jobs/review.js';
 import { processIndexingJob } from './jobs/index.js';
@@ -107,20 +106,25 @@ export async function startWorker() {
   await chatWorkerInstance.waitUntilReady();
 
   console.warn('🚀 All ReviewScope Workers started');
-  const portEnv = process.env.PORT || '';
-  const portNum = parseInt(portEnv, 10);
-  if (!Number.isNaN(portNum) && (process.env.NODE_ENV || '') !== 'development') {
-    httpServer = http.createServer((req, res) => {
-      if (req.url && req.url.startsWith('/health')) {
-        res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok' }));
-        return;
-      }
-      res.writeHead(200);
-      res.end('OK');
-    });
-    httpServer.listen(portNum);
-  }
+  const portNum = Number(process.env.PORT) || 3001;
+  
+  httpServer = http.createServer((req, res) => {
+    if (req.url === '/health' || req.url === '/') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ 
+        status: 'ok', 
+        service: 'ReviewScope Worker',
+        timestamp: new Date().toISOString()
+      }));
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
+
+  httpServer.listen(portNum, '0.0.0.0', () => {
+    console.warn(`🚀 Worker Health Server running on port ${portNum}`);
+  });
   return workerInstance;
 }
 

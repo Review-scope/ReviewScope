@@ -1,0 +1,71 @@
+# To run:
+# docker compose -f docker-compose.dev.yml up --build
+
+# To stop:
+# docker compose -f docker-compose.dev.yml down
+
+services:
+  redis:
+    image: redis:alpine
+    container_name: reviewscope-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    restart: always
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: reviewscope-api-dev
+    ports:
+      - "3001:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=${DATABASE_URL}
+    command: npm run dev -w @reviewscope/api
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: reviewscope-worker-dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=${DATABASE_URL}
+    command: npm run dev -w @reviewscope/worker
+    depends_on:
+      - redis
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: reviewscope-dashboard-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/dashboard/.next
+    environment:
+      - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=${DATABASE_URL}
+    command: npm run dev -w @reviewscope/dashboard
+    depends_on:
+      - redis
+
+volumes:
+  redis_data_dev:

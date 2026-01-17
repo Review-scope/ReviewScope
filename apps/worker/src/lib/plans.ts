@@ -11,6 +11,7 @@ export interface PlanLimits {
   ragK: number;
   maxFiles: number;
   maxRepos: number;
+  maxMonthlyActivations: number;
   allowCustomPrompts: boolean;
   chatPerPRLimit: number | 'unlimited';
   allowOrg: boolean;
@@ -47,6 +48,7 @@ export function getPlanLimits(planId: number | null, expiresAt?: Date | null): P
         ragK: 8,
         maxFiles: 999999, // Effectively unlimited (with batching)
         maxRepos: 999999,
+        maxMonthlyActivations: 999999,
         allowCustomPrompts: true,
         chatPerPRLimit: 'unlimited',
         allowOrg: true,
@@ -59,6 +61,7 @@ export function getPlanLimits(planId: number | null, expiresAt?: Date | null): P
         ragK: 5,
         maxFiles: 100,
         maxRepos: 5,
+        maxMonthlyActivations: 20, // 5 active + 15 swaps
         allowCustomPrompts: true,
         chatPerPRLimit: 'unlimited',
         allowOrg: true,
@@ -72,6 +75,7 @@ export function getPlanLimits(planId: number | null, expiresAt?: Date | null): P
         ragK: 2,
         maxFiles: 30,
         maxRepos: 3,
+        maxMonthlyActivations: 5, // 3 active + 2 swaps
         allowCustomPrompts: false,
         chatPerPRLimit: 3,
         allowOrg: false,

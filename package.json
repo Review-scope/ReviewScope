@@ -47,7 +47,6 @@
     "react-dom": "19.2.3"
   },
   "dependencies": {
-    "@qdrant/js-client-rest": "^1.16.2",
-    "dotenv": "^17.2.3"
+    "@qdrant/js-client-rest": "^1.16.2"
   }
 }

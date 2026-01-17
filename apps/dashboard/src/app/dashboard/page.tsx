@@ -259,7 +259,7 @@ export default async function DashboardPage() {
                   <div className="mt-8 pt-6 border-t flex items-center justify-between">
                     <div className="flex -space-x-2">
                        {[1, 2, 3].map(i => (
-                         <div key={i} className="w-6 h-6 rounded-full border-2 border-background bg-zinc-200" />
+                         <div key={`${repo.id}-avatar-${i}`} className="w-6 h-6 rounded-full border-2 border-background bg-zinc-200" />
                        ))}
                        <div className="w-6 h-6 rounded-full border-2 border-background bg-zinc-100 flex items-center justify-center text-[8px] font-bold">+12</div>
                     </div>

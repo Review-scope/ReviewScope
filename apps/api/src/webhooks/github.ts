@@ -3,7 +3,6 @@ import { Webhooks } from '@octokit/webhooks';
 import { 
   enqueueReviewJob, 
   enqueueChatJob, 
-  enqueueIndexingJob,
   getReviewQueue,
   getIndexingQueue,
   getChatQueue 
@@ -13,7 +12,6 @@ import { eq, and, gte } from 'drizzle-orm';
 import { GitHubClient } from '../../../worker/src/lib/github.js';
 import { getPlanLimits } from '../../../worker/src/lib/plans.js';
 import { QdrantClient } from '@qdrant/js-client-rest';
-import { assertRepoQuotaByInstallationId, QuotaError } from '../lib/quota.js';
 
 
 const gh = new GitHubClient();
@@ -173,57 +171,29 @@ githubWebhook.post('/', async (c) => {
     const limits = getPlanLimits(dbInst.planId);
     
     // Check if this repository is already registered
-    const [existingRepo] = await db.select().from(repositories).where(
+    await db.select().from(repositories).where(
       and(
         eq(repositories.githubRepoId, repo.id),
         eq(repositories.installationId, dbInst.id)
       )
     );
 
-    if (!existingRepo) {
-      // New repo being added - check limit
-      const activeRepos = await db.select().from(repositories).where(
-        and(
-          eq(repositories.installationId, dbInst.id),
-          eq(repositories.status, 'active')
-        )
-      );
-
-      if (activeRepos.length >= limits.maxRepos) {
-        console.warn(`[Webhook] Aborting: installation ${dbInst.id} (${dbInst.accountName}) reached repo limit (${limits.maxRepos})`);
-        
-        // Notify user via GitHub Comment (only once per PR)
-        const octokit = await gh.getInstallationClient(installation.id);
-        await octokit.rest.issues.createComment({
-          owner: repo.owner.login,
-          repo: repo.name,
-          issue_number: pr.number,
-          body: `### 🛑 ReviewScope Limit Reached
-Your current **${limits.tier}** plan supports up to **${limits.maxRepos}** repositories. 
-
-This repository could not be connected because you have reached your plan's limit. 
-
-To enable reviews for this repository, please:
-1. [Upgrade your plan](${process.env.DASHBOARD_URL || '#'}/pricing)
-2. Disable an existing repository in the [Dashboard](${process.env.DASHBOARD_URL || '#'}/dashboard)`,
-        });
-        
-        return c.json({ status: 'limit_reached', type: 'max_repos' });
-      }
-    }
+    // [MODIFIED] No auto-quota check here. New repos are inserted as isActive: false.
+    // Quota is enforced at Activation time in Dashboard.
 
     const [dbRepo] = await db.insert(repositories).values({
       installationId: dbInst.id,
       githubRepoId: repo.id,
       fullName: repo.full_name,
+      // isActive defaults to false
     }).onConflictDoUpdate({
       target: repositories.githubRepoId,
-      set: { fullName: repo.full_name, status: 'active' }, // Ensure it's marked active if re-added
+      set: { fullName: repo.full_name, status: 'active' }, 
     }).returning();
 
 
-    if (dbRepo.status !== 'active') {
-      console.warn(`[Webhook] Skipping PR #${pr.number}: Repository ${repo.full_name} is ${dbRepo.status}`);
+    if (dbRepo.status !== 'active' || !dbRepo.isActive) {
+      console.warn(`[Webhook] Skipping PR #${pr.number}: Repository ${repo.full_name} is ${dbRepo.status} (Active: ${dbRepo.isActive})`);
       return c.json({ status: 'ignored_inactive_repo' });
     }
 
@@ -306,8 +276,8 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
       return c.json({ status: 'ignored_inactive_installation' });
     }
     
-    if (!dbRepo || dbRepo.status !== 'active') {
-      console.warn(`[Webhook] Skipping command in PR #${issue.number}: Repository ${repo.full_name} is ${dbRepo?.status || 'not found'}`);
+    if (!dbRepo || dbRepo.status !== 'active' || !dbRepo.isActive) {
+      console.warn(`[Webhook] Skipping command in PR #${issue.number}: Repository ${repo.full_name} is ${dbRepo?.status || 'not found'} (Active: ${dbRepo?.isActive})`);
       return c.json({ status: 'ignored_inactive_repo' });
     }
 
@@ -459,56 +429,31 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
     if (action === 'added' && repositories_added) {
       console.warn(`[Webhook] installation_repositories.added: Adding ${repositories_added.length} repos to installation ${installation.id}`);
       
-      // Check if installation has an API key configured OR server has fallback keys
-      const [config] = await db.select().from(configs).where(eq(configs.installationId, dbInst.id)).limit(1);
-      const hasUserKey = !!config?.apiKeyEncrypted;
-      const hasServerKey = !!(process.env.GOOGLE_API_KEY || process.env.OPENAI_API_KEY);
-      const canIndex = hasUserKey || hasServerKey;
+      // [MODIFIED] Removed auto-quota check and auto-indexing.
+      // Repos are added as isActive: false. User must activate them in Dashboard.
+      
       const limits = getPlanLimits(dbInst.planId);
       
       for (const repo of repositories_added) {
-        // Enforce max repos before adding
-        try {
-          await assertRepoQuotaByInstallationId(dbInst.id);
-        } catch (e) {
-          const err = e as QuotaError;
-          console.warn(`[Webhook] Repo add blocked by quota: ${repo.full_name} — ${err.message}`);
-          // Skip insertion; report limit status
-          continue;
-        }
-
         await db
           .insert(repositories)
           .values({
             installationId: dbInst.id,
             githubRepoId: repo.id,
             fullName: repo.full_name,
+            // isActive: false (default)
           })
           .onConflictDoUpdate({
             target: repositories.githubRepoId,
             set: { fullName: repo.full_name, installationId: dbInst.id },
           });
-
-        // If any API key exists (user or server), trigger indexing
-        if (canIndex) {
-          console.warn(`[Webhook] Enqueueing indexing for newly added repo: ${repo.full_name} (using ${hasUserKey ? 'user' : 'server'} key)`);
-          await enqueueIndexingJob({
-            installationId: installation.id,
-            repositoryId: repo.id,
-            repositoryFullName: repo.full_name,
-          });
-        }
       }
 
-      if (!canIndex) {
-        console.warn(`[Webhook] Skipping indexing - no API key configured (user or server)`);
-      }
-
-      // Provide feedback including limit info
+      // Provide feedback
       return c.json({ 
         status: 'repositories_added', 
         count: repositories_added.length, 
-        indexed: canIndex,
+        indexed: false, // No longer auto-indexing
         maxRepos: limits.maxRepos,
       });
     }

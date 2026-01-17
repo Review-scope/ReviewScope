@@ -1,12 +1,6 @@
 
 import { QdrantClient } from '@qdrant/js-client-rest';
-import dotenv from 'dotenv';
 import path from 'path';
-
-// Load .env from workspace root
-// Since we are running from root d:\code\ReviewScope, process.cwd() is root. 
-// Just look for .env in current dir
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const url = process.env.QDRANT_URL;
 const apiKey = process.env.QDRANT_API_KEY;

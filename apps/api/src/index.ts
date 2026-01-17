@@ -1,4 +1,3 @@
-import './env.js';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
@@ -21,11 +20,7 @@ app.route('/api/v1/config', configRoutes);
 // Root
 app.get('/', (c) => c.json({ name: 'ReviewScope API', version: '0.0.1' }));
 
-if (!process.env.PORT) {
-  throw new Error('PORT is not defined in the environment');
-}
-
-const port = parseInt(process.env.PORT, 10);
+const port = Number(process.env.PORT) || 3000;
 
 console.warn(`🚀 ReviewScope API running on port ${port}`);
 
