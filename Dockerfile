@@ -41,7 +41,9 @@ COPY --from=api-builder /app/apps/api ./apps/api
 COPY --from=api-builder /app/packages ./packages
 
 EXPOSE 3000
-CMD ["sh", "-c", "npm run db:push -w @reviewscope/api && node apps/api/dist/apps/api/src/index.js"]
+# CMD ["sh", "-c", "npm run db:push -w @reviewscope/api && node apps/api/dist/apps/api/src/index.js"]
+# CMD ["sh", "-c", "node apps/api/dist/apps/api/src/index.js"]
+CMD ["node", "apps/api/dist/apps/api/src/index.js"]
 
 # --- Worker Stage ---
 FROM builder AS worker-builder

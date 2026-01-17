@@ -231,99 +231,136 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {configuredRepos.map((repo) => (
-              <div 
-                key={repo.id} 
-                className="group relative border-2 border-transparent hover:border-primary/20 rounded-[2rem] p-8 bg-card shadow-sm hover:shadow-2xl transition-all hover:-translate-y-1 overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/2 rounded-full -mr-16 -mt-16 group-hover:bg-primary/5 transition-colors"></div>
-                
-                <div className="relative z-10">
-                  <div className="flex items-start justify-between mb-8">
-                    <Link href={`/repositories/${repo.id}`} className="p-4 rounded-3xl bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner cursor-pointer">
-                      <Github className="w-6 h-6" />
+          <div className="border border-border/60 rounded-xl md:rounded-3xl md:border-2 md:overflow-hidden md:bg-card md:shadow-sm">
+            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-[11px] font-black uppercase tracking-widest text-muted-foreground/80 bg-muted/60">
+              <span className="col-span-5">Repository</span>
+              <span className="col-span-2">Owner</span>
+              <span className="col-span-2">Status</span>
+              <span className="col-span-2">Activation</span>
+              <span className="col-span-1 text-right">Actions</span>
+            </div>
+
+            <div className="divide-y divide-border/70">
+              {configuredRepos.map((repo) => (
+                <div
+                  key={repo.id}
+                  className="group px-4 md:px-6 py-4 flex flex-col gap-3 md:grid md:grid-cols-12 md:items-center md:gap-4 md:hover:bg-muted/40 transition-colors"
+                >
+                  <div className="md:col-span-5 flex items-center gap-3">
+                    <Link
+                      href={`/repositories/${repo.id}`}
+                      className="p-3 rounded-2xl bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner cursor-pointer"
+                    >
+                      <Github className="w-5 h-5" />
                     </Link>
-                    
-                    <div className="scale-75 origin-top-right cursor-pointer">
-                      <ActivationToggle repoId={repo.id} isActive={repo.isActive} />
+                    <div className="space-y-1">
+                      <Link
+                        href={`/repositories/${repo.id}`}
+                        className="font-black text-lg tracking-tight truncate group-hover:text-primary transition-colors cursor-pointer"
+                      >
+                        {repo.fullName.split('/')[1]}
+                      </Link>
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
+                        {repo.fullName.split('/')[0]}
+                      </p>
                     </div>
                   </div>
-                  
-                  <Link href={`/repositories/${repo.id}`} className="block space-y-1 cursor-pointer">
-                    <h2 className="font-black text-2xl tracking-tight truncate group-hover:text-primary transition-colors">
-                      {repo.fullName.split('/')[1]}
-                    </h2>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest opacity-60">
-                      {repo.fullName.split('/')[0]}
-                    </p>
-                  </Link>
 
-                  <div className="mt-8 pt-6 border-t flex items-center justify-between">
-                    <div className="flex flex-col gap-1">
-                      {!repo.isActive ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-600 text-[9px] font-black uppercase tracking-widest border border-zinc-200 w-fit">
-                           <Power className="w-3 h-3" /> Inactive
-                        </div>
-                      ) : repo.indexedAt ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-[9px] font-black uppercase tracking-widest border border-green-200 w-fit">
-                          <CheckCircle2 className="w-3 h-3" /> Indexed
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-[9px] font-black uppercase tracking-widest border border-blue-200 animate-pulse w-fit">
-                          <Clock className="w-3 h-3" /> Indexing
-                        </div>
-                      )}
+                  <div className="md:col-span-2 text-sm font-mono text-muted-foreground/90">
+                    @{repo.fullName.split('/')[0]}
+                  </div>
+
+                  <div className="md:col-span-2 flex items-center gap-2">
+                    {!repo.isActive ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-500 text-[10px] font-black uppercase tracking-widest border border-zinc-200 w-fit">
+                        —
+                      </div>
+                    ) : repo.indexedAt ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-black uppercase tracking-widest border border-green-200 w-fit">
+                        <CheckCircle2 className="w-3 h-3" /> Indexed
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-widest border border-blue-200 animate-pulse w-fit">
+                        <Clock className="w-3 h-3" /> Indexing
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2 flex items-center gap-2">
+                    <div className="scale-90 origin-left cursor-pointer">
+                      <ActivationToggle repoId={repo.id} isActive={repo.isActive} />
                     </div>
-                    
-                    <Link href={`/repositories/${repo.id}`} className="flex items-center gap-1 text-xs font-black uppercase tracking-widest text-primary opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1 cursor-pointer">
+                    <span className="sr-only">Toggle activation</span>
+                  </div>
+
+                  <div className="md:col-span-1 flex md:justify-end">
+                    <Link
+                      href={`/repositories/${repo.id}`}
+                      className="flex items-center gap-1 text-[11px] font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                    >
                       Explore <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {(() => {
-              const canConnect = userInstallations.some(inst => {
-                const limit = planLimits[inst.planName || 'Free'].maxRepos;
-                const count = userRepos.filter(r => r.installationId === inst.id).length;
-                return count < limit;
-              });
+              {(() => {
+                const canConnect = userInstallations.some(inst => {
+                  const limit = planLimits[inst.planName || 'Free'].maxRepos;
+                  const count = userRepos.filter(r => r.installationId === inst.id).length;
+                  return count < limit;
+                });
 
-              if (canConnect) {
+                if (canConnect) {
+                  return (
+                    <a
+                      href={`https://github.com/apps/review-scope/installations/new`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 md:px-6 py-5 flex flex-col gap-2 md:grid md:grid-cols-12 md:items-center md:gap-4 bg-muted/20 md:bg-muted/30 md:hover:bg-primary/10 transition-colors cursor-pointer rounded-b-xl md:rounded-none"
+                    >
+                      <div className="md:col-span-5 flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center group-hover:bg-primary/20 text-primary transition-all">
+                          <Sparkles className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="font-black text-base uppercase tracking-tight italic">Connect New Repository</div>
+                          <p className="text-xs text-muted-foreground font-medium max-w-xl">Expand your AI coverage by installing the GitHub App.</p>
+                        </div>
+                      </div>
+                      <div className="md:col-span-2 text-sm font-mono text-muted-foreground/90">Available slot</div>
+                      <div className="md:col-span-2 flex items-center gap-2 text-sm font-semibold text-primary">Ready</div>
+                      <div className="md:col-span-2"></div>
+                      <div className="md:col-span-1 flex md:justify-end">
+                        <span className="text-[11px] font-black uppercase tracking-widest text-primary">Install</span>
+                      </div>
+                    </a>
+                  );
+                }
                 return (
-                  <a 
-                    href={`https://github.com/apps/review-scope/installations/new`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group relative border-2 border-dashed border-border rounded-4xl p-8 flex flex-col items-center justify-center text-center space-y-4 hover:border-primary/50 hover:bg-primary/5 transition-all min-h-[250px] cursor-pointer"
+                  <Link
+                    href="/pricing"
+                    className="px-4 md:px-6 py-5 flex flex-col gap-2 md:grid md:grid-cols-12 md:items-center md:gap-4 bg-amber-50/80 md:bg-amber-50/60 md:hover:bg-amber-100 transition-colors cursor-pointer rounded-b-xl md:rounded-none"
                   >
-                    <div className="w-16 h-16 rounded-3xl bg-muted group-hover:bg-primary/10 group-hover:text-primary flex items-center justify-center transition-all">
-                      <Sparkles className="w-8 h-8" />
+                    <div className="md:col-span-5 flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                        <AlertCircle className="w-6 h-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="font-black text-base uppercase tracking-tight italic text-amber-900">Repository Limit Reached</div>
+                        <p className="text-xs text-amber-800 font-medium max-w-xl">Upgrade your plan to add more repositories to ReviewScope.</p>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <h3 className="font-black text-lg uppercase tracking-tight italic">Connect New <br />Repository</h3>
-                      <p className="text-xs text-muted-foreground font-medium max-w-[180px]">Expand your AI coverage by installing the GitHub App.</p>
+                    <div className="md:col-span-2 text-sm font-mono text-amber-800/90">Upgrade needed</div>
+                    <div className="md:col-span-2 flex items-center gap-2 text-sm font-semibold text-amber-700">Locked</div>
+                    <div className="md:col-span-2"></div>
+                    <div className="md:col-span-1 flex md:justify-end">
+                      <span className="text-[11px] font-black uppercase tracking-widest text-amber-700">Upgrade</span>
                     </div>
-                  </a>
+                  </Link>
                 );
-              }
-              return (
-                <Link 
-                  href="/pricing"
-                  className="group relative border-2 border-dashed border-amber-300 rounded-4xl p-8 flex flex-col items-center justify-center text-center space-y-4 bg-amber-50/50 hover:bg-amber-100 transition-all min-h-[250px] cursor-pointer"
-                >
-                  <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-700 flex items-center justify-center transition-all">
-                    <AlertCircle className="w-8 h-8" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="font-black text-lg uppercase tracking-tight italic text-amber-900">Repository Limit Reached</h3>
-                    <p className="text-xs text-amber-800 font-medium max-w-[220px]">Upgrade your plan to add more repositories to ReviewScope.</p>
-                  </div>
-                </Link>
-              );
-            })()}
+              })()}
+            </div>
           </div>
         </section>
 
