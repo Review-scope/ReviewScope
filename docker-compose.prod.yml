@@ -34,6 +34,7 @@ services:
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_API_KEY=${QDRANT_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DASHBOARD_URL=${DASHBOARD_URL}
     depends_on:
       - redis
 
@@ -53,6 +54,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - DASHBOARD_URL=${DASHBOARD_URL}
     depends_on:
       - redis
 
