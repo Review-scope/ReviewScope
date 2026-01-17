@@ -1,5 +1,6 @@
 import { db, installations, repositories, reviews, configs, marketplaceEvents } from '@/lib/db';
 import { getServerSession } from 'next-auth';
+import { Suspense } from 'react';
 import { authOptions } from '../api/auth/[...nextauth]/route';
 import { redirect } from 'next/navigation';
 import { count, desc, sql, eq, gte, and, isNotNull, ilike, or } from 'drizzle-orm';
@@ -287,11 +288,17 @@ export default async function AdminPage({
 
       {/* Installations and Repositories Management */}
       <section>
-        <AdminView 
-          data={transformedData}
-          page={page}
-          totalPages={totalPages}
-        />
+        <Suspense fallback={
+          <div className="h-96 flex items-center justify-center border rounded-xl bg-muted/10">
+            <Activity className="w-8 h-8 text-primary animate-spin" />
+          </div>
+        }>
+          <AdminView 
+            data={transformedData}
+            page={page}
+            totalPages={totalPages}
+          />
+        </Suspense>
       </section>
 
       {/* Review Activity */}
