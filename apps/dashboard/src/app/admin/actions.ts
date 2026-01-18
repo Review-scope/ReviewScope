@@ -259,6 +259,33 @@ export async function toggleGlobalIndexing(enabled: boolean) {
   return { success: true, enabled };
 }
 
+export async function updateInstallationPlan(installationId: string, planName: string) {
+  await requireAdmin();
+  console.log(`[Admin] Plan update requested for installation: ${installationId} to ${planName}`);
+
+  // Map plan names to GitHub Marketplace IDs
+  const PLAN_MAP: Record<string, number> = {
+    'Free': 3,
+    'Pro': 7,
+    'Team': 8
+  };
+
+  const planId = PLAN_MAP[planName] || 3;
+
+  await db.update(installations).set({
+    planName,
+    planId,
+    status: 'active',
+    swapCount: 0,
+    lastSwapReset: new Date(),
+    expiresAt: null, // Clear expiration for manual admin updates
+    updatedAt: new Date(),
+  }).where(eq(installations.id, installationId));
+
+  revalidatePath('/admin');
+  return { success: true };
+}
+
 // Helper to check global settings (for use in worker)
 export async function getGlobalSettings() {
   // No admin check needed here as this is a read-only helper for workers/internals

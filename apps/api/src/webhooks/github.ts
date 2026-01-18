@@ -188,7 +188,11 @@ githubWebhook.post('/', async (c) => {
       // isActive defaults to false
     }).onConflictDoUpdate({
       target: repositories.githubRepoId,
-      set: { fullName: repo.full_name, status: 'active' }, 
+      set: { 
+        fullName: repo.full_name, 
+        installationId: dbInst.id,
+        status: 'active' 
+      }, 
     }).returning();
 
 
@@ -200,49 +204,48 @@ githubWebhook.post('/', async (c) => {
     const [config] = await db.select().from(configs).where(eq(configs.installationId, dbInst.id)).limit(1);
 
     if (!config?.apiKeyEncrypted) {
-      console.warn(`[Webhook] Skipping review for ${repo.full_name} - No API key configured`);
-      const octokit = await gh.getInstallationClient(installation.id);
-      await octokit.rest.issues.createComment({
-        owner: repo.owner.login,
-        repo: repo.name,
-        issue_number: pr.number,
-        body: `### ⚠️ ReviewScope: API Key Missing
-AI-powered review was skipped because no API key has been configured for this installation.
-
-Please [setup your API key in the dashboard](http://localhost:3000/users/${dbInst.id}/config) to enable automated reviews.`,
-      });
-      return c.json({ status: 'skipped_no_config' });
+      console.warn(`[Webhook] No user API key configured for ${repo.full_name}. Proceeding with system fallback if available.`);
     }
 
     // Check daily limit
     const limitExceeded = await checkDailyLimit(dbInst.id, limits);
     if (limitExceeded) {
       console.warn(`[Webhook] Daily limit exceeded for installation ${dbInst.id} (${limits.tier} tier)`);
-      const octokit = await gh.getInstallationClient(installation.id);
-      await octokit.rest.issues.createComment({
-        owner: repo.owner.login,
-        repo: repo.name,
-        issue_number: pr.number,
-        body: `### 📊 ReviewScope Daily Limit Reached
+      try {
+        const octokit = await gh.getInstallationClient(installation.id);
+        await octokit.rest.issues.createComment({
+          owner: repo.owner.login,
+          repo: repo.name,
+          issue_number: pr.number,
+          body: `### 📊 ReviewScope Daily Limit Reached
 Your **${limits.tier}** plan allows **${limits.chatPerPRLimit}** reviews per day. You've reached today's limit.
 
 Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${process.env.DASHBOARD_URL || '#'}/pricing) for higher limits.`,
-      });
+        });
+      } catch (err: any) {
+        console.error(`[Webhook] Failed to post limit-exceeded comment: ${err.message}`);
+      }
       return c.json({ status: 'daily_limit_exceeded' });
     }
 
-    await enqueueReviewJob({
-      jobVersion: 1,
-      installationId: installation.id,
-      repositoryId: repo.id,
-      repositoryFullName: repo.full_name,
-      prNumber: pr.number,
-      prTitle: pr.title,
-      prBody: pr.body || '',
-      headSha: pr.head.sha,
-      baseSha: pr.base.sha,
-      deliveryId,
-    });
+    try {
+      await enqueueReviewJob({
+        jobVersion: 1,
+        installationId: installation.id,
+        repositoryId: repo.id,
+        repositoryFullName: repo.full_name,
+        prNumber: pr.number,
+        prTitle: pr.title,
+        prBody: pr.body || '',
+        headSha: pr.head.sha,
+        baseSha: pr.base.sha,
+        deliveryId,
+      });
+      console.warn(`[Webhook] Successfully enqueued review job for PR #${pr.number}`);
+    } catch (err: any) {
+      console.error(`[Webhook] Failed to enqueue review job: ${err.message}`);
+      return c.json({ error: 'Failed to enqueue review job' }, 500);
+    }
 
     return c.json({ status: 'queued', prNumber: pr.number });
   }
@@ -260,7 +263,7 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
       return c.json({ status: 'ignored', reason: 'no_mention' });
     }
 
-    console.warn(`Command received in PR #${issue.number}: ${body}`);
+    console.warn(`[Webhook] Command received in PR #${issue.number}: ${body}`);
 
     // Check DB status before enqueuing
     const [dbInst] = await db.select().from(installations).where(eq(installations.githubInstallationId, installation.id));
@@ -281,33 +284,39 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
       return c.json({ status: 'ignored_inactive_repo' });
     }
 
-    if (body.includes('re-review')) {
-      const [owner, name] = repo.full_name.split('/');
-      const pr = await gh.getPullRequest(installation.id, owner, name, issue.number);
-      
-      await enqueueReviewJob({
-        jobVersion: 1,
-        installationId: installation.id,
-        repositoryId: repo.id,
-        repositoryFullName: repo.full_name,
-        prNumber: issue.number,
-        prTitle: pr.title,
-        prBody: pr.body || '',
-        headSha: pr.head.sha,
-        baseSha: pr.base.sha,
-        deliveryId: `re-review-${Date.now()}`,
-      });
-      console.warn(`[Queue] Re-review enqueued for PR #${issue.number}`);
-    } else {
-      // 💬 CHAT MODE: Treat as a question
-      await enqueueChatJob({
-        installationId: installation.id,
-        repositoryId: repo.id,
-        repositoryFullName: repo.full_name,
-        prNumber: issue.number,
-        userQuestion: comment.body,
-        commentId: comment.id,
-      });
+    try {
+      if (body.includes('re-review')) {
+        const [owner, name] = repo.full_name.split('/');
+        const pr = await gh.getPullRequest(installation.id, owner, name, issue.number);
+        
+        await enqueueReviewJob({
+          jobVersion: 1,
+          installationId: installation.id,
+          repositoryId: repo.id,
+          repositoryFullName: repo.full_name,
+          prNumber: issue.number,
+          prTitle: pr.title,
+          prBody: pr.body || '',
+          headSha: pr.head.sha,
+          baseSha: pr.base.sha,
+          deliveryId: `re-review-${Date.now()}`,
+        });
+        console.warn(`[Webhook] Re-review enqueued for PR #${issue.number}`);
+      } else {
+        // 💬 CHAT MODE: Treat as a question
+        await enqueueChatJob({
+          installationId: installation.id,
+          repositoryId: repo.id,
+          repositoryFullName: repo.full_name,
+          prNumber: issue.number,
+          userQuestion: comment.body,
+          commentId: comment.id,
+        });
+        console.warn(`[Webhook] Chat job enqueued for PR #${issue.number}`);
+      }
+    } catch (err: any) {
+      console.error(`[Webhook] Failed to enqueue command job: ${err.message}`);
+      return c.json({ error: 'Failed to enqueue command job' }, 500);
     }
 
     return c.json({ status: 'command_received' });
@@ -408,7 +417,11 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
             fullName: repo.full_name,
           }).onConflictDoUpdate({
             target: repositories.githubRepoId,
-            set: { fullName: repo.full_name },
+            set: { 
+              fullName: repo.full_name,
+              installationId: dbInst.id,
+              status: 'active'
+            },
           });
         }
       }
@@ -445,7 +458,11 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
           })
           .onConflictDoUpdate({
             target: repositories.githubRepoId,
-            set: { fullName: repo.full_name, installationId: dbInst.id },
+            set: { 
+              fullName: repo.full_name, 
+              installationId: dbInst.id,
+              status: 'active'
+            },
           });
       }
 

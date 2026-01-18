@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import Link from 'next/link';
 import { ConfigForm } from './config-form';
+import { getUserOrgIds } from '@/lib/github';
 
 export default async function ConfigPage({ params }: { params: { id: string } }) {
   const { id } = await params;
@@ -13,8 +14,13 @@ export default async function ConfigPage({ params }: { params: { id: string } })
 
   if (!session?.user) redirect('/signin');
 
+  // @ts-expect-error session.accessToken exists
+  const accessToken = session.accessToken;
   // @ts-expect-error session.user.id
   const githubUserId = parseInt(session.user.id);
+
+  const orgIds = accessToken ? await getUserOrgIds(accessToken) : [];
+  const allAccountIds = [githubUserId, ...orgIds];
 
   const [installation] = await db
     .select()
@@ -22,7 +28,7 @@ export default async function ConfigPage({ params }: { params: { id: string } })
     .where(eq(installations.id, id))
     .limit(1);
 
-  if (!installation || installation.githubAccountId !== githubUserId) notFound();
+  if (!installation || !allAccountIds.includes(installation.githubAccountId || 0)) notFound();
 
   const [config] = await db
     .select()

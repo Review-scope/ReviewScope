@@ -12,6 +12,7 @@ export interface ChatOptions {
   model: string;
   temperature?: number;
   maxTokens?: number;
+  responseFormat?: 'text' | 'json';
 }
 
 export interface ChatResponse {

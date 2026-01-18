@@ -2,8 +2,9 @@
 import { Activity, AlertCircle, ArrowRight, Building2, Github, LayoutGrid, LogIn, Settings, Shield, Sparkles, User } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../api/auth/[...nextauth]/route';
-import { eq, and, desc, count } from 'drizzle-orm';
+import { eq, and, desc, count, inArray } from 'drizzle-orm';
 import Link from 'next/link';
+import { getUserOrgIds } from '@/lib/github';
 
 // Plan limits mapping
 const planLimits: { [key: string]: { maxRepos: number } } = {
@@ -38,15 +39,20 @@ export default async function SettingsPage() {
     );
   }
 
+  // @ts-expect-error session.accessToken exists
+  const accessToken = session.accessToken;
   // @ts-expect-error session.user.id
   const githubUserId = parseInt(session.user.id);
+
+  const orgIds = accessToken ? await getUserOrgIds(accessToken) : [];
+  const allAccountIds = [githubUserId, ...orgIds];
 
   const userInstallations = await db
     .select()
     .from(installations)
     .where(
       and(
-        eq(installations.githubAccountId, githubUserId),
+        inArray(installations.githubAccountId, allAccountIds),
         eq(installations.status, 'active')
       )
     )

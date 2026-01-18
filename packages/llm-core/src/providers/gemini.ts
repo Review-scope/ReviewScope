@@ -12,18 +12,19 @@ export class GeminiProvider implements LLMProvider, EmbeddingProvider {
   }
 
   async chat(messages: Message[], options: ChatOptions): Promise<ChatResponse> {
-    const model = this.client.getGenerativeModel({ model: options.model });
-
-    // Convert messages to Gemini format
     const systemMessage = messages.find((m) => m.role === 'system');
     const userMessages = messages.filter((m) => m.role !== 'system');
 
-    // Build the prompt with system context
-    let prompt = '';
-    if (systemMessage) {
-      prompt += `Instructions: ${systemMessage.content}\n\n`;
-    }
+    const model = this.client.getGenerativeModel({ 
+      model: options.model,
+      systemInstruction: systemMessage ? {
+        role: 'system',
+        parts: [{ text: systemMessage.content }]
+      } : undefined
+    });
 
+    // Convert messages to Gemini format
+    let prompt = '';
     for (const msg of userMessages) {
       if (msg.role === 'user') {
         prompt += `User: ${msg.content}\n`;
@@ -37,6 +38,7 @@ export class GeminiProvider implements LLMProvider, EmbeddingProvider {
       generationConfig: {
         temperature: options.temperature ?? 0.3,
         maxOutputTokens: options.maxTokens,
+        responseMimeType: options.responseFormat === 'json' ? 'application/json' : 'text/plain',
       },
     });
 

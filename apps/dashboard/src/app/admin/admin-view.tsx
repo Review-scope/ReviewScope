@@ -15,7 +15,8 @@ import {
   reindexInstallation, 
   disableInstallation, 
   reindexRepository, 
-  clearRepositoryVectors 
+  clearRepositoryVectors,
+  updateInstallationPlan
 } from './actions';
 
 const timeAgo = (date: Date | null) => {
@@ -189,7 +190,21 @@ export function AdminView({
                 )}
               </div>
 
-              <div className="text-sm font-medium">{inst.planName || 'Free'}</div>
+              <div className="text-sm">
+                <select 
+                  value={inst.planName || 'Free'} 
+                  onChange={(e) => {
+                    const newPlan = e.target.value;
+                    handleAction(async () => updateInstallationPlan(inst.id, newPlan), inst.id, `Plan change to ${newPlan} for ${inst.accountName}`);
+                  }}
+                  disabled={isLoading === inst.id}
+                  className="bg-transparent border-none p-0 font-medium focus:ring-0 cursor-pointer hover:text-primary transition-colors appearance-none"
+                >
+                  <option value="Free">Free</option>
+                  <option value="Pro">Pro</option>
+                  <option value="Team">Team</option>
+                </select>
+              </div>
               <div className="text-sm text-muted-foreground">{timeAgo(inst.createdAt)}</div>
 
               <div className="flex justify-end gap-2">

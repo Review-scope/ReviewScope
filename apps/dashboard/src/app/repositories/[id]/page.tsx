@@ -1,11 +1,12 @@
 import { db, repositories, reviews, installations, configs } from '@/lib/db';
-import { eq, desc, and, isNotNull } from 'drizzle-orm';
+import { eq, desc, and, isNotNull, inArray } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../api/auth/[...nextauth]/route';
 import { ChevronLeft, GitPullRequest, CheckCircle2, XCircle, Clock, ExternalLink, Hash, Calendar, ArrowRight, Key } from 'lucide-react';
 import Link from 'next/link';
 import { clsx } from 'clsx';
+import { getUserOrgIds } from '@/lib/github';
 
 import { ActivationToggle } from './activation-toggle';
 
@@ -17,8 +18,13 @@ export default async function RepositoryPage({ params }: { params: { id: string 
 
   if (!session?.user) return notFound();
 
+  // @ts-expect-error session.accessToken exists
+  const accessToken = session.accessToken;
   // @ts-expect-error session.user.id
   const githubUserId = parseInt(session.user.id);
+
+  const orgIds = accessToken ? await getUserOrgIds(accessToken) : [];
+  const allAccountIds = [githubUserId, ...orgIds];
 
   const repo = await db.query.repositories.findFirst({
     where: and(
@@ -29,7 +35,7 @@ export default async function RepositoryPage({ params }: { params: { id: string 
   });
 
   
-  if (!repo || repo.installation.githubAccountId !== githubUserId || repo.installation.status !== 'active') return notFound();
+  if (!repo || !allAccountIds.includes(repo.installation.githubAccountId || 0) || repo.installation.status !== 'active') return notFound();
 
   const [config] = await db
     .select({ hasApiKey: isNotNull(configs.apiKeyEncrypted) })

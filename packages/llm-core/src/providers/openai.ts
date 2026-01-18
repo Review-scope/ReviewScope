@@ -21,6 +21,7 @@ export class OpenAIProvider implements LLMProvider, EmbeddingProvider {
       })),
       temperature: options.temperature ?? 0.3,
       max_tokens: options.maxTokens,
+      response_format: options.responseFormat === 'json' ? { type: 'json_object' } : undefined,
       stream: false, // Explicitly disabled
     });
 

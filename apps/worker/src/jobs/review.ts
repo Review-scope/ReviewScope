@@ -413,7 +413,30 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
 
     const mergeReadyEmoji = mergeReadinessDisplay === 'Looks Good' ? '✅ Ready' : (mergeReadinessDisplay === 'Blocked' ? '❌ Blocked' : '⚠️ Needs Changes');
 
+    const prBodyTrimmed = (data.prBody || '').trim();
+    const prDescription = prBodyTrimmed
+        ? (prBodyTrimmed.length > 800 ? `${prBodyTrimmed.slice(0, 800)}...` : prBodyTrimmed)
+        : 'No description provided.';
+
+    const changedFilePaths = filteredFiles.map(f => f.path);
+    const maxFilesToShow = 20;
+    const listedFiles = changedFilePaths.slice(0, maxFilesToShow);
+    const filesList = listedFiles.length > 0
+        ? listedFiles.map(p => `- ${p}`).join('\n') +
+          (changedFilePaths.length > listedFiles.length
+              ? `\n- ... and ${changedFilePaths.length - listedFiles.length} more`
+              : '')
+        : '- No files were selected for review.';
+
     let summaryBody = `## 🤖 ReviewScope AI Review
+
+### 📌 PR Details
+- Title: ${data.prTitle || '(no title)'}
+- Description:
+${prDescription}
+
+### 📂 Files Reviewed (${changedFilePaths.length})
+${filesList}
 
 ### 🔍 Overall Assessment
 - **Risk Level:** ${assessment.riskLevel}
@@ -605,20 +628,41 @@ Reviewer Version: 0.1.0
         summaryBody,
         validatedComments
       );
+    } else {
+      await gh.postReview(
+        data.installationId,
+        owner,
+        repo,
+        data.prNumber,
+        data.headSha,
+        summaryBody,
+        []
+      );
     }
 
     // Update DB with new findings and threads
     if (dbReviewId) {
-      // 1. Record Threads for new comments
       const newFindingsWithNewKeys = allFindings.filter(f => !existingThreads.some(t => t.issueKey === f.issueKey));
       if (newFindingsWithNewKeys.length > 0) {
-          await db.insert(commentThreads).values(newFindingsWithNewKeys.map(f => ({
+        await db
+          .insert(commentThreads)
+          .values(
+            newFindingsWithNewKeys.map(f => ({
               reviewId: dbReviewId!,
               issueKey: f.issueKey,
               filePath: f.file,
               line: f.line,
               status: 'open' as const,
-          })));
+            }))
+          )
+          .onConflictDoUpdate({
+            target: [commentThreads.issueKey],
+            set: {
+              reviewId: dbReviewId!,
+              status: 'open',
+              updatedAt: new Date(),
+            },
+          });
       }
 
       await db.update(reviews).set({

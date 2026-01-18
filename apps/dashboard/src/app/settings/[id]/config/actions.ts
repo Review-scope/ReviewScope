@@ -1,7 +1,7 @@
 'use server';
 
 import { db, configs, installations, repositories } from '@/lib/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { encrypt, decrypt } from '@reviewscope/security';
 import { revalidatePath } from 'next/cache';
@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../api/auth/[...nextauth]/route';
 import { redirect } from 'next/navigation';
 import { createProvider } from '@reviewscope/llm-core';
+import { getUserOrgIds } from '@/lib/github';
 
 const configSchema = z.object({
   provider: z.enum(['gemini', 'openai']),
@@ -80,15 +81,20 @@ async function verifyOwnership(installationId: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;
 
+  // @ts-expect-error session.accessToken exists
+  const accessToken = session.accessToken;
   // @ts-expect-error session.user.id
   const githubUserId = parseInt(session.user.id);
+
+  const orgIds = accessToken ? await getUserOrgIds(accessToken) : [];
+  const allAccountIds = [githubUserId, ...orgIds];
 
   const [installation] = await db
     .select()
     .from(installations)
     .where(and(
       eq(installations.id, installationId),
-      eq(installations.githubAccountId, githubUserId)
+      inArray(installations.githubAccountId, allAccountIds)
     ))
     .limit(1);
 
@@ -157,9 +163,27 @@ export async function updateConfig(installationId: string, formData: FormData) {
     console.warn(`[Config] Update successful. apiKeyChanged: ${apiKeyChanged}, newlyAdded: ${!existingConfig?.apiKeyEncrypted && !!apiKeyEncrypted}, shouldIndex: ${shouldIndex}`);
 
     if (shouldIndex) {
-      // Indexing is now handled automatically by the GitHub webhook
-      // when configuration is updated, or can be manually triggered via API
-      console.info(`[Config] Configuration updated for installation ${installationId}. Indexing will be triggered via webhook.`);
+      // Trigger indexing for all active repositories in this installation
+      try {
+        const activeRepos = await db
+          .select({ id: repositories.id })
+          .from(repositories)
+          .where(and(
+            eq(repositories.installationId, installationId),
+            eq(repositories.isActive, true),
+            eq(repositories.status, 'active')
+          ));
+
+        const apiUrl = process.env.INTERNAL_API_URL || 'http://localhost:3001';
+        for (const repo of activeRepos) {
+          fetch(`${apiUrl}/api/v1/jobs/index/${repo.id}`, { method: 'POST' }).catch(err => 
+            console.error(`[Config] Failed to trigger indexing for repo ${repo.id}:`, err)
+          );
+        }
+        console.info(`[Config] Triggered indexing for ${activeRepos.length} repos for installation ${installationId}`);
+      } catch (err) {
+        console.error('[Config] Failed to fetch repos for indexing trigger:', err);
+      }
     }
 
     revalidatePath(`/settings/${installationId}/config`);

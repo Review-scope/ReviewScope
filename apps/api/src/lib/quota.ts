@@ -9,7 +9,7 @@ const PLAN_LIMITS: { [key: string]: { maxRepos: number } } = {
 };
 
 function getPlanLimits(planName: string | null) {
-  return PLAN_LIMITS[planName || 'Free'];
+  return PLAN_LIMITS[planName || 'Free'] || PLAN_LIMITS.Free;
 }
 
 export class QuotaError extends Error {

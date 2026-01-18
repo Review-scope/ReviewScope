@@ -94,7 +94,7 @@ export async function startWorker() {
     if ((err as any).code === 'ECONNRESET') {
       return; 
     }
-    console.error(`${workerName} error:`, err.message);
+    console.error(`${workerName} error [${(err as any).code || 'NO_CODE'}]:`, err.message || err.toString());
   };
 
   workerInstance.on('error', (err) => handleConnectionError('Review Worker', err));

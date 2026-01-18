@@ -20,4 +20,4 @@ docker compose -f docker-compose.prod.yml up -d --build
 echo "✅ Deployment complete!"
 echo "   - Dashboard: http://localhost:3000"
 echo "   - API: http://localhost:3001"
-echo "   - Redis: Internal (redis:6379)"
+echo "   - Redis: localhost:6379"

@@ -2,10 +2,11 @@ import { db, repositories, installations, configs, reviews } from '@/lib/db';
 import { Github, CheckCircle2, AlertCircle, Clock, ArrowRight, Key, Zap, BarChart3, ShieldCheck, Search, Filter, Sparkles, Lock, Gauge, Layers, MessageSquare, Check, Power } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../api/auth/[...nextauth]/route';
-import { eq, isNotNull, and, count, desc } from 'drizzle-orm';
+import { eq, isNotNull, and, count, desc, inArray, or } from 'drizzle-orm';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ActivationToggle } from '../repositories/[id]/activation-toggle';
+import { getUserOrgIds } from '@/lib/github';
 
 // Plan limits mapping (must match worker/lib/plans.ts)
 const planLimits: { [key: string]: { maxRepos: number } } = {
@@ -23,19 +24,52 @@ export default async function DashboardPage() {
     redirect('/');
   }
 
+  // @ts-expect-error session.accessToken exists
+  const accessToken = session.accessToken;
   // @ts-expect-error session.user.id
   const githubUserId = parseInt(session.user.id);
 
-  // Fetch user's installations to check plan limits
+  // LONG TERM FIX: Fetch user's organizations to include those installations
+  const orgIds = accessToken ? await getUserOrgIds(accessToken) : [];
+  const allAccountIds = [githubUserId, ...orgIds];
+
+  // Fetch user's installations (Personal + Orgs)
   const userInstallations = await db
     .select()
     .from(installations)
     .where(
       and(
-        eq(installations.githubAccountId, githubUserId),
+        inArray(installations.githubAccountId, allAccountIds),
         eq(installations.status, 'active')
       )
     );
+
+  // SELF-HEALING: Re-associate repositories with the latest active installation
+  // This fixes orphaned repos from uninstalls/reinstalls
+  for (const inst of userInstallations) {
+    const accountId = inst.githubAccountId;
+    if (!accountId) continue;
+
+    // Get all installation IDs for this account
+    const allInstIdsForAccount = await db
+      .select({ id: installations.id })
+      .from(installations)
+      .where(eq(installations.githubAccountId, accountId));
+    
+    const ids = allInstIdsForAccount.map(i => i.id);
+    
+    if (ids.length > 1) {
+      // If there are multiple installations (old ones), move all active repos to the current active one
+      await db.update(repositories)
+        .set({ installationId: inst.id })
+        .where(
+          and(
+            inArray(repositories.installationId, ids),
+            eq(repositories.status, 'active')
+          )
+        );
+    }
+  }
 
   // Fetch repositories with config and review counts
   const userRepos = await db
@@ -53,7 +87,7 @@ export default async function DashboardPage() {
     .leftJoin(configs, eq(repositories.installationId, configs.installationId))
     .where(
       and(
-        eq(installations.githubAccountId, githubUserId),
+        inArray(installations.githubAccountId, allAccountIds),
         eq(installations.status, 'active'),
         eq(repositories.status, 'active')
       )
@@ -123,7 +157,8 @@ export default async function DashboardPage() {
         .filter(inst => inst.planName === 'Free' || !inst.planName)
         .map((inst) => {
           const activeCount = userRepos.filter(r => r.installationId === inst.id && r.isActive).length;
-          const limit = planLimits[inst.planName || 'Free'].maxRepos;
+          const limits = planLimits[inst.planName || 'Free'] || planLimits.Free;
+          const limit = limits.maxRepos;
           const isAtLimit = activeCount >= limit;
           
           return isAtLimit ? (
@@ -306,7 +341,8 @@ export default async function DashboardPage() {
 
               {(() => {
                 const canConnect = userInstallations.some(inst => {
-                  const limit = planLimits[inst.planName || 'Free'].maxRepos;
+                  const limits = planLimits[inst.planName || 'Free'] || planLimits.Free;
+                  const limit = limits.maxRepos;
                   const count = userRepos.filter(r => r.installationId === inst.id).length;
                   return count < limit;
                 });
@@ -382,11 +418,12 @@ export default async function DashboardPage() {
                 .filter(inst => inst.status === 'active')
                 .map((inst) => {
                   const plan = inst.planName || 'Free';
-                  const limits = {
+                  const allLimits: Record<string, any> = {
                     'Free': { files: 30, rag: 2, chat: 5, repos: 3, batch: false },
                     'Pro': { files: 100, rag: 5, chat: 20, repos: 5, batch: false },
                     'Team': { files: 'Unlimited', rag: 8, chat: 'Unlimited', repos: 'Unlimited', batch: true }
-                  }[plan as 'Free' | 'Pro' | 'Team'];
+                  };
+                  const limits = allLimits[plan] || allLimits.Free;
 
                   return (
                     <div key={inst.id} className="bg-card border-2 border-border/50 rounded-2xl p-6 space-y-4">

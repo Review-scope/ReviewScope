@@ -15,7 +15,7 @@ COPY packages/rules-engine/package.json ./packages/rules-engine/
 COPY packages/security/package.json ./packages/security/
 
 # Install dependencies (including dev deps for building)
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .

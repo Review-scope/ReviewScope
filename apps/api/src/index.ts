@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
 import { healthRoutes } from './routes/health.js';
 import { configRoutes } from './routes/config.js';
+import { jobRoutes } from './routes/jobs.js';
 import { githubWebhook } from './webhooks/github.js';
 
 const app = new Hono();
@@ -16,6 +17,7 @@ app.use('*', cors());
 app.route('/health', healthRoutes);
 app.route('/webhooks/github', githubWebhook);
 app.route('/api/v1/config', configRoutes);
+app.route('/api/v1/jobs', jobRoutes);
 
 // Root
 app.get('/', (c) => c.json({ name: 'ReviewScope API', version: '0.0.1' }));

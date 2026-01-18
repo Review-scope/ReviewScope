@@ -376,8 +376,21 @@ function normalizeSeverity(comment: ReviewComment): ReviewComment | null {
 }
 
 export function parseReviewResponse(response: string): ReviewResult {
+  // Robust JSON extraction
+  let jsonStr = response.trim();
+  
+  // 1. Try to find content within backticks
   const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const jsonStr = jsonMatch ? jsonMatch[1].trim() : response.trim();
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1].trim();
+  } else {
+    // 2. Try to find the first { and last }
+    const firstBrace = response.indexOf('{');
+    const lastBrace = response.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      jsonStr = response.substring(firstBrace, lastBrace + 1).trim();
+    }
+  }
 
   try {
     const parsed = JSON.parse(jsonStr);

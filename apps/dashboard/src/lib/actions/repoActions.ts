@@ -3,9 +3,10 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../app/api/auth/[...nextauth]/route';
 import { db, repositories, installations } from '@/lib/db';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getPlanLimits } from '../../../../worker/src/lib/plans';
+import { getUserOrgIds } from '../github';
 
 export async function toggleRepoActivation(repoId: string, isActive: boolean) {
   const session = await getServerSession(authOptions);
@@ -14,8 +15,13 @@ export async function toggleRepoActivation(repoId: string, isActive: boolean) {
     return { success: false, error: 'Unauthorized' };
   }
 
+  // @ts-expect-error session.accessToken exists
+  const accessToken = session.accessToken;
   // @ts-expect-error session.user.id
   const githubUserId = parseInt(session.user.id);
+
+  const orgIds = accessToken ? await getUserOrgIds(accessToken) : [];
+  const allAccountIds = [githubUserId, ...orgIds];
 
   // Get Repo and Installation
   const [repo] = await db
@@ -38,7 +44,7 @@ export async function toggleRepoActivation(repoId: string, isActive: boolean) {
     .where(
       and(
         eq(installations.id, repo.installationId),
-        eq(installations.githubAccountId, githubUserId)
+        inArray(installations.githubAccountId, allAccountIds)
       )
     );
 
@@ -123,6 +129,18 @@ export async function toggleRepoActivation(repoId: string, isActive: boolean) {
       .set({ swapCount: sql`${installations.swapCount} + 1` })
       .where(eq(installations.id, installation.id));
   });
+
+  // 4. Trigger Indexing Worker
+  try {
+    const apiUrl = process.env.INTERNAL_API_URL || 'http://localhost:3001';
+    await fetch(`${apiUrl}/api/v1/jobs/index/${repoId}`, {
+      method: 'POST',
+    });
+  } catch (err) {
+    console.error('Failed to trigger indexing worker:', err);
+    // We don't fail the activation if the worker trigger fails, 
+    // but the user might notice the worker didn't start.
+  }
 
   revalidatePath('/dashboard');
   revalidatePath(`/repositories/${repoId}`);

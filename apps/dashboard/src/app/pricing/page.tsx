@@ -2,24 +2,27 @@ import { Check, X, Shield, Star, Building2, HelpCircle } from "lucide-react";
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { db, installations } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
+import { getUserOrgIds } from "@/lib/github";
 
 export default async function PricingPage() {
   const session = await getServerSession(authOptions);
   const customerAccountId = (session?.user as any)?.id || 'CUSTOMER_ACCOUNT_ID';
 
-  // Fetch user's current installation/plan
-  let currentPlanId: number | null = null;
+  // Fetch user's current installations/plans
+  let activePlanIds: number[] = [];
   if (session?.user) {
-    const installation = await db
+    // @ts-expect-error session.accessToken exists
+    const accessToken = session.accessToken;
+    const orgIds = accessToken ? await getUserOrgIds(accessToken) : [];
+    const allAccountIds = [parseInt(customerAccountId), ...orgIds];
+
+    const currentInstallations = await db
       .select()
       .from(installations)
-      .where(eq(installations.githubAccountId, parseInt(customerAccountId)))
-      .limit(1);
+      .where(inArray(installations.githubAccountId, allAccountIds));
     
-    if (installation.length > 0) {
-      currentPlanId = installation[0].planId || 0;
-    }
+    activePlanIds = currentInstallations.map(inst => inst.planId || 0);
   }
   const tiers = [
     {
@@ -124,7 +127,7 @@ export default async function PricingPage() {
               </div>
             )}
 
-            {currentPlanId === tier.planId || (currentPlanId === 0 && tier.planId === 3) && (
+            {(activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)) && (
               <div className="absolute top-0 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-md">
                 ACTIVE PLAN
               </div>
@@ -162,18 +165,18 @@ export default async function PricingPage() {
             </ul>
 
             <a
-              href={(currentPlanId === tier.planId || (currentPlanId === 0 && tier.planId === 3)) ? '#' : tier.upgradeUrl}
-              target={(currentPlanId === tier.planId || (currentPlanId === 0 && tier.planId === 3)) ? undefined : '_blank'}
-              rel={(currentPlanId === tier.planId || (currentPlanId === 0 && tier.planId === 3)) ? undefined : 'noopener noreferrer'}
+              href={(activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)) ? '#' : tier.upgradeUrl}
+              target={(activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)) ? undefined : '_blank'}
+              rel={(activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)) ? undefined : 'noopener noreferrer'}
               className={`w-full py-4 rounded-xl font-bold text-base text-center transition-all ${
-                currentPlanId === tier.planId || (currentPlanId === 0 && tier.planId === 3)
+                activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)
                   ? 'bg-green-600 text-white cursor-default opacity-90 pointer-events-none'
                   : tier.featured 
                   ? "bg-white text-primary hover:bg-gray-100" 
                   : "bg-primary text-primary-foreground hover:opacity-90 shadow-lg"
               }`}
             >
-              {currentPlanId === tier.planId || (currentPlanId === 0 && tier.planId === 3) ? 'Current Plan' : tier.cta}
+              {activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3) ? 'Current Plan' : tier.cta}
             </a>
           </div>
         ))}

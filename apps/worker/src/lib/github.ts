@@ -229,6 +229,7 @@ export class GitHubClient {
     summary: string,
     comments: Array<{ path: string; line: number; body: string; side?: 'LEFT' | 'RIGHT'; start_line?: number }>
   ): Promise<void> {
+    console.warn(`[GitHub] Posting review to ${owner}/${repo}#${pullNumber} with ${comments.length} comments`);
     const octokit = await this.getInstallationClient(installationId);
     
     // Create the review

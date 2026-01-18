@@ -148,6 +148,7 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
   const response = await provider.chat(messages, {
     model: modelName,
     temperature: 0.2, // Low temp for code review precision
+    responseFormat: 'json',
   });
 
   // 4. Parse Response

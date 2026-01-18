@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { type ReviewComment } from '@reviewscope/llm-core';
 import { clsx } from 'clsx';
 import { FindingsToolbar } from '../findings-toolbar';
+import { getUserOrgIds } from '@/lib/github';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +18,13 @@ export default async function ReviewDetailsPage({ params }: { params: { id: stri
 
   if (!session?.user) return notFound();
 
+  // @ts-expect-error session.accessToken exists
+  const accessToken = session.accessToken;
   // @ts-expect-error session.user.id
   const githubUserId = parseInt(session.user.id);
+
+  const orgIds = accessToken ? await getUserOrgIds(accessToken) : [];
+  const allAccountIds = [githubUserId, ...orgIds];
 
   const review = await db.query.reviews.findFirst({
     where: eq(reviews.id, id),
@@ -32,7 +38,7 @@ export default async function ReviewDetailsPage({ params }: { params: { id: stri
   });
 
 
-  if (!review || review.repository.installation.githubAccountId !== githubUserId) return notFound();
+  if (!review || !allAccountIds.includes(review.repository.installation.githubAccountId || 0)) return notFound();
 
   const result = review.result as any;
   const comments = (result?.comments || []) as ReviewComment[];
