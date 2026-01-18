@@ -1,9 +1,9 @@
-import { db, installations, repositories, reviews, configs, marketplaceEvents } from '@/lib/db';
-import { getServerSession } from 'next-auth';
-import { Suspense } from 'react';
-import { authOptions } from '../api/auth/[...nextauth]/route';
-import { redirect } from 'next/navigation';
-import { count, desc, sql, eq, gte, and, isNotNull, ilike, or } from 'drizzle-orm';
+import { db, installations, repositories, reviews, configs, marketplaceEvents } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { Suspense } from "react";
+import { authOptions } from "../api/auth/[...nextauth]/authOptions";
+import { redirect } from "next/navigation";
+import { count, desc, sql, eq, gte, and, isNotNull, ilike, or } from "drizzle-orm";
 import { 
   Shield, 
   Users, 
@@ -23,6 +23,7 @@ import { ReviewActivity } from './review-activity';
 import { SafetyControls } from './safety-controls';
 import { SystemInfo } from './system-info';
 import { getGlobalSettings, getSystemConfigStatus } from './actions';
+import { getPlanLimits } from '../../../../worker/src/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,9 +60,7 @@ export default async function AdminPage({
 
   const whereClause = query ? or(
     ilike(installations.accountName, `%${query}%`),
-    // Search by numeric ID if query is a number
     !isNaN(Number(query)) ? eq(installations.githubInstallationId, Number(query)) : undefined,
-    // Search by repository name
     sql`${installations.id} IN (
       SELECT installation_id FROM repositories 
       WHERE full_name ILIKE ${`%${query}%`}
@@ -95,16 +94,16 @@ export default async function AdminPage({
     
     // Paginated installations with repositories
     db.query.installations.findMany({
-        where: whereClause,
-        limit: ITEMS_PER_PAGE,
-        offset: offset,
-        orderBy: [desc(installations.createdAt)],
-        with: {
-            repositories: {
-                where: repoWhereClause,
-                orderBy: [desc(repositories.indexedAt)]
-            }
-        }
+      where: whereClause,
+      limit: ITEMS_PER_PAGE,
+      offset: offset,
+      orderBy: [desc(installations.createdAt)],
+      with: {
+        repositories: {
+          where: repoWhereClause,
+          orderBy: [desc(repositories.indexedAt)],
+        },
+      },
     }),
     
     // Stats repos
@@ -168,6 +167,7 @@ export default async function AdminPage({
 
   // Transform for AdminView
   const transformedData = paginatedInstallations.map(inst => {
+    const limits = getPlanLimits(inst.planId);
     const config = configMap.get(inst.id);
     
     return {
@@ -176,6 +176,13 @@ export default async function AdminPage({
       accountName: inst.accountName,
       accountType: inst.accountType,
       planName: inst.planName,
+      planLimits: {
+        tier: limits.tier,
+        maxRepos: limits.maxRepos,
+        maxMonthlyActivations: limits.maxMonthlyActivations,
+      },
+      swapCount: inst.swapCount,
+      lastSwapReset: inst.lastSwapReset,
       status: inst.status,
       createdAt: inst.createdAt,
       hasApiKey: !!config?.apiKey,

@@ -53,11 +53,28 @@ type Installation = {
   accountName: string;
   accountType: 'User' | 'Organization';
   planName: string | null;
+  planLimits: {
+    tier: 'FREE' | 'PRO' | 'TEAM';
+    maxRepos: number;
+    maxMonthlyActivations: number;
+  };
+  swapCount: number;
+  lastSwapReset: Date | null;
   status: 'active' | 'suspended' | 'inactive' | 'deleted';
   hasApiKey: boolean;
   provider: string | null;
   createdAt: Date;
   repositories: Repo[];
+};
+
+const getPlanBadgeClasses = (tier: Installation['planLimits']['tier']) => {
+  if (tier === 'TEAM') {
+    return 'bg-purple-500/10 text-purple-600 dark:text-purple-300';
+  }
+  if (tier === 'PRO') {
+    return 'bg-blue-500/10 text-blue-600 dark:text-blue-300';
+  }
+  return 'bg-zinc-500/10 text-zinc-700 dark:text-zinc-300';
 };
 
 export function AdminView({ 
@@ -74,6 +91,7 @@ export function AdminView({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const [isLoading, setIsLoading] = useState<string | null>(null);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
 
   // Debounce search update
   useEffect(() => {
@@ -93,6 +111,13 @@ export function AdminView({
 
     return () => clearTimeout(handler);
   }, [searchTerm, router, searchParams]);
+
+  useEffect(() => {
+    if (!normalizedSearch) return;
+    if (expandedIds.size > 0) return;
+    if (!data.length) return;
+    setExpandedIds(new Set(data.map(inst => inst.id)));
+  }, [normalizedSearch, data, expandedIds]);
 
   const toggleExpand = (id: string) => {
     const newExpanded = new Set(expandedIds);
@@ -191,19 +216,38 @@ export function AdminView({
               </div>
 
               <div className="text-sm">
-                <select 
-                  value={inst.planName || 'Free'} 
-                  onChange={(e) => {
-                    const newPlan = e.target.value;
-                    handleAction(async () => updateInstallationPlan(inst.id, newPlan), inst.id, `Plan change to ${newPlan} for ${inst.accountName}`);
-                  }}
-                  disabled={isLoading === inst.id}
-                  className="bg-transparent border-none p-0 font-medium focus:ring-0 cursor-pointer hover:text-primary transition-colors appearance-none"
-                >
-                  <option value="Free">Free</option>
-                  <option value="Pro">Pro</option>
-                  <option value="Team">Team</option>
-                </select>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ${getPlanBadgeClasses(inst.planLimits.tier)}`}
+                    >
+                      {inst.planName || 'Free'}
+                    </span>
+                    <select
+                      value={inst.planName || 'Free'}
+                      onChange={(e) => {
+                        const newPlan = e.target.value;
+                        handleAction(
+                          async () => updateInstallationPlan(inst.id, newPlan),
+                          inst.id,
+                          `Plan change to ${newPlan} for ${inst.accountName}`
+                        );
+                      }}
+                      disabled={isLoading === inst.id}
+                      className="text-xs font-medium px-2 py-1 rounded-md border border-border/60 bg-muted/40 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                    >
+                      <option value="Free">Free</option>
+                      <option value="Pro">Pro</option>
+                      <option value="Team">Team</option>
+                    </select>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">
+                    {inst.planLimits.maxRepos >= 999999 ? 'Unlimited repos' : `${inst.planLimits.maxRepos} repos`} • {inst.planLimits.maxMonthlyActivations >= 999999 ? 'Unlimited activations' : `${inst.planLimits.maxMonthlyActivations} activations/mo`}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Swaps used this period: {inst.swapCount}
+                  </span>
+                </div>
               </div>
               <div className="text-sm text-muted-foreground">{timeAgo(inst.createdAt)}</div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { Github, Shield, Zap, Lock, Code, ArrowRight, CheckCircle, Star } from 'lucide-react';
+import { Github, Zap, Lock, Code, ArrowRight, CheckCircle, Star } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -13,7 +13,7 @@ export default function SignInPage() {
         <div>
           <Link href="/" className="flex items-center gap-3 mb-16">
             <div className="p-2 bg-primary rounded-xl">
-              <Shield className="w-8 h-8 text-primary-foreground" />
+              <img src="/logo1.png" alt="ReviewScope" className="w-8 h-8 object-contain" />
             </div>
             <span className="text-2xl font-bold">ReviewScope</span>
           </Link>
@@ -49,7 +49,7 @@ export default function SignInPage() {
           </div>
         </div>
 
-        {/* Testimonial / Stats */}
+        {/* Testimonial / Stats
         <div className="border-t pt-8 space-y-4">
           <div className="flex items-center gap-1 text-yellow-500">
             {[...Array(5)].map((_, i) => (
@@ -67,7 +67,7 @@ export default function SignInPage() {
               <div className="text-sm text-muted-foreground">Lead Developer @ TechCorp</div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Right side - Sign in form */}
@@ -76,7 +76,7 @@ export default function SignInPage() {
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
             <div className="p-2 bg-primary rounded-xl">
-              <Shield className="w-8 h-8 text-primary-foreground" />
+              <img src="/logo1.png" alt="ReviewScope" className="w-8 h-8 object-contain" />
             </div>
             <span className="text-2xl font-bold">ReviewScope</span>
           </div>
@@ -126,6 +126,14 @@ export default function SignInPage() {
 
           {/* Footer links */}
           <div className="pt-8 border-t text-center space-y-4">
+            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+              <span>Powered by</span>
+              <div className="flex items-center gap-2">
+                <img src="/openai.svg" alt="OpenAI" className="w-5 h-5" />
+                <img src="/gemini-color.svg" alt="Gemini" className="w-5 h-5" />
+              </div>
+            </div>
+
             <p className="text-xs text-muted-foreground">
               By signing in, you agree to our{' '}
               <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>

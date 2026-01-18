@@ -1,12 +1,12 @@
 'use server';
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../app/api/auth/[...nextauth]/route';
-import { db, repositories, installations } from '@/lib/db';
-import { eq, and, sql, inArray } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
-import { getPlanLimits } from '../../../../worker/src/lib/plans';
-import { getUserOrgIds } from '../github';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
+import { db, repositories, installations } from "@/lib/db";
+import { eq, and, sql, inArray } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { getPlanLimits } from "../../../../worker/src/lib/plans";
+import { getUserOrgIds } from "../github";
 
 export async function toggleRepoActivation(repoId: string, isActive: boolean) {
   const session = await getServerSession(authOptions);

@@ -1,14 +1,14 @@
-import { db, reviews, repositories, installations } from '@/lib/db';
-import { eq } from 'drizzle-orm';
-import { notFound } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../api/auth/[...nextauth]/route';
-import { ChevronLeft, AlertTriangle, AlertOctagon, Info, HelpCircle, Code, FileText, CheckCircle2, XCircle, AlertCircle, ShieldAlert, Quote, ExternalLink, MessageSquare, Shield, Clock, Search, Filter, Sparkles, AlertCircle as AlertIcon } from 'lucide-react';
-import Link from 'next/link';
-import { type ReviewComment } from '@reviewscope/llm-core';
-import { clsx } from 'clsx';
-import { FindingsToolbar } from '../findings-toolbar';
-import { getUserOrgIds } from '@/lib/github';
+import { db, reviews, repositories, installations } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../api/auth/[...nextauth]/authOptions";
+import { ChevronLeft, AlertTriangle, AlertOctagon, Info, HelpCircle, Code, FileText, CheckCircle2, XCircle, AlertCircle, ShieldAlert, Quote, ExternalLink, MessageSquare, Shield, Clock, Search, Filter, Sparkles, AlertCircle as AlertIcon } from "lucide-react";
+import Link from "next/link";
+import { type ReviewComment } from "@reviewscope/llm-core";
+import { clsx } from "clsx";
+import { FindingsToolbar } from "../findings-toolbar";
+import { getUserOrgIds } from "@/lib/github";
 
 export const dynamic = 'force-dynamic';
 
@@ -261,5 +261,4 @@ function Zap(props: any) {
 function ZapIcon(props: any) {
   return <Zap {...props} />;
 }
-
 

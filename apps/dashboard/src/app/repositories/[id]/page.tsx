@@ -1,12 +1,12 @@
-import { db, repositories, reviews, installations, configs } from '@/lib/db';
-import { eq, desc, and, isNotNull, inArray } from 'drizzle-orm';
-import { notFound } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../api/auth/[...nextauth]/route';
-import { ChevronLeft, GitPullRequest, CheckCircle2, XCircle, Clock, ExternalLink, Hash, Calendar, ArrowRight, Key } from 'lucide-react';
-import Link from 'next/link';
-import { clsx } from 'clsx';
-import { getUserOrgIds } from '@/lib/github';
+import { db, repositories, reviews, installations, configs } from "@/lib/db";
+import { eq, desc, and, isNotNull, inArray } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../api/auth/[...nextauth]/authOptions";
+import { ChevronLeft, GitPullRequest, CheckCircle2, XCircle, Clock, ExternalLink, Hash, Calendar, ArrowRight, Key } from "lucide-react";
+import Link from "next/link";
+import { clsx } from "clsx";
+import { getUserOrgIds } from "@/lib/github";
 
 import { ActivationToggle } from './activation-toggle';
 

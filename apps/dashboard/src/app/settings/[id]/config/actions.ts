@@ -1,15 +1,15 @@
 'use server';
 
-import { db, configs, installations, repositories } from '@/lib/db';
-import { eq, and, inArray } from 'drizzle-orm';
-import { z } from 'zod';
-import { encrypt, decrypt } from '@reviewscope/security';
-import { revalidatePath } from 'next/cache';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../api/auth/[...nextauth]/route';
-import { redirect } from 'next/navigation';
-import { createProvider } from '@reviewscope/llm-core';
-import { getUserOrgIds } from '@/lib/github';
+import { db, configs, installations, repositories } from "@/lib/db";
+import { eq, and, inArray } from "drizzle-orm";
+import { z } from "zod";
+import { encrypt, decrypt } from "@reviewscope/security";
+import { revalidatePath } from "next/cache";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
+import { redirect } from "next/navigation";
+import { createProvider } from "@reviewscope/llm-core";
+import { getUserOrgIds } from "@/lib/github";
 
 const configSchema = z.object({
   provider: z.enum(['gemini', 'openai']),
@@ -218,4 +218,3 @@ export async function deleteApiKey(installationId: string) {
     return { error: 'Failed to delete API key' };
   }
 }
-

@@ -1,12 +1,12 @@
-import { db, configs, installations } from '@/lib/db';
-import { eq } from 'drizzle-orm';
-import { notFound, redirect } from 'next/navigation';
-import { ChevronLeft, Settings2, ShieldCheck, Zap, Sparkles } from 'lucide-react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import Link from 'next/link';
-import { ConfigForm } from './config-form';
-import { getUserOrgIds } from '@/lib/github';
+import { db, configs, installations } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { notFound, redirect } from "next/navigation";
+import { ChevronLeft, Settings2, ShieldCheck, Zap, Sparkles } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
+import Link from "next/link";
+import { ConfigForm } from "./config-form";
+import { getUserOrgIds } from "@/lib/github";
 
 export default async function ConfigPage({ params }: { params: { id: string } }) {
   const { id } = await params;

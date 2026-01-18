@@ -1,9 +1,7 @@
-import { db, repositories, installations, configs } from '@/lib/db';
-import { Github, CheckCircle2, AlertCircle, Clock, LogIn, ArrowRight, Shield, Key, Zap, Globe, Lock, MessagesSquare, Sparkles } from 'lucide-react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from './api/auth/[...nextauth]/route';
-import { eq, isNotNull, and } from 'drizzle-orm';
-import Link from 'next/link';
+import { Github, CheckCircle2, ArrowRight, Key, Zap, Globe, Lock, MessagesSquare, Sparkles } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "./api/auth/[...nextauth]/authOptions";
+import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 
@@ -12,9 +10,7 @@ export default async function LandingPage() {
 
   return (
     <div className="flex flex-col items-center pb-20 overflow-x-hidden">
-      {/* Premium Hero Section */}
       <section className="relative w-full pt-16 md:pt-32 pb-16 md:pb-24 px-4 md:px-8 flex flex-col items-center text-center">
-        {/* Abstract Background Elements */}
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-primary/10 via-background to-background"></div>
         <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,#8080800a_3px,transparent_3px),linear-gradient(to_bottom,#8080800a_3px,transparent_3px)] bg-size-[44px_44px] mask-[radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
 
@@ -55,6 +51,33 @@ export default async function LandingPage() {
           </Link>
         </div>
 
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full">
+          <div className="border border-border/60 rounded-2xl bg-card/80 px-4 py-3 text-left">
+            <div className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-1">
+              Production Teams
+            </div>
+            <div className="text-lg font-bold tracking-tight">
+              30+ using ReviewScope
+            </div>
+          </div>
+          <div className="border border-border/60 rounded-2xl bg-card/80 px-4 py-3 text-left">
+            <div className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-1">
+              Cost Savings
+            </div>
+            <div className="text-lg font-bold tracking-tight">
+              30%+ vs naive AI usage
+            </div>
+          </div>
+          <div className="border border-border/60 rounded-2xl bg-card/80 px-4 py-3 text-left">
+            <div className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-1">
+              Review Latency
+            </div>
+            <div className="text-lg font-bold tracking-tight">
+              &lt; 60s for simple PRs
+            </div>
+          </div>
+        </div>
+
         {/* Visual Mockup Section */}
         <div className="mt-24 w-full max-w-5xl relative animate-in fade-in zoom-in duration-1000 delay-500">
           <div className="absolute -inset-4 bg-primary/20 blur-3xl opacity-20 rounded-[3rem] -z-10"></div>
@@ -74,12 +97,21 @@ export default async function LandingPage() {
                </div>
                
                <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6 relative">
-                 <div className="flex items-center gap-3 mb-4">
-                   <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                     <Shield className="w-4 h-4" />
+                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                   <div className="flex items-center gap-3">
+                     <div className="w-8 h-8 rounded-full bg-primary/8 flex items-center justify-center text-primary-foreground">
+                       <img src="/logo1.png" alt="ReviewScope" className="w-6 h-6 object-contain" />
+                     </div>
+                     <span className="font-bold text-sm">ReviewScope AI</span>
+                     <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black">
+                       CRITICAL
+                     </span>
                    </div>
-                   <span className="font-bold text-sm">ReviewScope AI</span>
-                   <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black">CRITICAL</span>
+                   <div className="flex items-center justify-start sm:justify-end gap-2 text-[10px] text-muted-foreground">
+                     <span className="hidden sm:inline">Powered by</span>
+                     <img src="/gemini-color.svg" alt="Gemini" className="w-4 h-4" />
+                     <img src="/openai.svg" alt="OpenAI" className="w-4 h-4" />
+                   </div>
                  </div>
                  <div className="space-y-2">
                     <p className="font-bold text-sm">Race condition detected in queue consumer.</p>
@@ -96,13 +128,21 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Modern Tool Grid (Trust Markers) */}
-      <section className="py-10 opacity-40 hover:opacity-100 transition-opacity">
-        <div className="flex flex-wrap justify-center gap-8 md:gap-16 items-center grayscale">
-           {/* <div className="flex items-center gap-2 font-bold text-xl"><Github className="w-6 h-6"/> GitHub</div> */}
-           <div className="flex items-center gap-2 font-bold text-xl"><Sparkles className="w-6 h-6"/> Gemini</div>
-           <div className="flex items-center gap-2 font-bold text-xl"><Lock className="w-6 h-6"/> OpenAI</div>
-           {/* <div className="flex items-center gap-2 font-bold text-xl"><Shield className="w-6 h-6"/> OpenRouter</div> */}
+      <section className="py-10">
+        <div className="max-w-4xl mx-auto flex flex-col items-center gap-6">
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">
+            Built on trusted AI providers
+          </p>
+          <div className="flex flex-wrap justify-center gap-12 md:gap-16 items-center">
+            <div className="flex items-center gap-3">
+              <img src="/gemini-color.svg" alt="Gemini" className="w-8 h-8" />
+              <span className="font-bold text-xl">Gemini</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <img src="/openai.svg" alt="OpenAI" className="w-8 h-8" />
+              <span className="font-bold text-xl">OpenAI</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -128,7 +168,7 @@ export default async function LandingPage() {
               { 
                 icon: <Zap className="w-6 h-6" />, 
                 title: "AST-Based Static Rules", 
-                desc: "Context-aware pattern detection for JavaScript/TypeScript. Catch logic errors without AI, no key required." 
+                desc: "High-signal AST checks for JavaScript, TypeScript, Go, Java, and more that flag risky patterns and logic bugs before AI runs." 
               },
               { 
                 icon: <Globe className="w-6 h-6" />, 

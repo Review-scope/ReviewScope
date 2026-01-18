@@ -1,10 +1,10 @@
-﻿import { db, installations, repositories } from '@/lib/db';
-import { Activity, AlertCircle, ArrowRight, Building2, Github, LayoutGrid, LogIn, Settings, Shield, Sparkles, User } from 'lucide-react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../api/auth/[...nextauth]/route';
-import { eq, and, desc, count, inArray } from 'drizzle-orm';
-import Link from 'next/link';
-import { getUserOrgIds } from '@/lib/github';
+import { db, installations, repositories } from "@/lib/db";
+import { Activity, AlertCircle, ArrowRight, Building2, Github, LayoutGrid, LogIn, Settings, Shield, Sparkles, User } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
+import { eq, and, desc, count, inArray } from "drizzle-orm";
+import Link from "next/link";
+import { getUserOrgIds } from "@/lib/github";
 
 // Plan limits mapping
 const planLimits: { [key: string]: { maxRepos: number } } = {

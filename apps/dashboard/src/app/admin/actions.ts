@@ -1,13 +1,13 @@
 'use server';
 
-import { db, repositories, installations } from '@/lib/db';
-import { eq } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
-import { Queue } from 'bullmq';
-import { QdrantClient } from '@qdrant/js-client-rest';
-import Redis from 'ioredis';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../api/auth/[...nextauth]/route';
+import { db, repositories, installations } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { Queue } from "bullmq";
+import { QdrantClient } from "@qdrant/js-client-rest";
+import Redis from "ioredis";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../api/auth/[...nextauth]/authOptions";
 
 // Admin GitHub IDs - restricted access
 const ADMIN_GITHUB_IDS = [

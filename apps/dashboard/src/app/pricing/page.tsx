@@ -1,6 +1,6 @@
 import { Check, X, Shield, Star, Building2, HelpCircle } from "lucide-react";
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import { db, installations } from '@/lib/db';
 import { eq, inArray } from 'drizzle-orm';
 import { getUserOrgIds } from "@/lib/github";

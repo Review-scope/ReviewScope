@@ -1,13 +1,13 @@
-import { db, repositories, installations, configs, reviews } from '@/lib/db';
-import { Github, CheckCircle2, AlertCircle, Clock, ArrowRight, Key, Zap, BarChart3, ShieldCheck, Search, Filter, Sparkles, Lock, Gauge, Layers, MessageSquare, Check, Power } from 'lucide-react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../api/auth/[...nextauth]/route';
-import { eq, isNotNull, and, count, desc, inArray, or } from 'drizzle-orm';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { ActivationToggle } from '../repositories/[id]/activation-toggle';
-import { getUserOrgIds } from '@/lib/github';
-
+import { db, repositories, installations, configs, reviews } from "@/lib/db";
+import { Github, CheckCircle2, AlertCircle, Clock, ArrowRight, Key, Zap, BarChart3, ShieldCheck, Sparkles, Lock, Gauge, Layers, MessageSquare, Check, Power } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../api/auth/[...nextauth]/authOptions";
+import { eq, isNotNull, and, count, desc, inArray, or } from "drizzle-orm";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ActivationToggle } from "../repositories/[id]/activation-toggle";
+import { getUserOrgIds } from "@/lib/github";
+import { DashboardSearch } from "./dashboard-search";
 // Plan limits mapping (must match worker/lib/plans.ts)
 const planLimits: { [key: string]: { maxRepos: number } } = {
   Free: { maxRepos: 3 },
@@ -17,7 +17,14 @@ const planLimits: { [key: string]: { maxRepos: number } } = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const params = await searchParams;
+  const query = params.q || '';
+  const normalizedQuery = query.trim().toLowerCase();
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -71,7 +78,6 @@ export default async function DashboardPage() {
     }
   }
 
-  // Fetch repositories with config and review counts
   const userRepos = await db
     .select({
       id: repositories.id,
@@ -93,17 +99,16 @@ export default async function DashboardPage() {
       )
     );
 
-  // Calculate total active repos and total capacity across all installations
   const totalActiveRepos = userRepos.filter(r => r.isActive).length;
   const totalCapacity = userInstallations.reduce((sum, inst) => {
     const plan = inst.planName || 'Free';
     return sum + (planLimits[plan]?.maxRepos || 0);
   }, 0);
-
-  const reposMissingConfig = userRepos.filter(r => !r.hasApiKey);
-  const configuredRepos = userRepos.filter(r => r.hasApiKey);
-
-  // Stats for the header
+  const filteredUserRepos = normalizedQuery
+    ? userRepos.filter(r => r.fullName.toLowerCase().includes(normalizedQuery))
+    : userRepos;
+  const reposMissingConfig = filteredUserRepos.filter(r => !r.hasApiKey);
+  const configuredRepos = filteredUserRepos.filter(r => r.hasApiKey);
   const stats = [
     { 
       label: "Active Repos", 
@@ -251,19 +256,7 @@ export default async function DashboardPage() {
         <section className="space-y-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <h3 className="text-2xl font-black uppercase tracking-tighter italic">Repositories</h3>
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input 
-                  type="text" 
-                  placeholder="Filter repositories..." 
-                  className="w-full pl-10 pr-4 py-2 bg-card border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none" 
-                />
-              </div>
-              <button className="p-2 border rounded-xl bg-card hover:bg-accent transition-colors cursor-pointer">
-                <Filter className="w-4 h-4" />
-              </button>
-            </div>
+            <DashboardSearch />
           </div>
 
           <div className="border border-border/60 rounded-xl md:rounded-3xl md:border-2 md:overflow-hidden md:bg-card md:shadow-sm">
