@@ -74,7 +74,10 @@ githubWebhook.post('/', async (c) => {
   hmac.update(body);
   const calculatedSignature = `sha256=${hmac.digest('hex')}`;
 
-  // console.log(`[Webhook] Signature check - Received: ${signature}, Calculated: ${calculatedSignature}`);
+  console.log(`[Webhook Debug] Secret Length: ${secret.length}`);
+  console.log(`[Webhook Debug] Received Signature: ${signature}`);
+  console.log(`[Webhook Debug] Calculated Signature: ${calculatedSignature}`);
+  console.log(`[Webhook Debug] Body Length: ${body.length}`);
 
   if (signature !== calculatedSignature) {
     try {
@@ -83,11 +86,19 @@ githubWebhook.post('/', async (c) => {
       
       if (trusted.length !== untrusted.length || !crypto.timingSafeEqual(trusted, untrusted)) {
          console.error('[Webhook] Invalid signature');
-         return c.json({ error: 'Invalid signature' }, 401);
+         return c.json({ 
+           error: 'Invalid signature',
+           debug: {
+             received: signature,
+             calculated: calculatedSignature,
+             secretLength: secret.length,
+             bodyLength: body.length
+           }
+         }, 401);
       }
     } catch (err) {
        console.error('[Webhook] Signature verification error:', err);
-       return c.json({ error: 'Invalid signature' }, 401);
+       return c.json({ error: 'Signature verification failed', details: err instanceof Error ? err.message : String(err) }, 401);
     }
   }
 

@@ -24,6 +24,13 @@ app.get('/', (c) => c.json({ name: 'ReviewScope API', version: '0.0.1' }));
 
 const port = Number(process.env.PORT) || 3000;
 
+// Validate critical configuration
+if (!process.env.GITHUB_WEBHOOK_SECRET) {
+  console.error('❌ FATAL: GITHUB_WEBHOOK_SECRET is not defined. Webhooks will fail.');
+} else {
+  console.log(`✅ GITHUB_WEBHOOK_SECRET is configured (length: ${process.env.GITHUB_WEBHOOK_SECRET.length})`);
+}
+
 console.warn(`🚀 ReviewScope API running on port ${port}`);
 
 const server = serve({

@@ -64,6 +64,25 @@ healthRoutes.get('/ready', async (c) => {
     }
   }
 
+  // Configuration check
+  const requiredEnvVars = [
+    'DATABASE_URL',
+    'REDIS_URL',
+    'GITHUB_WEBHOOK_SECRET',
+    // Add other critical env vars here
+  ];
+
+  checks.config = { status: 'ok' };
+  const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+  
+  if (missingVars.length > 0) {
+    checks.config = { 
+      status: 'error', 
+      error: `Missing environment variables: ${missingVars.join(', ')}` 
+    };
+    allHealthy = false;
+  }
+
   return c.json({
     ready: allHealthy,
     checks,
