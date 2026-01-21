@@ -3,6 +3,10 @@ import { db, installations, marketplaceEvents } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 
+export async function GET(req: Request) {
+  return new Response('ReviewScope Marketplace Webhook is active', { status: 200 });
+}
+
 export async function POST(req: Request) {
   const body = await req.text();
   const headersList = await headers();
