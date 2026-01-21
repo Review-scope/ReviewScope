@@ -8,9 +8,10 @@ import { getUserOrgIds } from "@/lib/github";
 
 // Plan limits mapping
 const planLimits: { [key: string]: { maxRepos: number } } = {
+  'None': { maxRepos: 0 },
   'Free': { maxRepos: 3 },
-  'Pro': { maxRepos: 15 },
-  'Team': { maxRepos: 50 }
+  'Pro': { maxRepos: 5 },
+  'Team': { maxRepos: 999999 }
 };
 
 export const dynamic = 'force-dynamic';
@@ -122,7 +123,7 @@ export default async function SettingsPage() {
                     {inst.accountType} Account
                   </span>
                   <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-zinc-900 text-white border-none shadow-lg">
-                    {inst.planName || 'Free'} Tier
+                    {inst.planName || 'None'} Tier
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground font-medium">
@@ -130,9 +131,9 @@ export default async function SettingsPage() {
                     <Activity className="w-4 h-4 opacity-50 text-primary" />
                     <span className="font-bold text-foreground">{countsMap[inst.id] || 0}</span>
                     <span className="opacity-60">/</span>
-                    <span className="font-bold opacity-70">{planLimits[inst.planName || 'Free'].maxRepos}</span>
+                    <span className="font-bold opacity-70">{planLimits[inst.planName || 'None'].maxRepos}</span>
                     <span className="opacity-60">Repositories</span>
-                    {(countsMap[inst.id] || 0) >= planLimits[inst.planName || 'Free'].maxRepos && (
+                    {(countsMap[inst.id] || 0) >= planLimits[inst.planName || 'None'].maxRepos && (
                       <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 border border-orange-200 rounded-lg ml-2">
                         <AlertCircle className="w-3.5 h-3.5 text-orange-600" />
                         <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Limit Reached</span>

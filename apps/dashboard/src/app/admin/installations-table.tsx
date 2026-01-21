@@ -80,7 +80,7 @@ export function InstallationsTable({ installations }: { installations: Installat
                       {inst.status}
                     </span>
                   </td>
-                  <td className="p-3">{inst.planName || 'Free'}</td>
+                  <td className="p-3">{inst.planName || 'None'}</td>
                   <td className="p-3">
                     <span className="font-mono">{inst.indexedCount}/{inst.repoCount}</span>
                     <span className="text-xs text-muted-foreground ml-1">indexed</span>

@@ -302,7 +302,7 @@ export default async function AdminPage({
           </div>
         }>
           <AdminView 
-            data={transformedData}
+            data={transformedData as any}
             page={page}
             totalPages={totalPages}
           />

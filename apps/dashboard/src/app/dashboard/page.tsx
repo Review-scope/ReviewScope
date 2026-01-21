@@ -10,6 +10,7 @@ import { getUserOrgIds } from "@/lib/github";
 import { DashboardSearch } from "./dashboard-search";
 // Plan limits mapping (must match worker/lib/plans.ts)
 const planLimits: { [key: string]: { maxRepos: number } } = {
+  None: { maxRepos: 0 },
   Free: { maxRepos: 3 },
   Pro: { maxRepos: 5 },
   Team: { maxRepos: 999999 }
@@ -101,7 +102,7 @@ export default async function DashboardPage({
 
   const totalActiveRepos = userRepos.filter(r => r.isActive).length;
   const totalCapacity = userInstallations.reduce((sum, inst) => {
-    const plan = inst.planName || 'Free';
+    const plan = inst.planName || 'None';
     return sum + (planLimits[plan]?.maxRepos || 0);
   }, 0);
   const filteredUserRepos = normalizedQuery
@@ -159,12 +160,42 @@ export default async function DashboardPage({
 
       {/* Plan Quota Warning Banners */}
       {userInstallations
-        .filter(inst => inst.planName === 'Free' || !inst.planName)
+        .filter(inst => inst.planName === 'Free' || !inst.planName || inst.planName === 'None')
         .map((inst) => {
           const activeCount = userRepos.filter(r => r.installationId === inst.id && r.isActive).length;
-          const limits = planLimits[inst.planName || 'Free'] || planLimits.Free;
+          const planName = inst.planName || 'None';
+          const limits = planLimits[planName] || planLimits.None;
           const limit = limits.maxRepos;
           const isAtLimit = activeCount >= limit;
+          const isNone = planName === 'None';
+          
+          if (isNone) {
+            return (
+              <div 
+                key={inst.id}
+                className="rounded-2xl border-2 border-red-200 bg-red-50 p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-2.5 bg-red-100 rounded-lg mt-0.5">
+                    <ShieldCheck className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-red-900">Subscription Required</h3>
+                    <p className="text-sm text-red-700 mt-1">
+                      Account <span className="font-bold">@{inst.accountName}</span> has no active plan. Please subscribe to enable AI code reviews.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  <Zap className="w-4 h-4" />
+                  Subscribe Now
+                </Link>
+              </div>
+            );
+          }
           
           return isAtLimit ? (
             <div 

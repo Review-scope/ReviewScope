@@ -1,4 +1,5 @@
 export enum PlanTier {
+  NONE = 'NONE',
   FREE = 'FREE',
   PRO = 'PRO',
   TEAM = 'TEAM',
@@ -26,17 +27,17 @@ const PLAN_ID_MAP: Record<number, PlanTier> = {
 };
 
 export function getTier(planId: number | null): PlanTier {
-  // Default to Free plan (3) if not specified
-  if (!planId) return PlanTier.FREE;
+  // If no plan ID, return NONE
+  if (!planId) return PlanTier.NONE;
   return PLAN_ID_MAP[planId] || PlanTier.FREE;
 }
 
 export function getPlanLimits(planId: number | null, expiresAt?: Date | null): PlanLimits {
   const tier = getTier(planId);
 
-  // If plan has expired, downgrade to FREE
+  // If plan has expired, downgrade to NONE
   if (expiresAt && expiresAt < new Date()) {
-    return getPlanLimits(3, null); // Fallback to Free plan
+    return getPlanLimits(null, null); // Fallback to None
   }
 
   switch (tier) {
@@ -67,7 +68,6 @@ export function getPlanLimits(planId: number | null, expiresAt?: Date | null): P
         allowOrg: true,
       };
     case PlanTier.FREE:
-    default:
       return {
         tier,
         allowAI: true, // Requires BYO key
@@ -78,6 +78,20 @@ export function getPlanLimits(planId: number | null, expiresAt?: Date | null): P
         maxMonthlyActivations: 5, // 3 active + 2 swaps
         allowCustomPrompts: false,
         chatPerPRLimit: 3,
+        allowOrg: false,
+      };
+    case PlanTier.NONE:
+    default:
+      return {
+        tier: PlanTier.NONE,
+        allowAI: false,
+        allowRAG: false,
+        ragK: 0,
+        maxFiles: 0,
+        maxRepos: 0,
+        maxMonthlyActivations: 0,
+        allowCustomPrompts: false,
+        chatPerPRLimit: 0,
         allowOrg: false,
       };
   }

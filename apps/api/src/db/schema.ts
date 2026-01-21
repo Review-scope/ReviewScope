@@ -13,8 +13,8 @@ export const installations = pgTable('installations', {
   accountName: text('account_name').notNull(),
   
   // Marketplace billing
-  planId: integer('plan_id').default(0), // Default to FREE (0)
-  planName: text('plan_name').default('Free'), // Default tier name
+  planId: integer('plan_id'), // Null = No Plan
+  planName: text('plan_name').default('None'), // Default to None
   billingCycle: text('billing_cycle'), // monthly, yearly
   expiresAt: timestamp('expires_at'), // Plan expiration date
   

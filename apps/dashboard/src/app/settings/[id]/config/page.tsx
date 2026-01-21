@@ -8,7 +8,7 @@ import Link from "next/link";
 import { ConfigForm } from "./config-form";
 import { getUserOrgIds } from "@/lib/github";
 
-export default async function ConfigPage({ params }: { params: { id: string } }) {
+export default async function ConfigPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await getServerSession(authOptions);
 
@@ -36,12 +36,13 @@ export default async function ConfigPage({ params }: { params: { id: string } })
     .where(eq(configs.installationId, id))
     .limit(1);
 
-  const plan = installation.planName || 'Free';
+  const plan = installation.planName || 'None';
   const limits = {
+    'None': { files: 0, rag: 0, chat: 0, repos: 0, batch: false },
     'Free': { files: 30, rag: 2, chat: 5, repos: 3, batch: false },
     'Pro': { files: 100, rag: 5, chat: 20, repos: 5, batch: false },
     'Team': { files: 'Unlimited', rag: 8, chat: 'Unlimited', repos: 'Unlimited', batch: true }
-  }[plan as 'Free' | 'Pro' | 'Team'];
+  }[plan as 'None' | 'Free' | 'Pro' | 'Team'];
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-12">
@@ -72,28 +73,48 @@ export default async function ConfigPage({ params }: { params: { id: string } })
           <div className="absolute -left-4 top-0 bottom-0 w-1 bg-linear-to-b from-primary to-transparent rounded-full opacity-20"></div>
           
           {/* Plan Limits Info Banner */}
-          <div className="p-6 mb-8 rounded-2xl bg-blue-50 border-2 border-blue-200 flex flex-col gap-4">
+          <div className={`p-6 mb-8 rounded-2xl border-2 flex flex-col gap-4 ${
+            plan === 'None' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
+          }`}>
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg mt-0.5">
-                <Sparkles className="w-5 h-5 text-blue-600" />
+              <div className={`p-2 rounded-lg mt-0.5 ${
+                plan === 'None' ? 'bg-red-100' : 'bg-blue-100'
+              }`}>
+                {plan === 'None' ? (
+                  <ShieldCheck className="w-5 h-5 text-red-600" />
+                ) : (
+                  <Sparkles className="w-5 h-5 text-blue-600" />
+                )}
               </div>
               <div>
-                <h3 className="font-bold text-sm text-blue-900">Your {plan} Plan Includes:</h3>
-                <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                  PR file limit: <span className="font-bold">{limits?.files}</span> • 
-                  RAG snippets: <span className="font-bold">{limits?.rag}</span> • 
-                  Chat iterations: <span className="font-bold">{limits?.chat}</span> • 
-                  Repositories: <span className="font-bold">{limits?.repos}</span>
-                </p>
+                <h3 className={`font-bold text-sm ${
+                  plan === 'None' ? 'text-red-900' : 'text-blue-900'
+                }`}>
+                  {plan === 'None' ? 'Subscription Required' : `Your ${plan} Plan Includes:`}
+                </h3>
+                {plan === 'None' ? (
+                   <p className="text-xs text-red-700 mt-1 leading-relaxed">
+                     You must subscribe to a plan (even Free) to enable AI reviews.
+                   </p>
+                ) : (
+                  <p className="text-xs text-blue-700 mt-1 leading-relaxed">
+                    PR file limit: <span className="font-bold">{limits?.files}</span> • 
+                    RAG snippets: <span className="font-bold">{limits?.rag}</span> • 
+                    Chat iterations: <span className="font-bold">{limits?.chat}</span> • 
+                    Repositories: <span className="font-bold">{limits?.repos}</span>
+                  </p>
+                )}
               </div>
             </div>
-            {plan === 'Free' && (
+            {(plan === 'Free' || plan === 'None') && (
               <Link 
                 href="/pricing"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs uppercase tracking-wide transition-colors w-fit"
+                className={`inline-flex items-center gap-2 px-4 py-2 text-white rounded-lg font-bold text-xs uppercase tracking-wide transition-colors w-fit ${
+                  plan === 'None' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
                 <Zap className="w-3.5 h-3.5" />
-                Upgrade for More Capacity
+                {plan === 'None' ? 'Subscribe Now' : 'Upgrade for More Capacity'}
               </Link>
             )}
           </div>
