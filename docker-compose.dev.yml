@@ -85,6 +85,7 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - INTERNAL_API_URL=http://api:3000
     command: sh -c "npm install --quiet --legacy-peer-deps && npm run dev -w @reviewscope/dashboard"
     # command: sh -c "npm ci && npm run dev -w @reviewscope/dashboard"
