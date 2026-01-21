@@ -6,7 +6,7 @@ To set up your development GitHub App, follow these steps:
 - Go to [GitHub Developer Settings](https://github.com/settings/apps)
 - Click **New GitHub App**
 - **App Name**: `ReviewScope (Dev)`
-- **Homepage URL**: `https://reviewscope.live` (Placeholder)
+- **Homepage URL**: `https://localhost:3000` (Placeholder)
 - **Webhook URL**: Your local proxy URL (e.g., from `ngrok` or `localtunnel`)
 - **Webhook Secret**: Generate a strong secret and add it to your app's `.env` file (e.g., `apps/api/.env`) as `GITHUB_WEBHOOK_SECRET`
 

@@ -11,9 +11,9 @@ GitHub Marketplace PR reviewer: customizable, repo-aware, issue-aware, SaaS-read
 | **Runtime** | Node.js 20+ / TypeScript 5.x | Full Node APIs |
 | **API** | Hono + `@hono/node-server` | NO edge |
 | **Database** | PostgreSQL + Drizzle | Source of truth |
-| **Queue** | BullMQ + Upstash Redis | Queue ONLY |
+| **Queue** | BullMQ +  Redis | Queue ONLY |
 | **Vector DB** | Qdrant Cloud | Free tier |
-| **Deploy** | Railway | Free plan |
+
 
 ---
 
@@ -22,11 +22,18 @@ GitHub Marketplace PR reviewer: customizable, repo-aware, issue-aware, SaaS-read
 ```mermaid
 graph TB
     GH[GitHub Webhooks] --> WH[Webhook Handler]
-    WH -->|enqueue| Q[Upstash Redis]
+
+    WH -->|enqueue| Q[Redis]
+
     Q --> PROC[Worker]
-    PROC --> LLM[llm-core] & CTX[context-engine] & RULES[rules-engine]
+
+    PROC --> LLM[llm-core] & CTX[context-engine] & RULES
+    [rules-engine]
+    
     CTX --> VEC[(Qdrant)]
+    
     PROC --> GHAPI[GitHub API]
+    
     WH & PROC --> PG[(PostgreSQL)]
 ```
 
