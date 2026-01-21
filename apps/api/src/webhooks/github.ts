@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { Webhooks } from '@octokit/webhooks';
+import crypto from 'crypto';
 import { 
   enqueueReviewJob, 
   enqueueChatJob, 
@@ -24,18 +24,6 @@ function getQdrantClient() {
   const apiKey = process.env.QDRANT_API_KEY;
   if (!url) return null; // Optional - don't fail if not configured
   return new QdrantClient({ url, apiKey });
-}
-
-let webhooksInstance: Webhooks | null = null;
-function getWebhooks() {
-  if (!webhooksInstance) {
-    const secret = process.env.GITHUB_WEBHOOK_SECRET;
-    if (!secret) {
-      throw new Error('GITHUB_WEBHOOK_SECRET is not defined');
-    }
-    webhooksInstance = new Webhooks({ secret });
-  }
-  return webhooksInstance;
 }
 
 /**
@@ -68,7 +56,6 @@ export const githubWebhook = new Hono();
 
 githubWebhook.post('/', async (c) => {
   console.warn(`[Webhook] Request received: ${c.req.method} ${c.req.url}`);
-  const webhooks = getWebhooks();
   const signature = c.req.header('x-hub-signature-256') || '';
   const eventName = c.req.header('x-github-event') || '';
   const deliveryId = c.req.header('x-github-delivery') || '';
@@ -77,14 +64,31 @@ githubWebhook.post('/', async (c) => {
   console.warn(`[Webhook] Incoming event: ${eventName} (Delivery: ${deliveryId})`);
 
   // Verify signature
-  try {
-    const isValid = await webhooks.verify(body, signature);
-    if (!isValid) {
-      return c.json({ error: 'Invalid signature' }, 401);
+  const secret = process.env.GITHUB_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error('[Webhook] GITHUB_WEBHOOK_SECRET is not defined');
+    return c.json({ error: 'Configuration error' }, 500);
+  }
+
+  const hmac = crypto.createHmac('sha256', secret);
+  hmac.update(body);
+  const calculatedSignature = `sha256=${hmac.digest('hex')}`;
+
+  // console.log(`[Webhook] Signature check - Received: ${signature}, Calculated: ${calculatedSignature}`);
+
+  if (signature !== calculatedSignature) {
+    try {
+      const trusted = Buffer.from(calculatedSignature);
+      const untrusted = Buffer.from(signature);
+      
+      if (trusted.length !== untrusted.length || !crypto.timingSafeEqual(trusted, untrusted)) {
+         console.error('[Webhook] Invalid signature');
+         return c.json({ error: 'Invalid signature' }, 401);
+      }
+    } catch (err) {
+       console.error('[Webhook] Signature verification error:', err);
+       return c.json({ error: 'Invalid signature' }, 401);
     }
-  } catch (err) {
-    console.error('Signature verification failed:', err);
-    return c.json({ error: 'Signature verification failed' }, 401);
   }
 
   const payload = JSON.parse(body);

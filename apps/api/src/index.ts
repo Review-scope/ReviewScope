@@ -11,25 +11,7 @@ const app = new Hono();
 
 // Middleware
 app.use('*', logger());
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://api.luffytaro.me',
-  'https://dashboard.luffytaro.me',
-];
-
-app.use(
-  '*',
-  cors({
-    origin: (origin) => {
-      if (!origin) return '';
-      return allowedOrigins.includes(origin) ? origin : '';
-    },
-    credentials: true,
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
-  })
-);
-
+app.use('*', cors());
 
 // Routes
 app.route('/health', healthRoutes);
