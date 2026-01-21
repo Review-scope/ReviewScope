@@ -137,7 +137,7 @@ githubWebhook.post('/', async (c) => {
     } else if (action === 'cancelled') {
       await db.update(installations).set({
         planId: null,
-        planName: 'Free',
+        planName: 'None',
         expiresAt: null,
         updatedAt: new Date(),
       }).where(eq(installations.accountName, account.login));
