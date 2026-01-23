@@ -105,13 +105,14 @@ export function ConfigForm({
       const res = await updateConfig(installationId, formData);
       if (res?.error) {
         toast.error(res.error);
+        setIsSaving(false); // Stop loading on error
       } else {
         toast.success('Configuration updated');
         router.refresh();
+        setIsSaving(false);
       }
     } catch {
       toast.error('Failed to update configuration');
-    } finally {
       setIsSaving(false);
     }
   };
@@ -262,7 +263,7 @@ export function ConfigForm({
         <Section title="Custom Prompt" icon={<FileText className="w-5 h-5" />}>
           <textarea
             name="customPrompt"
-            disabled={plan === 'FREE'}
+            disabled={plan === 'Free'}
             defaultValue={initialConfig?.customPrompt || ''}
             className={clsx(
               'w-full min-h-35 rounded-xl p-4 border bg-muted/30',
