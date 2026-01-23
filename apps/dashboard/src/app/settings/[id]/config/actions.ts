@@ -200,7 +200,8 @@ export async function updateConfig(installationId: string, formData: FormData) {
   });
 
   if (!validatedFields.success) {
-    return { error: 'Invalid fields' };
+    console.error('Validation errors:', validatedFields.error);
+    return { error: 'Invalid fields: ' + validatedFields.error.issues.map(i => i.path.join('.') + ': ' + i.message).join(', ') };
   }
 
   const { provider, model, customPrompt, apiKey, smartRouting } = validatedFields.data;
