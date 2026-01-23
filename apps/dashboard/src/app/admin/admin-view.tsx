@@ -180,7 +180,7 @@ export function AdminView({
           <div key={inst.id} className="border-b last:border-0">
             {/* Top Row: Installation */}
             <div className={`grid grid-cols-[auto_2fr_1fr_1fr_1fr_1.5fr_auto] gap-4 p-4 items-center hover:bg-muted/10 transition-colors ${expandedIds.has(inst.id) ? 'bg-muted/20' : ''}`}>
-              <button onClick={() => toggleExpand(inst.id)} className="p-1 hover:bg-muted rounded-sm transition-colors">
+              <button onClick={() => toggleExpand(inst.id)} className="p-1 hover:bg-muted rounded-sm transition-colors cursor-pointer">
                 {expandedIds.has(inst.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </button>
               
@@ -255,7 +255,7 @@ export function AdminView({
                 <button 
                   onClick={() => handleAction(reindexInstallation, inst.id, inst.accountName)}
                   disabled={isLoading === inst.id}
-                  className="p-2 hover:bg-blue-500/10 text-blue-500 hover:text-blue-600 rounded-md disabled:opacity-50 transition-colors"
+                  className="p-2 hover:bg-blue-500/10 text-blue-500 hover:text-blue-600 rounded-md disabled:opacity-50 transition-colors cursor-pointer"
                   title="Reindex All Repositories"
                 >
                   <RefreshCw className={`h-4 w-4 ${isLoading === inst.id ? 'animate-spin' : ''}`} />
@@ -263,7 +263,7 @@ export function AdminView({
                 <button 
                   onClick={() => handleAction(disableInstallation, inst.id, inst.accountName)}
                   disabled={isLoading === inst.id}
-                  className="p-2 hover:bg-red-500/10 text-red-500 hover:text-red-600 rounded-md disabled:opacity-50 transition-colors"
+                  className="p-2 hover:bg-red-500/10 text-red-500 hover:text-red-600 rounded-md disabled:opacity-50 transition-colors cursor-pointer"
                   title="Disable Installation"
                 >
                   <ShieldAlert className="h-4 w-4" />
@@ -355,7 +355,7 @@ export function AdminView({
                 params.set('page', String(page - 1));
                 router.push(`?${params.toString()}`);
             }}
-            className="px-3 py-1.5 border rounded-md disabled:opacity-50 hover:bg-muted text-sm font-medium transition-colors"
+            className="px-3 py-1.5 border rounded-md disabled:opacity-50 hover:bg-muted text-sm font-medium transition-colors cursor-pointer"
             >
             Previous
             </button>
@@ -369,7 +369,7 @@ export function AdminView({
                 params.set('page', String(page + 1));
                 router.push(`?${params.toString()}`);
             }}
-            className="px-3 py-1.5 border rounded-md disabled:opacity-50 hover:bg-muted text-sm font-medium transition-colors"
+            className="px-3 py-1.5 border rounded-md disabled:opacity-50 hover:bg-muted text-sm font-medium transition-colors cursor-pointer"
             >
             Next
             </button>

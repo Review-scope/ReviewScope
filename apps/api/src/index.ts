@@ -6,6 +6,7 @@ import { healthRoutes } from './routes/health.js';
 import { configRoutes } from './routes/config.js';
 import { jobRoutes } from './routes/jobs.js';
 import { githubWebhook } from './webhooks/github.js';
+import { dodoWebhook } from './webhooks/dodo.js';
 
 const app = new Hono();
 
@@ -16,6 +17,7 @@ app.use('*', cors());
 // Routes
 app.route('/health', healthRoutes);
 app.route('/webhooks/github', githubWebhook);
+app.route('/webhooks/dodo', dodoWebhook);
 app.route('/api/v1/config', configRoutes);
 app.route('/api/v1/jobs', jobRoutes);
 

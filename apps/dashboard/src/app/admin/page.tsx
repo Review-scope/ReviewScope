@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { Suspense } from "react";
 import { authOptions } from "../api/auth/[...nextauth]/authOptions";
 import { redirect } from "next/navigation";
-import { count, desc, sql, eq, gte, and, isNotNull, ilike, or } from "drizzle-orm";
+import { count, desc, sql, eq, gte, and, isNotNull, ilike, or, inArray } from "drizzle-orm";
 import { 
   Shield, 
   Users, 
@@ -201,7 +201,22 @@ export default async function AdminPage({
 
 
   // Transform reviews for activity component
-  const repoMap = new Map(allRepositories.map(r => [r.id, r.fullName]));
+  // Fetch repo names for the reviews to ensure we have them all (recentReviews might be for older repos not in allRepositories)
+  const reviewRepoIds = Array.from(new Set(recentReviewsData.map(r => r.repositoryId)));
+  
+  let reviewRepos: { id: string; fullName: string }[] = [];
+  if (reviewRepoIds.length > 0) {
+    reviewRepos = await db.select({
+      id: repositories.id,
+      fullName: repositories.fullName
+    }).from(repositories).where(inArray(repositories.id, reviewRepoIds));
+  }
+
+  const repoMap = new Map([
+    ...allRepositories.map(r => [r.id, r.fullName] as [string, string]),
+    ...reviewRepos.map(r => [r.id, r.fullName] as [string, string])
+  ]);
+
   const recentReviewsForActivity = recentReviewsData.map(r => ({
     id: r.id,
     repositoryId: r.repositoryId,

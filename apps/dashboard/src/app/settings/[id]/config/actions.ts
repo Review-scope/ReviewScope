@@ -16,6 +16,7 @@ const configSchema = z.object({
   model: z.string().min(1),
   customPrompt: z.string().optional(),
   apiKey: z.string().optional(),
+  smartRouting: z.string().optional(),
 });
 
 export async function verifyApiKey(provider: string, model: string, apiKey: string = '', installationId?: string) {
@@ -110,15 +111,16 @@ export async function updateConfig(installationId: string, formData: FormData) {
   const validatedFields = configSchema.safeParse({
     provider: formData.get('provider'),
     model: formData.get('model'),
-    customPrompt: formData.get('customPrompt'),
-    apiKey: formData.get('apiKey'),
+    customPrompt: formData.get('customPrompt') || undefined,
+    apiKey: formData.get('apiKey') || undefined,
+    smartRouting: formData.get('smartRouting') || undefined,
   });
 
   if (!validatedFields.success) {
     return { error: 'Invalid fields' };
   }
 
-  const { provider, model, customPrompt, apiKey } = validatedFields.data;
+  const { provider, model, customPrompt, apiKey, smartRouting } = validatedFields.data;
 
   try {
     const existingConfig = await db.query.configs.findFirst({
@@ -145,6 +147,7 @@ export async function updateConfig(installationId: string, formData: FormData) {
           model,
           customPrompt: customPrompt || null,
           apiKeyEncrypted: apiKeyEncrypted || null,
+          smartRouting: smartRouting === 'true',
           updatedAt: new Date(),
         })
         .where(eq(configs.installationId, installationId));
@@ -155,6 +158,7 @@ export async function updateConfig(installationId: string, formData: FormData) {
         model,
         customPrompt: customPrompt || null,
         apiKeyEncrypted: apiKeyEncrypted || null,
+        smartRouting: smartRouting === 'true',
       });
     }
 
@@ -188,12 +192,11 @@ export async function updateConfig(installationId: string, formData: FormData) {
 
     revalidatePath(`/settings/${installationId}/config`);
     revalidatePath(`/settings`);
+    return { success: true };
   } catch (error) {
     console.error('Failed to update config:', error);
     return { error: 'Failed to update configuration' };
   }
-
-  redirect('/dashboard');
 }
 
 export async function deleteApiKey(installationId: string) {

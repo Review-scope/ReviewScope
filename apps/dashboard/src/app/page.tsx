@@ -182,8 +182,8 @@ export default async function LandingPage() {
               },
               { 
                 icon: <MessagesSquare className="w-6 h-6" />, 
-                title: "GitHub Marketplace Billing", 
-                desc: "Seamless upgrades via GitHub. Plan expiration tracking with auto-downgrade to Free." 
+                title: "Flexible Billing", 
+                desc: "Seamless upgrades via secure payments. Plan expiration tracking with auto-downgrade to Free." 
               }
             ].map((feat) => (
               <div key={feat.title} className="group p-5 md:p-6 border rounded-2xl bg-card hover:border-primary/50 transition-colors shadow-sm">

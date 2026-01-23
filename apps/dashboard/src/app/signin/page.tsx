@@ -94,7 +94,7 @@ export default function SignInPage() {
               toast.loading('Redirecting to GitHub...', { id: 'signin' });
               signIn('github', { callbackUrl: '/' });
             }}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-[#24292F] hover:bg-[#1a1f24] text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-[#24292F] hover:bg-[#1a1f24] text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
           >
             <Github className="w-6 h-6" />
             Continue with GitHub

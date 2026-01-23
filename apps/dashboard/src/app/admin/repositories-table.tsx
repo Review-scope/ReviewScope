@@ -118,7 +118,7 @@ export function RepositoriesTable({ repositories }: { repositories: Repository[]
                             toast.error(result.error || 'Failed to clear vectors', { id: `clear-${repo.id}` });
                           }
                         }}
-                        className="p-1.5 rounded hover:bg-red-500/10 text-red-500 transition-colors"
+                        className="p-1.5 rounded hover:bg-red-500/10 text-red-500 transition-colors cursor-pointer"
                         title="Clear Vectors"
                       >
                         <Trash2 className="w-4 h-4" />

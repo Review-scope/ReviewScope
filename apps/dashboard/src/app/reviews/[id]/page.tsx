@@ -88,7 +88,7 @@ export default async function ReviewDetailsPage({ params }: { params: Promise<{ 
               <span className="text-xl font-black italic uppercase tracking-tight">{assessment.riskLevel}</span>
             </div>
             <a 
-              href={`${review.repository.fullName}/pull/${review.prNumber}`}
+              href={`https://github.com/${review.repository.fullName}/pull/${review.prNumber}`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-4 bg-zinc-900 text-white rounded-4xl font-black uppercase tracking-widest text-xs flex items-center gap-3 hover:bg-zinc-800 transition-all hover:translate-y-[-2px] shadow-2xl"

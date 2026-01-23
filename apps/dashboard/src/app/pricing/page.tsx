@@ -5,6 +5,14 @@ import { db, installations } from '@/lib/db';
 import { eq, inArray } from 'drizzle-orm';
 import { getUserOrgIds } from "@/lib/github";
 
+function getPaymentLink(baseUrl: string | undefined, accountId: string) {
+  if (!baseUrl) return '#';
+  const separator = baseUrl.includes('?') ? '&' : '?';
+  // Dodo Payments uses metadata_ prefix for static links
+  // We also pass client_reference_id for compatibility if they support it directly
+  return `${baseUrl}${separator}metadata_client_reference_id=${accountId}&client_reference_id=${accountId}`;
+}
+
 export default async function PricingPage() {
   const session = await getServerSession(authOptions);
   const customerAccountId = (session?.user as any)?.id || 'CUSTOMER_ACCOUNT_ID';
@@ -31,7 +39,7 @@ export default async function PricingPage() {
       planId: 3,
       description: "Best for individual developers trying ReviewScope",
       price: "$0",
-      upgradeUrl: `https://github.com/marketplace/review-scope/upgrade/3/${customerAccountId}`,
+      upgradeUrl: getPaymentLink(process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK_FREE, customerAccountId),
       features: [
         "Up to 3 repositories",
         "Reviews up to 30 files per PR",
@@ -56,7 +64,7 @@ export default async function PricingPage() {
       description: "Best for power users & serious developers",
       price: "$15",
       period: "/mo",
-      upgradeUrl: `https://github.com/marketplace/review-scope/upgrade/7/${customerAccountId}`,
+      upgradeUrl: getPaymentLink(process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK_PRO, customerAccountId),
       features: [
         "Up to 5 repositories",
         "Reviews up to 100 files per PR",
@@ -81,7 +89,7 @@ export default async function PricingPage() {
       description: "Best for organizations & growing companies",
       price: "$50",
       period: "/mo",
-      upgradeUrl: `https://github.com/marketplace/review-scope/upgrade/8/${customerAccountId}`,
+      upgradeUrl: getPaymentLink(process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK_TEAM, customerAccountId),
       features: [
         "Unlimited repositories",
         "Unlimited files (Smart Batching)",
@@ -166,8 +174,8 @@ export default async function PricingPage() {
 
             <a
               href={(activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)) ? '#' : tier.upgradeUrl}
-              target={(activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)) ? undefined : '_blank'}
-              rel={(activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)) ? undefined : 'noopener noreferrer'}
+              target={(activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)) ? undefined : (tier.planId === 3 ? '_self' : '_blank')}
+              rel={(activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)) ? undefined : (tier.planId === 3 ? undefined : 'noopener noreferrer')}
               className={`w-full py-4 rounded-xl font-bold text-base text-center transition-all ${
                 activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3)
                   ? 'bg-green-600 text-white cursor-default opacity-90 pointer-events-none'
@@ -176,7 +184,7 @@ export default async function PricingPage() {
                   : "bg-primary text-primary-foreground hover:opacity-90 shadow-lg"
               }`}
             >
-              {activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3) ? 'Current Plan' : tier.cta}
+              {activePlanIds.includes(tier.planId) || (activePlanIds.includes(0) && tier.planId === 3) ? 'Current Plan' : (tier.planId === 3 ? 'Downgrade to Free' : tier.cta)}
             </a>
           </div>
         ))}
@@ -199,7 +207,7 @@ export default async function PricingPage() {
           <div className="space-y-3">
             <h4 className="font-bold text-lg">How do upgrades work?</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Upgrades are seamless via GitHub Marketplace. When you purchase a plan, we automatically detect it and update your account within seconds. Your plan limits take effect immediately.
+              Upgrades are seamless via our secure payment provider. When you purchase a plan, we automatically detect it and update your account within seconds. Your plan limits take effect immediately.
             </p>
           </div>
           <div className="space-y-3">
@@ -223,7 +231,7 @@ export default async function PricingPage() {
           <div className="space-y-3">
             <h4 className="font-bold text-lg">Can I cancel anytime?</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Yes. You can manage your subscription directly from GitHub Marketplace or our dashboard. Cancellations take effect at the end of your billing cycle. You'll keep your account and data.
+              Yes. You can manage your subscription directly from our dashboard. Cancellations take effect at the end of your billing cycle. You'll keep your account and data.
             </p>
           </div>
         </div>

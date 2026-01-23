@@ -43,7 +43,7 @@ export function ActivationToggle({ repoId, isActive: initialIsActive }: Activati
         onClick={handleToggle}
         disabled={isPending}
         className={clsx(
-          "relative inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95 disabled:opacity-70 disabled:pointer-events-none",
+          "relative inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95 disabled:opacity-70 disabled:pointer-events-none cursor-pointer",
           isActive 
             ? "bg-green-500 text-white hover:bg-green-600 shadow-green-500/20" 
             : "bg-zinc-200 text-zinc-500 hover:bg-zinc-300 shadow-zinc-500/10"

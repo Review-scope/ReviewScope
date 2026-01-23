@@ -70,7 +70,7 @@ export async function toggleRepoActivation(repoId: string, isActive: boolean) {
   }
 
   // LOGIC: Activation requires checks
-  const limits = getPlanLimits(installation.planId);
+  const limits = getPlanLimits(installation.planId, installation.expiresAt);
   
   // 1. Check Active Repo Limit
   const activeRepos = await db

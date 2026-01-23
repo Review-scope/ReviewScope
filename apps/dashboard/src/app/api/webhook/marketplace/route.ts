@@ -88,24 +88,11 @@ export async function POST(req: Request) {
       payload: payload,
     });
 
-    // Update installation if it exists
-    if (action === 'purchased' || action === 'changed') {
-      await db.update(installations).set({
-        planId: mp.plan.id,
-        planName: mp.plan.name,
-        expiresAt: mp.ends_at ? new Date(mp.ends_at) : null,
-        updatedAt: new Date(),
-      }).where(eq(installations.accountName, account.login));
-    } else if (action === 'cancelled') {
-      await db.update(installations).set({
-        planId: null,
-        planName: 'None',
-        expiresAt: null,
-        updatedAt: new Date(),
-      }).where(eq(installations.accountName, account.login));
-    }
+    // GitHub Marketplace logic removed in favor of Dodo Payments
+    // We log the event above for audit, but we do not update the installation plan.
+    console.warn(`[Marketplace Webhook] Ignoring GitHub plan update: ${action} (Dodo Payments active)`);
 
-    return new Response('Marketplace event processed', { status: 200 });
+    return new Response('Marketplace event ignored (Dodo Payments active)', { status: 200 });
 
   } catch (error) {
     console.error('[Marketplace Webhook] Error processing event:', error);
