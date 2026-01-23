@@ -76,16 +76,26 @@ export default async function SettingsPage() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-12">
       {/* Premium Header */}
       <header className="space-y-6">
-        <div className="flex items-center gap-6">
-          <div className="p-4 rounded-3xl bg-primary text-primary-foreground shadow-xl shadow-primary/20">
-            <LayoutGrid className="w-10 h-10" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <div className="p-4 rounded-3xl bg-primary text-primary-foreground shadow-xl shadow-primary/20">
+              <LayoutGrid className="w-10 h-10" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-black tracking-tighter uppercase italic leading-none">Connected Accounts</h1>
+              <p className="text-xl text-muted-foreground font-medium mt-2">
+                Manage your GitHub installations and configure AI review settings for each workspace.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-4xl font-black tracking-tighter uppercase italic leading-none">Connected Accounts</h1>
-            <p className="text-xl text-muted-foreground font-medium mt-2">
-              Manage your GitHub installations and configure AI review settings for each workspace.
-            </p>
-          </div>
+          <a 
+            href="https://github.com/apps/review-scope/installations/new"
+            target="_blank"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all shadow-lg text-sm shrink-0"
+          >
+            <Github className="w-4 h-4" />
+            Add Organization
+          </a>
         </div>
       </header>
 

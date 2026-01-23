@@ -1,4 +1,4 @@
-import { db, configs, installations } from "@/lib/db";
+import { db, configs, installations, repositories } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft, Settings2, ShieldCheck, Zap, Sparkles } from "lucide-react";
@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import Link from "next/link";
 import { ConfigForm } from "./config-form";
+import { RepoList } from "./repo-list";
 import { getUserOrgIds } from "@/lib/github";
 
 export default async function ConfigPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,6 +36,16 @@ export default async function ConfigPage({ params }: { params: Promise<{ id: str
     .from(configs)
     .where(eq(configs.installationId, id))
     .limit(1);
+
+  const installationRepos = await db
+    .select({
+      id: repositories.id,
+      fullName: repositories.fullName,
+      status: repositories.status,
+      isActive: repositories.isActive
+    })
+    .from(repositories)
+    .where(eq(repositories.installationId, id));
 
   const plan = installation.planName || 'None';
   const limits = {
@@ -108,7 +119,7 @@ export default async function ConfigPage({ params }: { params: Promise<{ id: str
             </div>
             {(plan === 'Free' || plan === 'None') && (
               <Link 
-                href="/pricing"
+                href={`/pricing?accountId=${installation.githubAccountId}`}
                 className={`inline-flex items-center gap-2 px-4 py-2 text-white rounded-lg font-bold text-xs uppercase tracking-wide transition-colors w-fit ${
                   plan === 'None' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
@@ -129,6 +140,16 @@ export default async function ConfigPage({ params }: { params: Promise<{ id: str
               apiKeyEncrypted: config.apiKeyEncrypted,
               smartRouting: config.smartRouting,
             } : undefined} 
+          />
+
+          <RepoList 
+            installationId={id} 
+            repos={installationRepos.map(r => ({
+              id: r.id,
+              fullName: r.fullName,
+              status: r.status,
+              isActive: r.isActive
+            }))} 
           />
         </div>
 

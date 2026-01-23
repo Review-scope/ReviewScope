@@ -10,6 +10,8 @@ export const authOptions: NextAuthOptions = {
       authorization: {
         params: {
           scope: "read:user user:email read:org",
+          // Force re-consent to ensure new scopes are granted if they were missing before
+          prompt: "consent", 
         },
       },
     }),

@@ -7,7 +7,7 @@ import {
   getIndexingQueue,
   getChatQueue 
 } from '../lib/queue.js';
-import { db, installations, repositories, marketplaceEvents, configs, reviews } from '../db/index.js';
+import { db, installations, repositories, configs, reviews } from '../db/index.js';
 import { eq, and, gte } from 'drizzle-orm';
 import { GitHubClient } from '../../../worker/src/lib/github.js';
 import { getPlanLimits } from '../../../worker/src/lib/plans.js';

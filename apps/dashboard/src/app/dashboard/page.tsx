@@ -79,6 +79,7 @@ export default async function DashboardPage({
       fullName: repositories.fullName,
       indexedAt: repositories.indexedAt,
       installationId: repositories.installationId,
+      githubAccountId: installations.githubAccountId,
       hasApiKey: isNotNull(configs.apiKeyEncrypted),
       status: repositories.status,
       isActive: repositories.isActive,
@@ -178,7 +179,7 @@ export default async function DashboardPage({
                 </div>
               </div>
               <Link
-                href="/pricing"
+                href={`/pricing?accountId=${inst.githubAccountId}`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-sm uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer"
               >
                 <Zap className="w-4 h-4" />
@@ -202,7 +203,7 @@ export default async function DashboardPage({
                 </div>
               </div>
               <Link
-                href="/pricing"
+                href={`/pricing?accountId=${inst.githubAccountId}`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-sm uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer"
               >
                 <Zap className="w-4 h-4" />
@@ -237,7 +238,7 @@ export default async function DashboardPage({
                   </div>
                   <Link 
                     href={`/settings/${repo.installationId}/config`}
-                    className="w-full md:w-auto px-6 py-2.5 bg-orange-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all hover:translate-y-[-2px] active:translate-y-0 cursor-pointer"
+                    className="w-full md:w-auto px-6 py-2.5 bg-orange-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                   >
                     Setup Key
                   </Link>
@@ -365,7 +366,7 @@ export default async function DashboardPage({
                 }
                 return (
                   <Link
-                    href="/pricing"
+                    href={`/pricing?accountId=${userInstallations[0]?.githubAccountId}`}
                     className="px-4 md:px-6 py-5 flex flex-col gap-2 md:grid md:grid-cols-12 md:items-center md:gap-4 bg-amber-50/80 md:bg-amber-50/60 md:hover:bg-amber-100 transition-colors cursor-pointer rounded-b-xl md:rounded-none"
                   >
                     <div className="md:col-span-5 flex items-center gap-3">
