@@ -1,5 +1,5 @@
 import { db, repositories, installations, configs, reviews } from "@/lib/db";
-import { Github, CheckCircle2, AlertCircle, Clock, ArrowRight, Key, Zap, BarChart3, ShieldCheck, Sparkles, Lock, Gauge, Layers, MessageSquare, Check, Power } from "lucide-react";
+import { Github, CheckCircle2, AlertCircle, Clock, ArrowRight, Key, Zap, BarChart3, ShieldCheck, Sparkles, Lock, Gauge, Layers, MessageSquare, Check, Power, RefreshCw } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/authOptions";
 import { eq, isNotNull, and, count, desc, inArray, or } from "drizzle-orm";
@@ -8,13 +8,7 @@ import { redirect } from "next/navigation";
 import { ActivationToggle } from "../repositories/[id]/activation-toggle";
 import { getUserOrgIds } from "@/lib/github";
 import { DashboardSearch } from "./dashboard-search";
-// Plan limits mapping (must match worker/lib/plans.ts)
-const planLimits: { [key: string]: { maxRepos: number } } = {
-  None: { maxRepos: 0 },
-  Free: { maxRepos: 3 },
-  Pro: { maxRepos: 5 },
-  Team: { maxRepos: 999999 }
-};
+import { getPlanLimits, PlanTier } from "../../../../worker/src/lib/plans";
 
 export const dynamic = 'force-dynamic';
 
@@ -85,6 +79,7 @@ export default async function DashboardPage({
       fullName: repositories.fullName,
       indexedAt: repositories.indexedAt,
       installationId: repositories.installationId,
+      githubAccountId: installations.githubAccountId,
       hasApiKey: isNotNull(configs.apiKeyEncrypted),
       status: repositories.status,
       isActive: repositories.isActive,
@@ -102,8 +97,8 @@ export default async function DashboardPage({
 
   const totalActiveRepos = userRepos.filter(r => r.isActive).length;
   const totalCapacity = userInstallations.reduce((sum, inst) => {
-    const plan = inst.planName || 'None';
-    return sum + (planLimits[plan]?.maxRepos || 0);
+    const limits = getPlanLimits(inst.planId, inst.expiresAt);
+    return sum + limits.maxRepos;
   }, 0);
   const filteredUserRepos = normalizedQuery
     ? userRepos.filter(r => r.fullName.toLowerCase().includes(normalizedQuery))
@@ -160,42 +155,12 @@ export default async function DashboardPage({
 
       {/* Plan Quota Warning Banners */}
       {userInstallations
-        .filter(inst => inst.planName === 'Free' || !inst.planName || inst.planName === 'None')
         .map((inst) => {
           const activeCount = userRepos.filter(r => r.installationId === inst.id && r.isActive).length;
-          const planName = inst.planName || 'None';
-          const limits = planLimits[planName] || planLimits.None;
+          const planName = (inst.planName === 'None' || !inst.planName) ? 'Free' : inst.planName;
+          const limits = getPlanLimits(inst.planId, inst.expiresAt);
           const limit = limits.maxRepos;
           const isAtLimit = activeCount >= limit;
-          const isNone = planName === 'None';
-          
-          if (isNone) {
-            return (
-              <div 
-                key={inst.id}
-                className="rounded-2xl border-2 border-red-200 bg-red-50 p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 bg-red-100 rounded-lg mt-0.5">
-                    <ShieldCheck className="w-5 h-5 text-red-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-red-900">Subscription Required</h3>
-                    <p className="text-sm text-red-700 mt-1">
-                      Account <span className="font-bold">@{inst.accountName}</span> has no active plan. Please subscribe to enable AI code reviews.
-                    </p>
-                  </div>
-                </div>
-                <Link
-                  href="/pricing"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  <Zap className="w-4 h-4" />
-                  Subscribe Now
-                </Link>
-              </div>
-            );
-          }
           
           return isAtLimit ? (
             <div 
@@ -209,12 +174,12 @@ export default async function DashboardPage({
                 <div>
                   <h3 className="font-bold text-orange-900">Active Repository Limit Reached</h3>
                   <p className="text-sm text-orange-700 mt-1">
-                    You&apos;ve activated all <span className="font-bold">{limit}</span> repositories allowed on the Free plan for @{inst.accountName}. Deactivate one to turn on another, or upgrade.
+                    You&apos;ve activated all <span className="font-bold">{limit}</span> repositories allowed on the {planName} plan for @{inst.accountName}. Deactivate one to turn on another, or upgrade.
                   </p>
                 </div>
               </div>
               <Link
-                href="/pricing"
+                href={`/pricing?accountId=${inst.githubAccountId}`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-sm uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer"
               >
                 <Zap className="w-4 h-4" />
@@ -233,12 +198,12 @@ export default async function DashboardPage({
                 <div>
                   <h3 className="font-bold text-amber-900">Approaching Active Limit</h3>
                   <p className="text-sm text-amber-700 mt-1">
-                    You&apos;re using <span className="font-bold">{activeCount}/{limit}</span> active repositories on the Free plan for @{inst.accountName}.
+                    You&apos;re using <span className="font-bold">{activeCount}/{limit}</span> active repositories on the {planName} plan for @{inst.accountName}.
                   </p>
                 </div>
               </div>
               <Link
-                href="/pricing"
+                href={`/pricing?accountId=${inst.githubAccountId}`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-sm uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer"
               >
                 <Zap className="w-4 h-4" />
@@ -273,7 +238,7 @@ export default async function DashboardPage({
                   </div>
                   <Link 
                     href={`/settings/${repo.installationId}/config`}
-                    className="w-full md:w-auto px-6 py-2.5 bg-orange-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all hover:translate-y-[-2px] active:translate-y-0 cursor-pointer"
+                    className="w-full md:w-auto px-6 py-2.5 bg-orange-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                   >
                     Setup Key
                   </Link>
@@ -365,8 +330,10 @@ export default async function DashboardPage({
 
               {(() => {
                 const canConnect = userInstallations.some(inst => {
-                  const limits = planLimits[inst.planName || 'Free'] || planLimits.Free;
-                  const limit = limits.maxRepos;
+                  const limits = getPlanLimits(inst.planId, inst.expiresAt);
+                  // Allow connecting more repos than the active limit to enable swapping
+                  // Only block if the plan effectively has 0 allowed repos (e.g. None/Expired)
+                  const limit = limits.maxRepos > 0 ? 100 : 0;
                   const count = userRepos.filter(r => r.installationId === inst.id).length;
                   return count < limit;
                 });
@@ -399,7 +366,7 @@ export default async function DashboardPage({
                 }
                 return (
                   <Link
-                    href="/pricing"
+                    href={`/pricing?accountId=${userInstallations[0]?.githubAccountId}`}
                     className="px-4 md:px-6 py-5 flex flex-col gap-2 md:grid md:grid-cols-12 md:items-center md:gap-4 bg-amber-50/80 md:bg-amber-50/60 md:hover:bg-amber-100 transition-colors cursor-pointer rounded-b-xl md:rounded-none"
                   >
                     <div className="md:col-span-5 flex items-center gap-3">
@@ -441,13 +408,8 @@ export default async function DashboardPage({
               {userInstallations
                 .filter(inst => inst.status === 'active')
                 .map((inst) => {
-                  const plan = inst.planName || 'Free';
-                  const allLimits: Record<string, any> = {
-                    'Free': { files: 30, rag: 2, chat: 5, repos: 3, batch: false },
-                    'Pro': { files: 100, rag: 5, chat: 20, repos: 5, batch: false },
-                    'Team': { files: 'Unlimited', rag: 8, chat: 'Unlimited', repos: 'Unlimited', batch: true }
-                  };
-                  const limits = allLimits[plan] || allLimits.Free;
+                  const plan = (inst.planName === 'None' || !inst.planName) ? 'Free' : inst.planName;
+                  const limits = getPlanLimits(inst.planId, inst.expiresAt);
 
                   return (
                     <div key={inst.id} className="bg-card border-2 border-border/50 rounded-2xl p-6 space-y-4">
@@ -466,7 +428,17 @@ export default async function DashboardPage({
                             <span className="font-medium">Repos</span>
                           </div>
                           <span className="font-bold">
-                            {userRepos.filter(r => r.installationId === inst.id && r.isActive).length}/{limits?.repos}
+                            {userRepos.filter(r => r.installationId === inst.id && r.isActive).length}/{limits.maxRepos > 1000 ? 'Unlimited' : limits.maxRepos}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <RefreshCw className="w-3.5 h-3.5 text-green-600" />
+                            <span className="font-medium">Swaps</span>
+                          </div>
+                          <span className="font-bold">
+                            {inst.swapCount}/{limits.maxMonthlyActivations > 1000 ? 'Unlimited' : limits.maxMonthlyActivations}
                           </span>
                         </div>
 
@@ -475,7 +447,7 @@ export default async function DashboardPage({
                             <Gauge className="w-3.5 h-3.5 text-primary" />
                             <span className="font-medium">PR Size</span>
                           </div>
-                          <span className="font-bold">{limits?.files}</span>
+                          <span className="font-bold">{limits.maxFiles > 1000 ? 'Unlimited' : limits.maxFiles}</span>
                         </div>
 
                         <div className="flex items-center justify-between text-xs">
@@ -483,7 +455,7 @@ export default async function DashboardPage({
                             <Layers className="w-3.5 h-3.5 text-blue-500" />
                             <span className="font-medium">RAG Depth</span>
                           </div>
-                          <span className="font-bold">{limits?.rag}</span>
+                          <span className="font-bold">{limits.ragK}</span>
                         </div>
 
                         <div className="flex items-center justify-between text-xs">
@@ -491,10 +463,10 @@ export default async function DashboardPage({
                             <MessageSquare className="w-3.5 h-3.5 text-amber-500" />
                             <span className="font-medium">Chat Iter</span>
                           </div>
-                          <span className="font-bold">{limits?.chat}</span>
+                          <span className="font-bold">{limits.chatPerPRLimit === 'unlimited' ? 'Unlimited' : limits.chatPerPRLimit}</span>
                         </div>
 
-                        {limits?.batch && (
+                        {limits.tier === PlanTier.TEAM && (
                           <div className="flex items-center gap-2 p-2 bg-primary/5 rounded-lg text-xs">
                             <Check className="w-3 h-3 text-primary" />
                             <span className="font-bold text-primary">Batching</span>

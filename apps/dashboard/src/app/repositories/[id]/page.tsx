@@ -53,7 +53,7 @@ export default async function RepositoryPage({ params }: { params: Promise<{ id:
     <div className="p-4 md:p-8 max-7xl mx-auto space-y-8">
       <header className="space-y-4">
         <Link 
-          href="/" 
+          href="/dashboard" 
           className="group inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors"
         >
           <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />

@@ -7,7 +7,7 @@ import {
   getIndexingQueue,
   getChatQueue 
 } from '../lib/queue.js';
-import { db, installations, repositories, marketplaceEvents, configs, reviews } from '../db/index.js';
+import { db, installations, repositories, configs, reviews } from '../db/index.js';
 import { eq, and, gte } from 'drizzle-orm';
 import { GitHubClient } from '../../../worker/src/lib/github.js';
 import { getPlanLimits } from '../../../worker/src/lib/plans.js';
@@ -60,7 +60,10 @@ githubWebhook.post('/', async (c) => {
   const eventName = c.req.header('x-github-event') || '';
   const deliveryId = c.req.header('x-github-delivery') || '';
 
-  const body = await c.req.text();
+  const bodyBuffer = await c.req.arrayBuffer();
+  const rawBody = Buffer.from(bodyBuffer);
+  const body = rawBody.toString('utf-8');
+  
   console.warn(`[Webhook] Incoming event: ${eventName} (Delivery: ${deliveryId})`);
 
   // Verify signature
@@ -71,13 +74,13 @@ githubWebhook.post('/', async (c) => {
   }
 
   const hmac = crypto.createHmac('sha256', secret);
-  hmac.update(body);
+  hmac.update(rawBody);
   const calculatedSignature = `sha256=${hmac.digest('hex')}`;
 
-  console.log(`[Webhook Debug] Secret Length: ${secret.length}`);
-  console.log(`[Webhook Debug] Received Signature: ${signature}`);
-  console.log(`[Webhook Debug] Calculated Signature: ${calculatedSignature}`);
-  console.log(`[Webhook Debug] Body Length: ${body.length}`);
+  // console.log(`[Webhook Debug] Secret Length: ${secret.length}`);
+  // console.log(`[Webhook Debug] Received Signature: ${signature}`);
+  // console.log(`[Webhook Debug] Calculated Signature: ${calculatedSignature}`);
+  // console.log(`[Webhook Debug] Body Length: ${rawBody.length}`);
 
   if (signature !== calculatedSignature) {
     try {
@@ -86,19 +89,11 @@ githubWebhook.post('/', async (c) => {
       
       if (trusted.length !== untrusted.length || !crypto.timingSafeEqual(trusted, untrusted)) {
          console.error('[Webhook] Invalid signature');
-         return c.json({ 
-           error: 'Invalid signature',
-           debug: {
-             received: signature,
-             calculated: calculatedSignature,
-             secretLength: secret.length,
-             bodyLength: body.length
-           }
-         }, 401);
+         return c.json({ error: 'Invalid signature' }, 401);
       }
     } catch (err) {
        console.error('[Webhook] Signature verification error:', err);
-       return c.json({ error: 'Signature verification failed', details: err instanceof Error ? err.message : String(err) }, 401);
+       return c.json({ error: 'Invalid signature' }, 401);
     }
   }
 
@@ -127,38 +122,9 @@ githubWebhook.post('/', async (c) => {
 
   // Handle Marketplace Events
   if (eventName === 'marketplace_purchase') {
-    const { action, marketplace_purchase: mp, sender } = payload;
-    const account = mp.account;
-
-    console.warn(`Marketplace event: ${action} for ${account.login} (Plan: ${mp.plan.name})`);
-
-    // Log event
-    await db.insert(marketplaceEvents).values({
-      githubAccountId: account.id,
-      action: action,
-      planId: mp.plan.id,
-      sender: sender.login,
-      payload: payload,
-    });
-
-    // Update installation if it exists
-    if (action === 'purchased' || action === 'changed') {
-      await db.update(installations).set({
-        planId: mp.plan.id,
-        planName: mp.plan.name,
-        expiresAt: mp.ends_at ? new Date(mp.ends_at) : null,
-        updatedAt: new Date(),
-      }).where(eq(installations.accountName, account.login));
-    } else if (action === 'cancelled') {
-      await db.update(installations).set({
-        planId: null,
-        planName: 'None',
-        expiresAt: null,
-        updatedAt: new Date(),
-      }).where(eq(installations.accountName, account.login));
-    }
-
-    return c.json({ status: 'marketplace_synced' });
+    // GitHub Marketplace logic removed in favor of Dodo Payments
+    console.warn(`[Webhook] Ignoring GitHub Marketplace event: ${payload.action}`);
+    return c.json({ status: 'ignored_dodo_payments_active' });
   }
 
   // Handle Event Types

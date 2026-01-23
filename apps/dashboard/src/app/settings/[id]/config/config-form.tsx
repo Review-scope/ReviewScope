@@ -49,6 +49,7 @@ export function ConfigForm({
     'idle' | 'verifying' | 'valid' | 'invalid'
   >('idle');
   const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleDeleteKey = async () => {
     if (!confirm('Are you sure you want to remove the API key? AI reviews will be disabled.')) return;
@@ -81,6 +82,7 @@ export function ConfigForm({
 
     if (result.success) {
       setVerifyStatus('valid');
+      toast.success('API key verified');
     } else {
       setVerifyStatus('invalid');
       setVerifyError(result.error || 'Verification failed');
@@ -88,13 +90,29 @@ export function ConfigForm({
   };
 
   const handleFormSubmit = async (formData: FormData) => {
+    setIsSaving(true);
     try {
+      // Ensure smartRouting is explicitly set as 'true' or 'false' string
+      // Delete any existing smartRouting entry first to avoid duplicates
+      formData.delete('smartRouting');
+      formData.append('smartRouting', smartRouting ? 'true' : 'false');
+
+      // Ensure model is included even if disabled (when smartRouting is on)
+      if (!formData.get('model')) {
+        formData.set('model', model);
+      }
+      
       const res = await updateConfig(installationId, formData);
       if (res?.error) {
         toast.error(res.error);
+      } else {
+        toast.success('Configuration updated');
+        router.refresh();
       }
     } catch {
       toast.error('Failed to update configuration');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -104,7 +122,14 @@ export function ConfigForm({
 
   return (
     <div className="bg-card border border-border/60 rounded-[2.5rem] shadow-xl">
-      <form action={handleFormSubmit} className="p-10 space-y-12">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+          handleFormSubmit(formData);
+        }}
+        className="p-10 space-y-12"
+      >
 
         {/* HEADER */}
         <div>
@@ -148,7 +173,7 @@ export function ConfigForm({
               type="button"
               onClick={() => setSmartRouting(!smartRouting)}
               className={clsx(
-                'w-11 h-6 rounded-full relative',
+                'w-11 h-6 rounded-full relative cursor-pointer',
                 smartRouting ? 'bg-primary' : 'bg-muted'
               )}
             >
@@ -166,8 +191,12 @@ export function ConfigForm({
             value={model}
             onChange={(e) => setModel(e.target.value)}
             disabled={smartRouting}
-            className="mt-4 w-full h-14 rounded-xl px-4 border bg-muted/40"
+            className={clsx(
+              'mt-4 w-full h-14 rounded-xl px-4 border bg-muted/40',
+              smartRouting && 'opacity-50 cursor-not-allowed'
+            )}
           />
+          <input type="hidden" name="smartRouting" value={smartRouting ? 'true' : 'false'} />
         </Section>
 
         {/* API KEY */}
@@ -200,7 +229,7 @@ export function ConfigForm({
             <button
               type="button"
               onClick={handleVerify}
-              className="h-14 px-6 bg-black text-white rounded-xl font-bold hover:bg-zinc-800 transition-colors"
+              className="h-14 px-6 bg-black text-white rounded-xl font-bold hover:bg-zinc-800 transition-colors cursor-pointer"
             >
               Verify
             </button>
@@ -209,7 +238,7 @@ export function ConfigForm({
               <button
                 type="button"
                 onClick={handleDeleteKey}
-                className="h-14 px-4 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold hover:bg-red-100 transition-colors"
+                className="h-14 px-4 bg-red-50 text-red-600 cursor-pointer border border-red-100 rounded-xl font-bold hover:bg-red-100 transition-colors"
                 title="Remove API Key"
               >
                 <XCircle className="w-5 h-5" />
@@ -233,9 +262,12 @@ export function ConfigForm({
         <Section title="Custom Prompt" icon={<FileText className="w-5 h-5" />}>
           <textarea
             name="customPrompt"
-            disabled={plan === 'Free'}
+            disabled={plan === 'FREE'}
             defaultValue={initialConfig?.customPrompt || ''}
-            className="w-full min-h-[140px] rounded-xl p-4 border bg-muted/30"
+            className={clsx(
+              'w-full min-h-35 rounded-xl p-4 border bg-muted/30',
+              plan === 'Free' && 'opacity-50 cursor-not-allowed'
+            )}
           />
           {plan === 'Free' && (
             <p className="text-xs text-orange-600 flex gap-2">
@@ -252,10 +284,11 @@ export function ConfigForm({
 
           <button
             type="submit"
-            disabled={!canSave}
-            className="px-10 py-4 bg-primary text-primary-foreground rounded-xl font-bold"
+            disabled={!canSave || isSaving}
+            className="px-10 py-4 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            Save Changes
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </form>

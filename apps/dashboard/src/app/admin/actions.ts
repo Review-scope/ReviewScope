@@ -272,13 +272,17 @@ export async function updateInstallationPlan(installationId: string, planName: s
 
   const planId = PLAN_MAP[planName] || 3;
 
+  // Set expiration to 30 days from now
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+
   await db.update(installations).set({
     planName,
     planId,
     status: 'active',
     swapCount: 0,
     lastSwapReset: new Date(),
-    expiresAt: null, // Clear expiration for manual admin updates
+    expiresAt, // Set expiration to 30 days from now
     updatedAt: new Date(),
   }).where(eq(installations.id, installationId));
 

@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "main": "./dist/apps/api/src/index.js",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch --env-file=.env src/index.ts",
@@ -25,6 +27,7 @@
     "hono": "^4.0.0",
     "pg": "^8.16.3",
     "postgres": "^3.4.0",
+    "standardwebhooks": "^1.0.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {

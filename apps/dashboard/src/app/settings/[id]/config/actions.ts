@@ -16,6 +16,7 @@ const configSchema = z.object({
   model: z.string().min(1),
   customPrompt: z.string().optional(),
   apiKey: z.string().optional(),
+  smartRouting: z.string().optional(),
 });
 
 export async function verifyApiKey(provider: string, model: string, apiKey: string = '', installationId?: string) {
@@ -101,6 +102,89 @@ async function verifyOwnership(installationId: string) {
   return installation;
 }
 
+export async function syncRepositories(installationId: string) {
+  const installation = await verifyOwnership(installationId);
+  if (!installation) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    const session = await getServerSession(authOptions);
+    // @ts-expect-error session.accessToken exists
+    const accessToken = session?.accessToken;
+
+    if (!accessToken) {
+      return { success: false, error: "No access token found" };
+    }
+
+    // 1. Get Installation Token
+    // We can't use user token to list installation repos directly if we want all of them including those not owned by user but part of installation
+    // BUT, for now, we can try to use the user token to list repos accessible to the installation if we had an endpoint.
+    // Better: Use the GitHub App credentials. But we are in the dashboard, we might not have the App private key loaded here?
+    // The dashboard DOES have access to DB.
+    
+    // Actually, we can use the user's access token to list the repositories that the INSTALLATION has access to.
+    // Endpoint: GET /user/installations/{installation_id}/repositories
+    
+    let allRepos: any[] = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const res = await fetch(`https://api.github.com/user/installations/${installation.githubInstallationId}/repositories?per_page=100&page=${page}`, {
+        headers: {
+          Authorization: `token ${accessToken}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Failed to fetch repos:", errText);
+        break;
+      }
+
+      const data = await res.json();
+      if (data.repositories && data.repositories.length > 0) {
+        allRepos = [...allRepos, ...data.repositories];
+        page++;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    if (allRepos.length === 0) {
+      return { success: true, count: 0, message: "No repositories found for this installation." };
+    }
+
+    // 2. Sync to DB
+    let count = 0;
+    for (const repo of allRepos) {
+      await db.insert(repositories).values({
+        installationId: installation.id,
+        githubRepoId: repo.id,
+        fullName: repo.full_name,
+        // isActive: false // Default
+      }).onConflictDoUpdate({
+        target: repositories.githubRepoId,
+        set: {
+          fullName: repo.full_name,
+          installationId: installation.id,
+          status: 'active',
+          updatedAt: new Date()
+        }
+      });
+      count++;
+    }
+
+    revalidatePath(`/settings/${installationId}/config`);
+    return { success: true, count };
+  } catch (error: any) {
+    console.error("Sync error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updateConfig(installationId: string, formData: FormData) {
   const installation = await verifyOwnership(installationId);
   if (!installation) {
@@ -110,15 +194,16 @@ export async function updateConfig(installationId: string, formData: FormData) {
   const validatedFields = configSchema.safeParse({
     provider: formData.get('provider'),
     model: formData.get('model'),
-    customPrompt: formData.get('customPrompt'),
-    apiKey: formData.get('apiKey'),
+    customPrompt: formData.get('customPrompt') || undefined,
+    apiKey: formData.get('apiKey') || undefined,
+    smartRouting: formData.get('smartRouting') || undefined,
   });
 
   if (!validatedFields.success) {
     return { error: 'Invalid fields' };
   }
 
-  const { provider, model, customPrompt, apiKey } = validatedFields.data;
+  const { provider, model, customPrompt, apiKey, smartRouting } = validatedFields.data;
 
   try {
     const existingConfig = await db.query.configs.findFirst({
@@ -145,6 +230,7 @@ export async function updateConfig(installationId: string, formData: FormData) {
           model,
           customPrompt: customPrompt || null,
           apiKeyEncrypted: apiKeyEncrypted || null,
+          smartRouting: smartRouting === 'true',
           updatedAt: new Date(),
         })
         .where(eq(configs.installationId, installationId));
@@ -155,6 +241,7 @@ export async function updateConfig(installationId: string, formData: FormData) {
         model,
         customPrompt: customPrompt || null,
         apiKeyEncrypted: apiKeyEncrypted || null,
+        smartRouting: smartRouting === 'true',
       });
     }
 
@@ -188,12 +275,11 @@ export async function updateConfig(installationId: string, formData: FormData) {
 
     revalidatePath(`/settings/${installationId}/config`);
     revalidatePath(`/settings`);
+    return { success: true };
   } catch (error) {
     console.error('Failed to update config:', error);
     return { error: 'Failed to update configuration' };
   }
-
-  redirect('/dashboard');
 }
 
 export async function deleteApiKey(installationId: string) {
