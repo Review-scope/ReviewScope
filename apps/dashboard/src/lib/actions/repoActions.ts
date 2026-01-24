@@ -70,6 +70,15 @@ export async function toggleRepoActivation(repoId: string, isActive: boolean) {
   }
 
   // LOGIC: Activation requires checks
+  
+  // 0. Org Policy Check: Free plans cannot activate repositories in Organizations
+  if (installation.accountType === 'Organization' && (!installation.planName || installation.planName === 'Free')) {
+    return {
+      success: false,
+      error: 'Organization accounts require a Pro or Team plan to activate repositories.'
+    };
+  }
+
   const limits = getPlanLimits(installation.planId, installation.expiresAt);
   
   // 1. Check Active Repo Limit

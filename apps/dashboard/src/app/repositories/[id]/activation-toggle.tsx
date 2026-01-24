@@ -5,6 +5,7 @@ import { toggleRepoActivation } from '@/lib/actions/repoActions';
 import { Loader2, Power } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface ActivationToggleProps {
   repoId: string;
@@ -14,11 +15,9 @@ interface ActivationToggleProps {
 export function ActivationToggle({ repoId, isActive: initialIsActive }: ActivationToggleProps) {
   const [isActive, setIsActive] = useState(initialIsActive);
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleToggle = () => {
-    setError(null);
     const newState = !isActive;
     
     startTransition(async () => {
@@ -30,7 +29,7 @@ export function ActivationToggle({ repoId, isActive: initialIsActive }: Activati
       if (!result.success) {
         // Revert on failure
         setIsActive(!newState);
-        setError(result.error || 'Failed to update status');
+        toast.error(result.error || 'Failed to update status');
       } else {
         router.refresh();
       }
@@ -52,11 +51,6 @@ export function ActivationToggle({ repoId, isActive: initialIsActive }: Activati
         {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Power className="w-4 h-4" />}
         {isActive ? 'Active' : 'Inactive'}
       </button>
-      {error && (
-        <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded animate-in fade-in slide-in-from-top-1">
-          {error}
-        </span>
-      )}
     </div>
   );
 }
