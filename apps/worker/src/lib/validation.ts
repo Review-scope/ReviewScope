@@ -9,10 +9,6 @@ export interface ValidationOptions {
 /**
  * normalize code for comparison by removing all whitespace
  */
-function normalize(code: string): boolean {
-  return code.replace(/\s+/g, '').trim() === '';
-}
-
 function normalizeCode(code: string): string {
   return code.replace(/\s+/g, '').trim();
 }
