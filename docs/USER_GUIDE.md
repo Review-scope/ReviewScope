@@ -36,20 +36,21 @@ ReviewScope works automatically in the background.
 
 ### Manual Triggers & Chat
 
-You can interact with ReviewScope by commenting on the Pull Request. You must mention **@reviewscope** for the bot to respond.
+You can interact with ReviewScope by commenting on the Pull Request. You must mention **@review-scope** for the bot to respond.
 
--   **Trigger a Re-review**:
-    ```text
-    @reviewscope re-review
-    ```
-    This forces ReviewScope to re-analyze the current state of the PR, even if no new code has been pushed.
+Example commands:
+```
+    @review-scope re-review
+```
 
--   **Ask Questions (Chat Mode)**:
-    You can ask questions about the code or the review. ReviewScope uses the PR context to answer.
-    ```text
-    @reviewscope Why is this change necessary?
-    @reviewscope Can you explain the logic in the auth module?
-    ```
+### Asking Questions
+
+You can also ask specific questions about the code changes:
+
+```
+    @review-scope Why is this change necessary?
+    @review-scope Can you explain the logic in the auth module?
+```
 
 ## Understanding the Feedback
 
