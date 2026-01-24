@@ -11,6 +11,26 @@ import { eq, and } from 'drizzle-orm';
 import { generateIssueKey } from '../lib/hash.js';
 import picomatch from 'picomatch';
 import { getPlanLimits, PlanTier } from '../lib/plans.js';
+import { checkRateLimits, logReviewUsage, RateLimitError } from '../lib/rate-limit.js';
+import { Queue } from 'bullmq';
+
+import { ReviewComment } from '@reviewscope/llm-core';
+
+let reviewQueue: Queue | null = null;
+const getReviewQueue = () => {
+  if (!reviewQueue) {
+    const redisUrl = new URL(process.env.REDIS_URL || 'redis://localhost:6379');
+    reviewQueue = new Queue('review-jobs', {
+      connection: {
+        host: redisUrl.hostname,
+        port: Number(redisUrl.port),
+        password: redisUrl.password,
+        tls: redisUrl.protocol === 'rediss:' ? {} : undefined,
+      }
+    });
+  }
+  return reviewQueue;
+};
 
 export interface ReviewJobData {
   jobVersion: 1;
@@ -33,16 +53,10 @@ export interface ReviewResult {
   summary: string;
 }
 
-export interface ReviewComment {
-  file: string;
-  line: number;
-  body: string;
-  severity: 'error' | 'warning' | 'suggestion';
-}
-
 const gh = new GitHubClient();
 
 import { sortAndLimitFiles, scoreFile } from '../lib/scoring.js';
+import { validateReviewComments } from '../lib/validation.js';
 
 export async function processReviewJob(data: ReviewJobData): Promise<ReviewResult> {
   console.warn(`[Worker] Started processing review for PR #${data.prNumber} in ${data.repositoryFullName}`);
@@ -82,6 +96,84 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
       return { success: false, reviewerVersion: '0.0.1', contextHash: '', comments: [], summary: `Repository inactive (${dbRepo.status})` };
     }
 
+    // Fetch Plan Limits
+    const limits = getPlanLimits(dbInst.planId);
+    console.warn(`[Plan] Using limits for Tier: ${limits.tier} (AI: ${limits.allowAI}, Max Files: ${limits.maxFiles})`);
+
+    // RATE LIMIT CHECK
+    try {
+        await checkRateLimits(dbInst.id, dbRepo.id, data.prNumber, limits);
+    } catch (e) {
+        if (e instanceof RateLimitError) {
+             console.warn(`[Limit] ${e.message}`);
+
+             let userMessage = e.message;
+             let summaryPrefix = '🚫 Review Skipped';
+             let footer = '[Upgrade your plan](https://reviewscope.com/pricing) to increase your limits.';
+
+             // Handle Auto-Requeue if reset time is provided
+             if (e.resetAt) {
+                 const delay = e.resetAt.getTime() - Date.now();
+                 // Ensure delay is positive and reasonable (e.g. max 2 days)
+                 if (delay > 0 && delay < 48 * 60 * 60 * 1000) {
+                      try {
+                          const queue = getReviewQueue();
+                          await queue.add('retry-review', data, { 
+                              delay,
+                              jobId: `retry-${data.installationId}-${data.prNumber}-${e.resetAt.getTime()}` // Dedup
+                          });
+                          
+                          const resetTimeStr = e.resetAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+                          userMessage = `${e.message}\n\n**Good news!** We've queued this review to run automatically at **${resetTimeStr}**.`;
+                          summaryPrefix = '⏳ Review Queued';
+                          footer = 'You will be notified when the review completes.';
+                      } catch (qError) {
+                          console.error('[Worker] Failed to queue retry job', qError);
+                      }
+                 }
+             }
+
+             // Create record to notify user
+             await db.insert(reviews).values({
+                 repositoryId: dbRepo.id,
+                 prNumber: data.prNumber,
+                 status: 'completed',
+                 reviewerVersion: '0.0.1',
+                 deliveryId: data.deliveryId,
+                 result: { summary: `${summaryPrefix}\n\n${userMessage}`, comments: [] },
+                 processedAt: new Date(),
+             }).onConflictDoUpdate({
+                target: [reviews.repositoryId, reviews.prNumber],
+                set: {
+                    status: 'completed',
+                    result: { summary: `${summaryPrefix}\n\n${userMessage}`, comments: [] },
+                    processedAt: new Date(),
+                    updatedAt: new Date(),
+                    error: e.message
+                }
+             });
+
+             // Notify user via GitHub comment
+             try {
+                const octokit = await gh.getInstallationClient(data.installationId);
+                await octokit.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: data.prNumber,
+                    body: `## ${summaryPrefix}\n\n${userMessage}\n\n${footer}`
+                });
+             } catch (ghError) {
+                 console.error('[Worker] Failed to post rate limit comment to GitHub', ghError);
+             }
+
+             return { success: false, reviewerVersion: '0.0.1', contextHash: '', comments: [], summary: userMessage };
+        }
+        throw e;
+    }
+
+    // Track usage
+    await logReviewUsage(dbInst.id, dbRepo.id, data.prNumber);
+
     // 2. Create or Update Review Record
     const [insertedReview] = await db.insert(reviews).values({
       repositoryId: dbRepo.id,
@@ -101,10 +193,6 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     }).returning();
     
     dbReviewId = insertedReview.id;
-
-    // Fetch Plan Limits
-    const limits = getPlanLimits(dbInst.planId);
-    console.warn(`[Plan] Using limits for Tier: ${limits.tier} (AI: ${limits.allowAI}, Max Files: ${limits.maxFiles})`);
 
     // COMPLIANCE: Free tier is for Personal accounts only
     if (limits.tier === PlanTier.FREE && dbInst.accountType === 'Organization') {
@@ -182,7 +270,8 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     // Phase 2b - Scoring and Limiting (LLM Context Budgeting / Plan Limits)
     const MAX_FILES = limits.maxFiles;
     const aiReviewFiles = sortAndLimitFiles(filteredFiles, MAX_FILES);
-    
+    const skippedFilesCount = Math.max(0, filteredFiles.length - aiReviewFiles.length);
+
     // Check if we effectively filtered everything out (e.g., only docs were left and we skipped them)
     if (filteredFiles.length === 0 || aiReviewFiles.length === 0) {
       console.warn('Skipping logic: No relevant file changes found for AI.');
@@ -230,7 +319,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
       file: v.file,
       line: v.line,
       severity: v.severity,
-      body: v.message,
+      message: v.message,
       ruleId: v.ruleId
     }));
 
@@ -397,105 +486,70 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     }
 
     // Phase 10 - Post to GitHub
-    const criticals = aiComments.filter(c => c.severity === 'CRITICAL');
-    const majors = aiComments.filter(c => c.severity === 'MAJOR');
-    const minors = aiComments.filter(c => c.severity === 'MINOR');
-    const infos = aiComments.filter(c => c.severity === 'INFO');
+    if (skippedFilesCount > 0) {
+      const upgradeMessage = limits.tier === PlanTier.TEAM
+        ? "Contact support for enterprise limits."
+        : "[Upgrade your plan](https://reviewscope.com/pricing) to review all files.";
 
-    // FORCE: If no criticals, merge readiness is at least "Needs Changes" unless specifically approved
-    let mergeReadinessDisplay = assessment.mergeReadiness;
-    if (criticals.length === 0 && assessment.mergeReadiness === 'Blocked') {
-        mergeReadinessDisplay = 'Needs Changes';
-    }
-    if (criticals.length === 0 && majors.length === 0) {
-        mergeReadinessDisplay = 'Looks Good';
+      aiSummary += `\n\n> ⚠️ **Plan Limit Reached**: Checked ${aiReviewFiles.length}/${filteredFiles.length} files. The remaining ${skippedFilesCount} lower-priority files were skipped. ${upgradeMessage}`;
     }
 
-    const mergeReadyEmoji = mergeReadinessDisplay === 'Looks Good' ? '✅ Ready' : (mergeReadinessDisplay === 'Blocked' ? '❌ Blocked' : '⚠️ Needs Changes');
+    // Validate comments before processing
+    const validatedAiComments = validateReviewComments(aiComments, parsedFiles, { maxComments: 20 });
+    
+    // We also validate static comments to ensure they are within diff hunks and not on ignored files
+    const validatedStaticComments = validateReviewComments(
+        staticComments.map(c => ({
+            ...c,
+            severity: c.severity.toUpperCase(), // Ensure uppercase
+            message: c.message,
+            file: c.file,
+            line: c.line,
+            fix: undefined
+        } as any)), 
+        parsedFiles, 
+        { maxComments: 100 }
+    );
 
-    const prBodyTrimmed = (data.prBody || '').trim();
-    const prDescription = prBodyTrimmed
-        ? (prBodyTrimmed.length > 800 ? `${prBodyTrimmed.slice(0, 800)}...` : prBodyTrimmed)
-        : 'No description provided.';
-
-    const changedFilePaths = filteredFiles.map(f => f.path);
-    const maxFilesToShow = 20;
-    const listedFiles = changedFilePaths.slice(0, maxFilesToShow);
-    const filesList = listedFiles.length > 0
-        ? listedFiles.map(p => `- ${p}`).join('\n') +
-          (changedFilePaths.length > listedFiles.length
-              ? `\n- ... and ${changedFilePaths.length - listedFiles.length} more`
-              : '')
-        : '- No files were selected for review.';
-
-    let summaryBody = `## 🤖 ReviewScope AI Review
-
-### 📌 PR Details
-- Title: ${data.prTitle || '(no title)'}
-- Description:
-${prDescription}
-
-### 📂 Files Reviewed (${changedFilePaths.length})
-${filesList}
-
-### 🔍 Overall Assessment
-- **Risk Level:** ${assessment.riskLevel}
-- **Merge Readiness:** ${mergeReadyEmoji}
-
-### 📝 Summary
+    const criticals = validatedAiComments.filter(c => c.severity === 'CRITICAL');
+    const majors = validatedAiComments.filter(c => c.severity === 'MAJOR');
+    const minors = validatedAiComments.filter(c => c.severity === 'MINOR');
+    
+    const summaryBody = `
+## ReviewScope Analysis
 ${aiSummary}
+
+### 📊 Assessment
+- **Risk Level:** ${assessment.riskLevel}
+- **Merge Readiness:** ${assessment.mergeReadiness}
+
+### 🛡️ Static Analysis
+Found ${validatedStaticComments.length} pattern violations.
+
+### 🧠 AI Findings
+- 🔴 Critical: ${criticals.length}
+- 🟠 Major: ${majors.length}
+- 🟡 Minor: ${minors.length}
+
+---
+*Generated by [ReviewScope](https://github.com/Review-scope/ReviewScope)*
 `;
 
-    if (criticals.length > 0) {
-        summaryBody += `\n### 🚨 Blocking Issues (${criticals.length})\n`;
-        criticals.forEach((c) => {
-            summaryBody += `- **${c.message}** in \`${c.file}\`\n`;
-        });
-    }
-
-    if (majors.length > 0) {
-        summaryBody += `\n### ⚠️ Should Fix Before Release (${majors.length})\n`;
-        majors.forEach((c) => {
-            summaryBody += `- ${c.message} in \`${c.file}\`\n`;
-        });
-    }
-
-    if (minors.length > 0 || infos.length > 0) {
-        summaryBody += `\n### ℹ️ Optional Improvements (${minors.length + infos.length})\n`;
-        [...minors, ...infos].slice(0, 5).forEach((c) => {
-            summaryBody += `- ${c.message} (${c.severity})\n`;
-        });
-        if (minors.length + infos.length > 5) {
-            summaryBody += `- ... and ${minors.length + infos.length - 5} more.\n`;
-        }
-    }
-
-    summaryBody += `
-\n### 🧠 Reviewer Notes
-- Review focused on runtime safety, security, and correctness.
-- Non-runtime suggestions or stylistic nits were intentionally down-prioritized or ignored.
-
-<details>
-<summary>Metadata</summary>
-Context Hash: ${contextHash}
-Reviewer Version: 0.1.0
-</details>
-    `.trim();
-
-    // Unified list of all issues with keys
+    // Combine findings
     const allFindings = [
-      ...staticComments.map(c => ({
+      ...validatedStaticComments.map(c => ({
         ...c,
         source: 'static' as const,
         issueKey: generateIssueKey({
             repositoryId: dbRepo.id,
             prNumber: data.prNumber,
             filePath: c.file,
-            ruleId: c.ruleId || 'static-violation',
-            message: c.body
+            ruleId: (c as any).ruleId || 'static-violation',
+            message: c.message,
+            line: c.line
         })
       })),
-      ...aiComments.map(c => ({
+      ...validatedAiComments.map(c => ({
         ...c,
         source: 'ai' as const,
         issueKey: generateIssueKey({
@@ -503,7 +557,8 @@ Reviewer Version: 0.1.0
             prNumber: data.prNumber,
             filePath: c.file,
             ruleId: 'ai-review',
-            message: c.message
+            message: c.message,
+            line: c.line
         })
       }))
     ];
@@ -538,14 +593,14 @@ Reviewer Version: 0.1.0
           path: finding.file,
           line: finding.line,
           side: 'RIGHT' as const,
-          body: `**[STATIC] ${finding.severity.toUpperCase()}:** ${finding.body}`
+          body: `**[STATIC] ${finding.severity.toUpperCase()}:** ${finding.message}`
         });
 
         dbComments.push({
            file: finding.file,
            line: finding.line,
            severity: finding.severity.toUpperCase(),
-           message: finding.body,
+           message: finding.message,
            why: 'Detected by static analysis rules.',
            fix: undefined,
            issueKey: finding.issueKey
@@ -597,28 +652,8 @@ Reviewer Version: 0.1.0
         }
     }
 
-    // Validate comments to avoid 422 errors
-    const validatedComments = githubComments.filter(c => {
-        const file = parsedFiles.find(f => f.path === c.path);
-        if (!file) return false;
-        
-        // GitHub API only allows comments on lines that are part of the diff (hunks)
-        const side = c.side || 'RIGHT';
-        const hunk = file.hunks.find(h => {
-             if (side === 'RIGHT') {
-                 return c.line >= h.newStart && c.line < h.newStart + h.newLines;
-             } else {
-                 return c.line >= h.oldStart && c.line < h.oldStart + h.oldLines;
-             }
-        });
-        return !!hunk;
-    });
-
-    if (validatedComments.length < githubComments.length) {
-        console.warn(`[Worker] Filtered out ${githubComments.length - validatedComments.length} invalid or duplicated comments.`);
-    }
-
-    if (validatedComments.length > 0) {
+    // Validate comments to avoid 422 errors - ALREADY VALIDATED via validateReviewComments
+    if (githubComments.length > 0) {
       await gh.postReview(
         data.installationId,
         owner,
@@ -626,7 +661,7 @@ Reviewer Version: 0.1.0
         data.prNumber,
         data.headSha,
         summaryBody,
-        validatedComments
+        githubComments
       );
     } else {
       await gh.postReview(

@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { 
   enqueueReviewJob, 
   enqueueChatJob, 
+  enqueueIndexingJob,
   getReviewQueue,
   getIndexingQueue,
   getChatQueue 
@@ -532,6 +533,54 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
       }).where(eq(repositories.githubRepoId, repo.id));
       return c.json({ status: 'repository_renamed', repoId: repo.id });
     }
+  }
+
+  // Handle Push Events (Re-index on merge/push to default branch)
+  if (eventName === 'push') {
+    const { ref, repository: repo, installation } = payload;
+    const defaultBranchRef = `refs/heads/${repo.default_branch}`;
+
+    if (ref === defaultBranchRef) {
+      console.warn(`[Webhook] Push to default branch (${repo.default_branch}) detected for ${repo.full_name}`);
+
+      // Check if repo is active in DB
+      const [dbInst] = await db.select().from(installations).where(eq(installations.githubInstallationId, installation.id));
+      if (!dbInst || dbInst.status !== 'active') {
+         return c.json({ status: 'ignored_inactive_installation' });
+      }
+
+      const [dbRepo] = await db.select().from(repositories).where(
+        and(
+          eq(repositories.githubRepoId, repo.id),
+          eq(repositories.installationId, dbInst.id)
+        )
+      );
+
+      if (!dbRepo || dbRepo.status !== 'active' || !dbRepo.isActive) {
+         return c.json({ status: 'ignored_inactive_repo' });
+      }
+
+      // Check plan limits (allowRAG)
+      const limits = getPlanLimits(dbInst.planId);
+      if (!limits.allowRAG) {
+         return c.json({ status: 'ignored_plan_limit', reason: 'rag_not_allowed' });
+      }
+
+      try {
+        await enqueueIndexingJob({
+          installationId: installation.id,
+          repositoryId: repo.id,
+          repositoryFullName: repo.full_name,
+        });
+        console.warn(`[Webhook] Enqueued re-indexing job for ${repo.full_name}`);
+        return c.json({ status: 'indexing_queued', repo: repo.full_name });
+      } catch (err: any) {
+        console.error(`[Webhook] Failed to enqueue indexing job: ${err.message}`);
+        return c.json({ error: 'Failed to enqueue indexing job' }, 500);
+      }
+    }
+    
+    return c.json({ status: 'ignored', reason: 'not_default_branch' });
   }
 
   return c.json({ status: 'ignored', event: eventName });

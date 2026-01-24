@@ -112,6 +112,14 @@ const NOISE_PATTERNS = [
   /\.mp4$/,
   /\.webm$/,
   
+  // Data Files
+  /\.geojson$/,
+  /\.csv$/,
+  /\.tsv$/,
+  /\.xml$/,
+  /\.sql$/, // SQL dumps/migrations are usually noise for logic review
+  /\.xlsx?$/,
+  
   // Vender / Third-party
   /^vendor\//,
   /^node_modules\//,

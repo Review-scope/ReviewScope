@@ -8,7 +8,9 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-8">
           <div className="flex items-center gap-3">
-            <img src="/logo1.png" alt="ReviewScope" className="w-6 h-6 object-contain grayscale opacity-70" />
+            <div className="w-6 h-6 flex items-center justify-center grayscale opacity-70">
+              <img src="/logo1.png" alt="ReviewScope" className="w-full h-full object-contain" />
+            </div>
             <span className="text-sm font-black uppercase tracking-tighter italic">ReviewScope <span className="text-zinc-400 font-medium">// AI Code Integrity</span></span>
           </div>
           
@@ -25,9 +27,13 @@ export function Footer() {
             © {new Date().getFullYear()} REVIEW SCOPE. BUILT FOR SCALE.
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <span className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">All Systems Operational</span>
+            </div> */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Payments by</span>
+              <img src="/dodo.jpeg" alt="Dodo Payments" className="w-4 h-4 object-contain rounded-full" />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Powered by</span>

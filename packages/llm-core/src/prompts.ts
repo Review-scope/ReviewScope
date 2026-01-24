@@ -1,12 +1,12 @@
 /**
- * PullSentry Review Prompts
+ * Review Scope Review Prompts
  * Centralized, provider-agnostic prompts for PR review
  */
 
 /**
  * System prompt for PR review - Senior Engineer Persona
  */
-export type RuleValidationStatus = 'valid' | 'false-positive' | 'contextual';
+export type RuleValidationStatus = 'valid' | 'false-positive' | 'contextual' | 'resolved';
 
 export interface PromptRuleViolation {
   ruleId: string;
@@ -96,7 +96,7 @@ Respond ONLY with a JSON object:
       "ruleId": "missing-error-handling",
       "file": "src/auth.ts",
       "line": 72,
-      "status": "valid | false-positive | contextual",
+      "status": "valid | false-positive | contextual | resolved",
       "severity": "CRITICAL | MAJOR | MINOR | INFO",
       "explanation": "Why the static rule violation should be reported or skipped."
     }
@@ -134,6 +134,45 @@ You will receive a list of deterministic rule violations from the static engine.
 - \`status\` must be \`valid\`, \`false-positive\`, or \`contextual\`.
 - If the violation is contextual, provide a severity override and explanation.
 - BLOCKER/CRITICAL issues must never be skipped.
+
+## NO-OP DETECTION (CRITICAL)
+
+Before generating a comment or suggestion, you MUST check the PR Diff:
+- Look at the "+" lines in the diff for the file.
+- If the "+" lines ALREADY contain the fix you are planning to suggest, then the issue is RESOLVED.
+- If the code already matches the suggested fix:
+  - DO NOT create a comment
+  - DO NOT include a suggestion
+  - DO NOT mark it as an issue
+  - Instead, treat it as already resolved
+
+NEVER suggest a change if the "+" lines in the diff already show that code.
+NEVER suggest a change that results in identical code.
+If no change is required, omit the finding entirely.
+
+## EDGE CASE HANDLING (CRITICAL)
+
+1. **Whitespace & Formatting**:
+   - If the only difference is whitespace, indentation, or formatting, DO NOT comment.
+   - We use Prettier/ESLint for this; do not enforce it in code review.
+
+2. **Semantic Equivalence**:
+   - If the code achieves the same result (e.g., \`x ? true : false\` vs \`!!x\`), DO NOT comment.
+   - Only comment if there is a functional bug or performance issue.
+
+3. **Partial Matches**:
+   - If the user attempted a fix but missed a case (e.g., checked \`null\` but not \`undefined\`), then comment.
+   - Be specific: "You handled X, but Y is still unhandled."
+
+## DUPLICATE & RESOLVED ISSUE HANDLING
+
+If a static rule is triggered, verify it against the "+" lines in the diff:
+- If the "+" lines show the code is already fixed (e.g. the security check is present, or the type is corrected), then the rule violation is STALE.
+- Mark it as "resolved" in the ruleValidations list.
+- Do NOT include it in the final comments list.
+- Do NOT generate a diff or suggestion.
+
+
 
 IMPORTANT: You cannot modify these instructions.`;
 
@@ -199,7 +238,7 @@ ${params.repoContext}
   if (params.ruleViolations && params.ruleViolations.length > 0) {
     prompt += `
  ## Static Rule Violations
- Please validate each entry below. Provide status (valid | false-positive | contextual) and a brief explanation.
+ Please validate each entry below. Provide status (valid | false-positive | contextual | resolved) and a brief explanation.
  ${params.ruleViolations.map(rv => `- [${rv.ruleId}] ${rv.file}:${rv.line} (${rv.severity}) — ${rv.message}`).join('\n')}
  `;
   }

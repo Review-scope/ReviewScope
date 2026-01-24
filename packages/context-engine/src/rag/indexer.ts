@@ -51,6 +51,27 @@ export class RAGIndexer {
   async indexRepository(repoId: string, installationId: string, files: { path: string, content: string }[]) {
     await this.ensureCollection();
     const client = getQdrantClient();
+    
+    // 0. Clean up existing vectors for this repo to avoid duplicates/stale code
+    // Since this is a full re-index, we replace the entire knowledge base for this repo.
+    try {
+      await client.delete(COLLECTION_NAME, {
+        filter: {
+          must: [
+            {
+              key: 'repoId',
+              match: {
+                value: repoId,
+              },
+            },
+          ],
+        },
+      });
+      console.warn(`[Indexer] Cleared existing vectors for repo ${repoId}`);
+    } catch (e) {
+      console.warn(`[Indexer] Failed to clear existing vectors (might be first run or connection issue):`, e);
+    }
+
     const points: any[] = [];
 
     // 1. Chunk files

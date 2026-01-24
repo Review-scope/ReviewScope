@@ -29,13 +29,22 @@ export const consoleLogRule: Rule = {
 
         // Flag console statements in production code
         if (call.context === 'production') {
-          violations.push({
-            ruleId: this.id,
-            file: file.path,
-            line: call.line,
-            severity: 'warning',
-            message: `console.${call.type}() found in production code - use a logger instead`,
-          });
+          // call.line is 1-based index relative to the `sourceCode` constructed from additions
+          // We need to map it back to the original file's additions array
+          const addition = file.additions[call.line - 1];
+          
+          if (addition) {
+             const actualLine = addition.lineNumber;
+             const codeSnippet = addition.content.trim();
+
+             violations.push({
+               ruleId: this.id,
+               file: file.path,
+               line: actualLine,
+               severity: 'warning',
+               message: `console.${call.type}() found in production code - use a logger instead\n\n\`\`\`typescript\n${codeSnippet}\n\`\`\``,
+             });
+          }
         }
       }
     }

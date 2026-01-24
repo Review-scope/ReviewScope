@@ -85,10 +85,18 @@ export default function SupportPage() {
             </div>
             <div className="flex-1">
               <h2 className="text-lg font-semibold mb-1">Found a Bug?</h2>
-              <p className="text-sm text-muted-foreground">
-                If you've found a bug or have a feature request, feel free to email us 
-                with details and we'll look into it as soon as possible.
+              <p className="text-sm text-muted-foreground mb-4">
+                If you've found a bug or have a feature request, please open an issue on our GitHub repository.
               </p>
+              <a 
+                href="https://github.com/Review-scope/ReviewScope/issues"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-medium text-sm hover:opacity-90 transition-all"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open GitHub Issue
+              </a>
             </div>
           </div>
         </div>

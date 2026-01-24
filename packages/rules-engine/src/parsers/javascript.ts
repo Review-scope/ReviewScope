@@ -258,7 +258,7 @@ export class JavaScriptParser {
     return content;
   }
 
-  private static removeStringsAndComments(line: string): string {
+  public static removeStringsAndComments(line: string): string {
     // Remove single-line comments
     let result = line.split('//')[0];
 

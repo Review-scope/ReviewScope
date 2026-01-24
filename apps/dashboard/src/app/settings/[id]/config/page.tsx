@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ConfigForm } from "./config-form";
 import { RepoList } from "./repo-list";
 import { getUserOrgIds } from "@/lib/github";
+import { getPlanLimits } from "../../../../../../worker/src/lib/plans";
 
 export default async function ConfigPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -48,12 +49,7 @@ export default async function ConfigPage({ params }: { params: Promise<{ id: str
     .where(eq(repositories.installationId, id));
 
   const plan = installation.planName || 'None';
-  const limits = {
-    'None': { files: 0, rag: 0, chat: 0, repos: 0, batch: false },
-    'Free': { files: 30, rag: 2, chat: 5, repos: 3, batch: false },
-    'Pro': { files: 100, rag: 5, chat: 20, repos: 5, batch: false },
-    'Team': { files: 'Unlimited', rag: 8, chat: 'Unlimited', repos: 'Unlimited', batch: true }
-  }[plan as 'None' | 'Free' | 'Pro' | 'Team'];
+  const limits = getPlanLimits(installation.planId, installation.expiresAt);
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-12">
@@ -108,12 +104,18 @@ export default async function ConfigPage({ params }: { params: Promise<{ id: str
                      You must subscribe to a plan (even Free) to enable AI reviews.
                    </p>
                 ) : (
-                  <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                    PR file limit: <span className="font-bold">{limits?.files}</span> • 
-                    RAG snippets: <span className="font-bold">{limits?.rag}</span> • 
-                    Chat iterations: <span className="font-bold">{limits?.chat}</span> • 
-                    Repositories: <span className="font-bold">{limits?.repos}</span>
-                  </p>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs text-blue-700 mt-1 leading-relaxed">
+                      PR file limit: <span className="font-bold">{limits.maxFiles >= 999999 ? 'Unlimited' : limits.maxFiles}</span> • 
+                      RAG snippets: <span className="font-bold">{limits.ragK}</span> • 
+                      Chat: <span className="font-bold">{limits.chatPerPRLimit === 'unlimited' ? 'Unlimited' : limits.chatPerPRLimit}</span>
+                    </p>
+                    <p className="text-xs text-blue-700 leading-relaxed">
+                      Daily Reviews: <span className="font-bold">{limits.dailyReviewsLimit}</span> • 
+                      Reviews/PR: <span className="font-bold">{limits.reviewsPerPR}</span> • 
+                      Cooldown: <span className="font-bold">{limits.cooldownMinutes}m</span>
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

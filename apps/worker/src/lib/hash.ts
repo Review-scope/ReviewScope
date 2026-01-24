@@ -9,14 +9,21 @@ export function generateIssueKey(params: {
   filePath: string;
   ruleId: string;
   message: string;
+  line?: number;
 }): string {
   // Normalize message (remove line specific numbers, quotes, etc to avoid hash drift on minor wording changes)
   const normalizedMessage = params.message
     .toLowerCase()
     .replace(/\d+/g, '') // Remove numbers (often line or count specific)
     .replace(/['"`]/g, '')
+    .replace(/\s+/g, ' ') // Collapse whitespace
     .trim();
 
-  const input = `${params.repositoryId}:${params.prNumber}:${params.filePath}:${params.ruleId}:${normalizedMessage}`;
+  // If message includes a code block, strip it for hashing stability
+  const messageWithoutCode = normalizedMessage.split('```')[0].trim();
+
+  // Include line number in hash to differentiate multiple violations of same rule in same file
+  const linePart = params.line ? `:${params.line}` : '';
+  const input = `${params.repositoryId}:${params.prNumber}:${params.filePath}:${params.ruleId}${linePart}:${messageWithoutCode}`;
   return createHash('sha256').update(input).digest('hex').substring(0, 16);
 }

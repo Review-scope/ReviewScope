@@ -1,4 +1,5 @@
 import type { Rule, PRDiff, RuleViolation } from '../types.js';
+import { JavaScriptParser } from '../parsers/javascript.js';
 
 export const unsafePatternsRule: Rule = {
   id: 'unsafe-patterns',
@@ -20,17 +21,17 @@ export const unsafePatternsRule: Rule = {
         continue;
       }
 
-      for (const line of file.additions) {
-        for (const { regex, message, severity } of patterns) {
-          // Check if pattern matches, but exclude if it's in a string or comment
-          const content = line.content;
-          
-          // Simple check: skip if line starts with // or contains only strings
-          if (content.trim().startsWith('//') || content.trim().startsWith('*')) {
-            continue;
-          }
+      // Skip documentation files (often contain code samples or text discussing security)
+      if (file.path.includes('/docs/') || file.path.startsWith('docs/')) {
+        continue;
+      }
 
-          if (regex.test(content)) {
+      for (const line of file.additions) {
+        // Clean content (remove strings and comments) to avoid false positives in text/logs
+        const cleanContent = JavaScriptParser.removeStringsAndComments(line.content);
+
+        for (const { regex, message, severity } of patterns) {
+          if (regex.test(cleanContent)) {
             violations.push({
               ruleId: this.id,
               file: file.path,
