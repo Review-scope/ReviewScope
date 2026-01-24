@@ -241,7 +241,7 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
     }
 
     const body = comment.body.toLowerCase();
-    if (!body.includes('@reviewscope')) {
+    if (!body.includes('@review-scope')) {
       return c.json({ status: 'ignored', reason: 'no_mention' });
     }
 
