@@ -1,5 +1,6 @@
+/* eslint-disable no-console */
 import { GitHubClient } from '../lib/github.js';
-import { parseDiff, filterNoise } from '../lib/parser.js';
+import { parseDiff, filterNoise, detectDuplicateKeys } from '../lib/parser.js';
 import { parseIssueReferences, fetchIssueContext } from '../lib/issue.js';
 import { fetchConfig } from '../lib/config.js';
 import { calculateComplexity } from '../lib/complexity.js';
@@ -300,7 +301,9 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
             success: true,
             reviewerVersion: '0.0.1',
             contextHash: fingerprint,
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
             comments: (existingReview.result as any).comments || [],
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
             summary: (existingReview.result as any).summary || 'Review reused from previous identical run.',
         };
     }
@@ -374,7 +377,19 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
 
     // Phase 8 - Rules Engine
     // Run rules on ALL filtered files (not just the top N) because rules are cheap and deterministic
-    const ruleViolations = runRules({ files: filteredFiles }, config);
+    const duplicateKeyViolations = filteredFiles.flatMap((file) =>
+      detectDuplicateKeys(file).map((dup) => ({
+        file: file.path,
+        line: dup.lines[0],
+        severity: 'MAJOR',
+        message: `Duplicate key "${dup.key}" defined multiple times. Earlier value will be ignored.`,
+        ruleId: 'duplicate-object-key'
+      }))
+    );
+    const ruleViolations = [
+      ...runRules({ files: filteredFiles }, config),
+      ...duplicateKeyViolations
+    ];
     const staticComments = ruleViolations.map((v) => ({
       file: v.file,
       line: v.line,
@@ -426,6 +441,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     console.warn(`[Complexity] Score: ${complexityScore.score}/10 → ${complexity} (${complexityScore.reason})`);
 
     // Phase 9 - AI Review
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     let aiComments: any[] = [];
     let contextHash = 'filtered-empty';
     let aiSummary = 'No AI summary available.';
@@ -452,6 +468,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
           }
 
           let combinedSummary = '';
+          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
           const combinedComments: any[] = [];
 
           for (let i = 0; i < batches.length; i++) {
@@ -576,6 +593,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
             file: c.file,
             line: c.line,
             fix: undefined
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         } as any)), 
         parsedFiles, 
         { maxComments: 100 }
@@ -588,7 +606,7 @@ ${aiSummary}
 ### 🏁 Verdict
 **Merge Readiness**: ${assessment.mergeReadiness}  
 **Risk Level**: ${assessment.riskLevel}  
-**Confidence**: ${(assessment as any).confidence ? (assessment as any).confidence.toUpperCase() : 'N/A'}
+**Confidence**: ${assessment.confidence ? assessment.confidence.toUpperCase() : 'N/A'}
 
 ${validatedStaticComments.length > 0 ? `> 🛡️ Found ${validatedStaticComments.length} static code analysis issues.` : ''}
 
@@ -605,6 +623,7 @@ ${validatedStaticComments.length > 0 ? `> 🛡️ Found ${validatedStaticComment
             repositoryId: dbRepo.id,
             prNumber: data.prNumber,
             filePath: c.file,
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
             ruleId: (c as any).ruleId || 'static-violation',
             message: c.message,
             line: c.line

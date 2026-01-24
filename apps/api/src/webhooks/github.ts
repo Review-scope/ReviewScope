@@ -204,8 +204,8 @@ Your **${limits.tier}** plan allows **${limits.chatPerPRLimit}** reviews per day
 
 Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${process.env.DASHBOARD_URL || '#'}/pricing) for higher limits.`,
         });
-      } catch (err: any) {
-        console.error(`[Webhook] Failed to post limit-exceeded comment: ${err.message}`);
+      } catch (err: unknown) {
+        console.error(`[Webhook] Failed to post limit-exceeded comment: ${(err as Error).message}`);
       }
       return c.json({ status: 'daily_limit_exceeded' });
     }
@@ -224,8 +224,9 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
         deliveryId,
       });
       console.warn(`[Webhook] Successfully enqueued review job for PR #${pr.number}`);
-    } catch (err: any) {
-      console.error(`[Webhook] Failed to enqueue review job: ${err.message}`);
+    } catch (err: unknown) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      console.error(`[Webhook] Failed to enqueue review job: ${(err as any).message}`);
       return c.json({ error: 'Failed to enqueue review job' }, 500);
     }
 
@@ -296,8 +297,9 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
         });
         console.warn(`[Webhook] Chat job enqueued for PR #${issue.number}`);
       }
-    } catch (err: any) {
-      console.error(`[Webhook] Failed to enqueue command job: ${err.message}`);
+    } catch (err: unknown) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      console.error(`[Webhook] Failed to enqueue command job: ${(err as any).message}`);
       return c.json({ error: 'Failed to enqueue command job' }, 500);
     }
 
@@ -574,8 +576,8 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
         });
         console.warn(`[Webhook] Enqueued re-indexing job for ${repo.full_name}`);
         return c.json({ status: 'indexing_queued', repo: repo.full_name });
-      } catch (err: any) {
-        console.error(`[Webhook] Failed to enqueue indexing job: ${err.message}`);
+      } catch (err: unknown) {
+        console.error(`[Webhook] Failed to enqueue indexing job: ${(err as Error).message}`);
         return c.json({ error: 'Failed to enqueue indexing job' }, 500);
       }
     }

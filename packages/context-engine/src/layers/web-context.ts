@@ -70,7 +70,7 @@ class WebContextProvider {
       if (!latest) return null;
 
       // Fetch security advisories (optional - may fail if service unavailable)
-      let vulnerabilities: PackageInfo['vulnerabilities'] = [];
+      const vulnerabilities: PackageInfo['vulnerabilities'] = [];
       try {
         // Security advisory check via npm audit API or GitHub GraphQL
         // For now, skip as it requires additional auth setup

@@ -1,6 +1,9 @@
 
+/* eslint-disable no-console */
 import { QdrantClient } from '@qdrant/js-client-rest';
-import path from 'path';
+// import dotenv from 'dotenv';
+
+// dotenv.config();
 
 const url = process.env.QDRANT_URL;
 const apiKey = process.env.QDRANT_API_KEY;
@@ -31,8 +34,9 @@ async function createIndexes() {
         });
         console.log('✅ Created index for repoId');
 
-    } catch (err) {
-        console.error('Failed to create indexes:', err);
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('Failed to create indexes:', message);
     }
 }
 

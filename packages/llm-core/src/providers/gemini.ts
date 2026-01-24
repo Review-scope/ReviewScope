@@ -78,7 +78,7 @@ export class GeminiProvider implements LLMProvider, EmbeddingProvider {
           try {
             const result = await model.embedContent(t);
             return result.embedding.values;
-          } catch (e: any) {
+          } catch (e: unknown) {
             if (retries === 0) throw e;
             retries--;
             await new Promise(r => setTimeout(r, 500));

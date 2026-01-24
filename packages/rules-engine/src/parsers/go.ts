@@ -4,12 +4,25 @@ export interface GoConsoleCall {
   context: 'production' | 'test' | 'debug';
 }
 
+export interface GoTryBlock {
+  tryLine: number;
+  catchLine: number;
+  isEmpty: boolean;
+  content: string;
+}
+
+export interface GoAsyncFunction {
+  line: number;
+  name?: string;
+  hasAwait: boolean;
+}
+
 export class GoParser {
-  static findTryCatchBlocks(): any[] {
+  static findTryCatchBlocks(): GoTryBlock[] {
     return [];
   }
 
-  static findAsyncFunctions(): any[] {
+  static findAsyncFunctions(): GoAsyncFunction[] {
     return [];
   }
 

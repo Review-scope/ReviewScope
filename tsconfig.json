@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/api" },
+    { "path": "./apps/dashboard" },
+    { "path": "./apps/worker" },
+    { "path": "./packages/context-engine" },
+    { "path": "./packages/llm-core" },
+    { "path": "./packages/rules-engine" },
+    { "path": "./packages/security" }
+  ]
+}

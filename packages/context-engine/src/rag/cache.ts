@@ -77,6 +77,7 @@ export class LRUCache<K, V> {
  * Example: REDIS_URL=redis://localhost:6379
  */
 export class RedisCache<K extends string, V> {
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   private client: any;
   private ttl: number;
   private enabled: boolean;
@@ -88,6 +89,7 @@ export class RedisCache<K extends string, V> {
     // Try to initialize Redis (optional)
     try {
       if (process.env.REDIS_URL) {
+        /* eslint-disable-next-line @typescript-eslint/no-var-requires */
         const redis = require('redis');
         const client = redis.createClient({ url: process.env.REDIS_URL });
         this.client = client;
@@ -177,6 +179,7 @@ export class HybridCache<K extends string, V> {
 /**
  * Global cache instance for web context
  */
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 export const webContextCache = new HybridCache<string, any>({
   ttl: 7 * 24 * 60 * 60 * 1000, // 7 days
   maxSize: 5000, // LRU: max 5000 packages

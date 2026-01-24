@@ -1,5 +1,6 @@
 'use server';
 
+/* eslint-disable no-console */
 import { db, repositories, installations } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";

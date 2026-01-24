@@ -76,6 +76,29 @@ export function parseDiff(diff: string): ParsedFile[] {
   return files;
 }
 
+export function detectDuplicateKeys(file: ParsedFile): Array<{ key: string; lines: number[] }> {
+  const keyMap = new Map<string, number[]>();
+
+  for (const add of file.additions) {
+    const match = add.content.match(/^\s*([a-zA-Z0-9_]+)\s*:/);
+    if (!match) continue;
+
+    const key = match[1];
+    if (!key) continue;
+
+    const list = keyMap.get(key);
+    if (list) {
+      list.push(add.lineNumber);
+    } else {
+      keyMap.set(key, [add.lineNumber]);
+    }
+  }
+
+  return Array.from(keyMap.entries())
+    .filter(([, lines]) => lines.length > 1)
+    .map(([key, lines]) => ({ key, lines }));
+}
+
 const NOISE_PATTERNS = [
   // Lockfiles (Auto-generated, high token usage)
   /package-lock\.json$/,

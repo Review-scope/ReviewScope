@@ -1,4 +1,5 @@
 
+/* eslint-disable no-console */
 import { DiffFile } from './parser.js';
 
 const HIGH_RISK_PATTERNS = [

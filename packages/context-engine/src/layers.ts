@@ -33,6 +33,6 @@ export interface ContextInput {
   ragContext?: string;
   webContext?: string;
   userPrompt?: string;
-  ruleViolations?: any[]; // Static rule violations for LLM validation
+  ruleViolations?: unknown[]; // Static rule violations for LLM validation
   indexedAt?: Date | null;
 }

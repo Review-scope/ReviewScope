@@ -219,7 +219,7 @@ export class JavaScriptParser {
   }
 
   private static isFunctionDeclaration(line: string): boolean {
-    return /\b(function|const|let|var)\s+\w+\s*[=\(]/.test(this.removeStringsAndComments(line));
+    return /\b(function|const|let|var)\s+\w+\s*[=(]/.test(this.removeStringsAndComments(line));
   }
 
   private static isEmptyBlock(content: string): boolean {

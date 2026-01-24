@@ -83,8 +83,9 @@ export class GitHubClient {
         body: data.body || '',
         state: data.state,
       };
-    } catch (e: any) {
-      if (e.status === 404) return null;
+    } catch (e: unknown) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      if ((e as any).status === 404) return null;
       throw e;
     }
   }
@@ -109,8 +110,9 @@ export class GitHubClient {
         return Buffer.from(data.content, 'base64').toString('utf-8');
       }
       return null;
-    } catch (e: any) {
-      if (e.status === 404) return null;
+    } catch (e: unknown) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      if ((e as any).status === 404) return null;
       throw e;
     }
   }
@@ -159,7 +161,7 @@ export class GitHubClient {
       const results = await Promise.all(
         batch.map(async (item) => {
           let retries = 3;
-          let lastError: any;
+          let lastErrorMessage = 'Unknown error';
 
           while (retries > 0) {
             try {
@@ -181,11 +183,12 @@ export class GitHubClient {
                 path: item.path!,
                 content: Buffer.from(blob.content, 'base64').toString('utf-8'),
               };
-            } catch (e: any) {
-              lastError = e;
+            } catch (e: unknown) {
+              lastErrorMessage = e instanceof Error ? e.message : String(e);
               
               // If file disappeared (race condition), skip it without retrying
-              if (e.status === 404) {
+              /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+              if ((e as any).status === 404) {
                  console.warn(`[GitHub] File ${item.path} not found (404) during batch fetch, skipping.`);
                  return null;
               }
@@ -195,13 +198,13 @@ export class GitHubClient {
 
               // Exponential backoff with jitter: 1s, 2s, 4s + random(0-1s)
               const delay = Math.pow(2, 3 - retries) * 1000 + Math.random() * 1000;
-              console.warn(`Retrying blob fetch for ${item.path} (${3 - retries}/3) in ${Math.round(delay)}ms... Error: ${e.message}`);
+              console.warn(`Retrying blob fetch for ${item.path} (${3 - retries}/3) in ${Math.round(delay)}ms... Error: ${(e as Error).message}`);
               await new Promise(resolve => setTimeout(resolve, delay));
             }
           }
           
           // If we exhausted retries for a non-404 error, we fail the batch to ensure data integrity
-          throw new Error(`Failed to fetch blob for ${item.path} after 3 retries: ${lastError?.message}`);
+          throw new Error(`Failed to fetch blob for ${item.path} after 3 retries: ${lastErrorMessage}`);
         })
       );
 
@@ -228,8 +231,9 @@ export class GitHubClient {
         full_name: repo.full_name,
         private: repo.private,
       }));
-    } catch (e: any) {
-      console.error(`[GitHub] Failed to list repos for installation ${installationId}:`, e.message);
+    } catch (e: unknown) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      console.error(`[GitHub] Failed to list repos for installation ${installationId}:`, (e as any).message || e);
       return [];
     }
   }
@@ -298,6 +302,7 @@ export class GitHubClient {
           body: '🔍 **ReviewScope** detected new findings. See comments below.', // Minimal body
           event: 'COMMENT',
           comments: comments.map(c => {
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
             const comment: any = {
               path: c.path,
               line: c.line,
@@ -314,27 +319,33 @@ export class GitHubClient {
       }
     } else {
       // Strategy B: No existing summary, create full review
-      await octokit.rest.pulls.createReview({
-        owner,
-        repo,
-        pull_number: pullNumber,
-        commit_id: commitId,
-        body: summary,
-        event: 'COMMENT',
-        comments: comments.map(c => {
-          const comment: any = {
-            path: c.path,
-            line: c.line,
-            side: c.side || 'RIGHT',
-            body: c.body,
-          };
-          if (c.start_line) {
-            comment.start_line = c.start_line;
-            comment.start_side = c.side || 'RIGHT';
-          }
-          return comment;
-        }),
-      });
+      try {
+        await octokit.rest.pulls.createReview({
+          owner,
+          repo,
+          pull_number: pullNumber,
+          commit_id: commitId,
+          body: summary,
+          event: 'COMMENT',
+          comments: comments.map(c => {
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+            const comment: any = {
+              path: c.path,
+              line: c.line,
+              side: c.side || 'RIGHT',
+              body: c.body,
+            };
+            if (c.start_line) {
+              comment.start_line = c.start_line;
+              comment.start_side = c.side || 'RIGHT';
+            }
+            return comment;
+          }),
+        });
+      } catch (e: unknown) {
+        console.error('Failed to post review:', e);
+        throw e;
+      }
     }
   }
 }

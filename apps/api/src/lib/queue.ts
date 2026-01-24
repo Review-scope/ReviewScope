@@ -117,8 +117,9 @@ export async function enqueueIndexingJob(data: IndexingJobData): Promise<string>
     const job = await queue.add('process-indexing', data, { jobId });
     console.warn(`[Queue] Successfully enqueued Indexing Job: ${job.id}`);
     return job.id || jobId;
-  } catch (err: any) {
-    console.error(`[Queue] Failed to enqueue Indexing Job: ${err.message}`);
+  } catch (err: unknown) {
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    console.error(`[Queue] Failed to enqueue Indexing Job: ${(err as any).message}`);
     throw err;
   }
 }

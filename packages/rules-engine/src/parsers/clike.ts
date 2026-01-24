@@ -11,6 +11,12 @@ export interface CLikeConsoleCall {
   context: 'production' | 'test' | 'debug';
 }
 
+export interface CLikeAsyncFunction {
+  line: number;
+  name?: string;
+  hasAwait: boolean;
+}
+
 export class CLikeParser {
   static findTryCatchBlocks(source: string): CLikeTryBlock[] {
     const lines = source.split('\n');
@@ -55,7 +61,7 @@ export class CLikeParser {
     return results;
   }
 
-  static findAsyncFunctions(): any[] {
+  static findAsyncFunctions(): CLikeAsyncFunction[] {
     return [];
   }
 

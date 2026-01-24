@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { GitHubClient } from '../lib/github.js';
 import { RAGIndexer } from '@reviewscope/context-engine';
 import { createConfiguredProvider } from '../lib/ai-review.js';

@@ -42,8 +42,9 @@ export async function createConfiguredProvider(installationId?: string): Promise
             provider: createProvider(userConfig.provider as 'openai' | 'gemini', decryptedKey),
             smartRouting
           };
-        } catch (e: any) {
-          console.error(`[LLM] Failed to decrypt user API key for installation ${installationId}. Error: ${e.message}`);
+        } catch (e: unknown) {
+          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+          console.error(`[LLM] Failed to decrypt user API key for installation ${installationId}. Error: ${(e as any).message}`);
         }
       } else {
         console.warn(`[LLM] No custom API key found in DB for installation ${installationId}`);
@@ -74,7 +75,7 @@ interface AIReviewInput {
   diff: string;
   issueContext?: string;
   ragContext?: string; // Pre-fetched RAG context if any
-  ruleViolations?: any[]; // Static rule violations for LLM validation
+  ruleViolations?: unknown[]; // Static rule violations for LLM validation
   complexity?: 'trivial' | 'simple' | 'complex'; // Complexity tier for model routing
 }
 

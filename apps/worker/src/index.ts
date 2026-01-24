@@ -10,6 +10,7 @@ import http from 'http';
 // Handle uncaught connection errors gracefully (ECONNRESET from idle connections)
 process.on('uncaughtException', (err) => {
   // Ignore ECONNRESET - these are expected when idle connections are closed by remote
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   if ((err as any).code === 'ECONNRESET') {
     console.warn('⚠️ Connection reset (idle connection closed by remote) - continuing...');
     return;
@@ -20,6 +21,7 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason, promise) => {
   // Ignore ECONNRESET rejections
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   if ((reason as any)?.code === 'ECONNRESET') {
     console.warn('⚠️ Connection reset in promise - continuing...');
     return;
@@ -91,9 +93,11 @@ export async function startWorker() {
   // Handle connection errors gracefully
   const handleConnectionError = (workerName: string, err: Error) => {
     // Suppress noise from idle connection resets which are common and handled by auto-reconnect
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     if ((err as any).code === 'ECONNRESET') {
       return; 
     }
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     console.error(`${workerName} error [${(err as any).code || 'NO_CODE'}]:`, err.message || err.toString());
   };
 

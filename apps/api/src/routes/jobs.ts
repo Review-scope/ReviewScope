@@ -49,8 +49,10 @@ jobRoutes.post('/index/:repoId', async (c) => {
     });
 
     return c.json({ success: true, message: 'Indexing job enqueued' });
-  } catch (err: any) {
-    console.error('Failed to enqueue indexing job:', err);
-    return c.json({ error: err.message }, 500);
+  } catch (err: unknown) {
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    console.error('Failed to enqueue indexing job:', (err as any).message || err);
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    return c.json({ error: (err as any).message || 'Unknown error' }, 500);
   }
 });

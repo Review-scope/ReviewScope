@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { Hono } from 'hono';
 import { db, installations, marketplaceEvents } from '../db/index.js';
 import { eq } from 'drizzle-orm';

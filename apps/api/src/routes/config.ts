@@ -13,6 +13,7 @@ configRoutes.get('/quota/:installationId', async (c) => {
   try {
     const quota = await getRepoQuotaByInstallationId(installationId);
     return c.json(quota);
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   } catch (err: any) {
     return c.json({ error: err.message, code: err.code }, err.status || 500);
   }
@@ -27,6 +28,7 @@ configRoutes.get('/quota/github/:githubInstallationId', async (c) => {
   try {
     const quota = await getRepoQuotaByGithubInstallationId(githubInstallationId);
     return c.json(quota);
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   } catch (err: any) {
     return c.json({ error: err.message, code: err.code }, err.status || 500);
   }

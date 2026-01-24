@@ -1,9 +1,9 @@
+/* eslint-disable no-console */
 import { headers } from 'next/headers';
-import { db, installations, marketplaceEvents } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+import { db, marketplaceEvents } from '@/lib/db';
 import crypto from 'crypto';
 
-export async function GET(req: Request) {
+export async function GET() {
   return new Response('ReviewScope Marketplace Webhook is active', { status: 200 });
 }
 
@@ -48,6 +48,7 @@ export async function POST(req: Request) {
   }
 
   // 2. Parse Payload
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   let payload: any;
   if (contentType?.includes('application/x-www-form-urlencoded')) {
     const params = new URLSearchParams(body);

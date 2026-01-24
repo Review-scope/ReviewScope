@@ -11,6 +11,12 @@ export interface JavaConsoleCall {
   context: 'production' | 'test' | 'debug';
 }
 
+export interface JavaAsyncFunction {
+  line: number;
+  name?: string;
+  hasAwait: boolean;
+}
+
 export class JavaParser {
   static findTryCatchBlocks(source: string): JavaTryBlock[] {
     const lines = source.split('\n');
@@ -55,7 +61,7 @@ export class JavaParser {
     return results;
   }
 
-  static findAsyncFunctions(): any[] {
+  static findAsyncFunctions(): JavaAsyncFunction[] {
     return [];
   }
 

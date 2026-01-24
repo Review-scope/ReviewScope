@@ -1,8 +1,14 @@
+interface GitHubOrg {
+  id: number;
+  login: string;
+  avatar_url: string;
+  [key: string]: unknown;
+}
 
 export async function getUserOrgIds(accessToken: string): Promise<number[]> {
   try {
     // console.log(`[GitHub] Fetching orgs with token ending in ...${accessToken.slice(-10)}`);
-    let orgs: any[] = [];
+    let orgs: GitHubOrg[] = [];
     let page = 1;
     let hasMore = true;
 
@@ -30,8 +36,8 @@ export async function getUserOrgIds(accessToken: string): Promise<number[]> {
       }
     }
     // console.log("Orgs:",orgs)
-    return orgs.map((org: any) => org.id);
-  } catch (error) {
+    return orgs.map((org) => org.id);
+  } catch (error: unknown) {
     console.error('Failed to fetch user orgs:', error);
     return [];
   }
@@ -39,7 +45,7 @@ export async function getUserOrgIds(accessToken: string): Promise<number[]> {
 
 export async function getUserOrgs(accessToken: string): Promise<{ id: number; login: string; avatar_url: string }[]> {
   try {
-    let orgs: any[] = [];
+    let orgs: GitHubOrg[] = [];
     let page = 1;
     let hasMore = true;
 
@@ -63,12 +69,12 @@ export async function getUserOrgs(accessToken: string): Promise<{ id: number; lo
       }
     }
 
-    return orgs.map((org: any) => ({
+    return orgs.map((org) => ({
       id: org.id,
       login: org.login,
       avatar_url: org.avatar_url
     }));
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to fetch user orgs:', error);
     return [];
   }

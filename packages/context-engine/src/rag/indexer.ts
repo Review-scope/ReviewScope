@@ -72,6 +72,7 @@ export class RAGIndexer {
       console.warn(`[Indexer] Failed to clear existing vectors (might be first run or connection issue):`, e);
     }
 
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     const points: any[] = [];
 
     // 1. Chunk files

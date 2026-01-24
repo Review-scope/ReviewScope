@@ -1,7 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../../../api/src/db/schema';
-import path from 'path';
 
 const connectionString = process.env.DATABASE_URL || '';
 // console.log('Dashboard CWD:', process.cwd());

@@ -1,5 +1,6 @@
 'use server';
 
+/* eslint-disable no-console */
 import { db, configs, installations, repositories } from "@/lib/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -7,7 +8,6 @@ import { encrypt, decrypt } from "@reviewscope/security";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
-import { redirect } from "next/navigation";
 import { createProvider } from "@reviewscope/llm-core";
 import { getUserOrgIds } from "@/lib/github";
 
@@ -52,9 +52,10 @@ export async function verifyApiKey(provider: string, model: string, apiKey: stri
         // OpenAI verification
         await llm.chat([{ role: 'user', content: 'Hi' }], { model: model, maxTokens: 1 });
       }
-    } catch (modelError: any) {
+    } catch (modelError: unknown) {
       // If the specific model fails, we try a fallback check to see if it's just the model name
-      console.warn(`[Verify] Specific model "${model}" failed, trying fallback check:`, modelError.message);
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      console.warn(`[Verify] Specific model "${model}" failed, trying fallback check:`, (modelError as any).message);
       
       try {
         if (provider === 'gemini') {
@@ -64,17 +65,21 @@ export async function verifyApiKey(provider: string, model: string, apiKey: stri
         }
         return { 
           success: false, 
-          error: `API Key is valid, but model "${model}" could not be reached. Error: ${modelError.message}` 
+          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+          error: `API Key is valid, but model "${model}" could not be reached. Error: ${(modelError as any).message}` 
         };
-      } catch (keyError: any) {
-        return { success: false, error: `Invalid API Key for ${provider}. Error: ${keyError.message}` };
+      } catch (keyError: unknown) {
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+        return { success: false, error: `Invalid API Key for ${provider}. Error: ${(keyError as any).message}` };
       }
     }
     
     return { success: true };
-  } catch (error: any) {
-    console.error(`[Verify] Cryptic failure:`, error.message);
-    return { error: error.message || 'System error during verification' };
+  } catch (error: unknown) {
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    console.error(`[Verify] Cryptic failure:`, (error as any).message);
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    return { error: (error as any).message || 'System error during verification' };
   }
 }
 
@@ -102,6 +107,12 @@ async function verifyOwnership(installationId: string) {
   return installation;
 }
 
+interface GitHubRepo {
+  id: number;
+  full_name: string;
+  [key: string]: unknown;
+}
+
 export async function syncRepositories(installationId: string) {
   const installation = await verifyOwnership(installationId);
   if (!installation) {
@@ -126,7 +137,7 @@ export async function syncRepositories(installationId: string) {
     // Actually, we can use the user's access token to list the repositories that the INSTALLATION has access to.
     // Endpoint: GET /user/installations/{installation_id}/repositories
     
-    let allRepos: any[] = [];
+    let allRepos: GitHubRepo[] = [];
     let page = 1;
     let hasMore = true;
 
@@ -179,9 +190,11 @@ export async function syncRepositories(installationId: string) {
 
     revalidatePath(`/settings/${installationId}/config`);
     return { success: true, count };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     console.error("Sync error:", error);
-    return { success: false, error: error.message };
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    return { success: false, error: (error as any).message };
   }
 }
 
@@ -207,6 +220,7 @@ export async function updateConfig(installationId: string, formData: FormData) {
   const { provider, model, customPrompt, apiKey, smartRouting } = validatedFields.data;
 
   try {
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     const existingConfig = await db.query.configs.findFirst({
       where: eq(configs.installationId, installationId),
     });
@@ -214,6 +228,7 @@ export async function updateConfig(installationId: string, formData: FormData) {
     let apiKeyEncrypted = existingConfig?.apiKeyEncrypted;
     let apiKeyChanged = false;
 
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     if (apiKey && apiKey.trim() !== '') {
       const secret = process.env.ENCRYPTION_KEY;
       if (!secret) {

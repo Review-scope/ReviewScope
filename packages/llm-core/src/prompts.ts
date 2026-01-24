@@ -59,6 +59,11 @@ You are a Senior Engineer reviewing this PR. Focus your analysis on these key ar
 - Provide concrete code snippets or diffs for every fix.
 - If a fix is complex, explain the approach clearly.
 
+## CHANGE RELATIONSHIPS
+- If the same object key appears multiple times in the diff, assume the last one overrides previous values.
+- Do NOT suggest re-adding logic that already exists later in the same object.
+- Prefer pointing out duplicates or shadowed values over proposing redundant fixes.
+
 ## WHY THIS MATTERS
 - Your review is human-centric: explain what changed, what risks it introduces, and how to fix them like a senior teammate would.
 - Write naturally and clearly, prioritizing developer understanding over linting rules.
@@ -128,7 +133,7 @@ When providing a "diff" field:
 - This is for display purposes in the comment body.
 
 Example: If line 42 is \`const x = null;\` and should be \`const x = "";\`:
-"diff": "- const x = null;\n+ const x = \"\";"
+"diff": "- const x = null;\n+ const x = \\"\\";"
 
 ## RULES
 - DO NOT restate the diff.
@@ -450,6 +455,7 @@ export function parseReviewResponse(response: string): ReviewResult {
   try {
     const parsed = JSON.parse(jsonStr);
     const rawComments: ReviewComment[] = (parsed.comments || [])
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       .map((c: any) => ({
         file: c.file || 'unknown',
         line: c.line || 0,
@@ -462,9 +468,11 @@ export function parseReviewResponse(response: string): ReviewResult {
         suggestion: c.suggestion,
       }))
       .map(normalizeSeverity)
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       .filter((c: any): c is ReviewComment => c !== null);
 
     const rawValidations: RuleValidation[] = (parsed.ruleValidations || [])
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       .map((v: any) => ({
         ruleId: v.ruleId,
         file: v.file,
