@@ -52,6 +52,12 @@ ReviewScope/
 └── tsconfig.base.json          # Shared TypeScript config
 ```
 
+## Documentation
+
+- [User Guide](docs/USER_GUIDE.md) - How to install, configure, and use ReviewScope.
+- [Architecture](docs/ARCHITECTURE.md) - Deep dive into the system design and data flow.
+- [Contributing](CONTRIBUTING.md) - Guide for developers who want to contribute to the project.
+
 ## Setup & Installation
 
 ### Prerequisites
@@ -64,7 +70,7 @@ ReviewScope/
 ### 1. Clone & Install
 
 ```bash
-git clone <repo>
+git clone https://github.com/Review-scope/ReviewScope
 cd ReviewScope
 npm install
 ```
@@ -282,8 +288,8 @@ npm run queue:ui  # localhost:3000/admin/queues
 ## Support & Contact
 
 📧 **Email:** parasverma7454@gmail.com  
-🐙 **GitHub Issues:** [ReviewScope Issues](https://github.com/yourusername/ReviewScope/issues)  
-💬 **Discussions:** [GitHub Discussions](https://github.com/yourusername/ReviewScope/discussions)
+🐙 **GitHub Issues:** [ReviewScope Issues](https://github.com/Review-scope/ReviewScope/issues)  
+💬 **Discussions:** [GitHub Discussions](https://github.com/Review-scope/ReviewScope/discussions)
 
 ## Contributing
 

@@ -119,6 +119,7 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
         "Unlimited files (Smart Batching)",
         "Full RAG + Historical Memory",
         "Org-wide shared guidelines",
+        "Custom review prompts",
         "Shared team dashboard",
         "Audit logs & controls",
         "Priority 24/7 support",
@@ -136,14 +137,14 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
   const currentPlanId = selectedAccount.planId;
 
   return (
-    <div className="py-20 px-4 md:px-8 max-w-7xl mx-auto space-y-16">
+    <div className="py-12 px-4 md:px-8 max-w-7xl mx-auto space-y-12">
       {/* Header & Account Selector */}
-      <div className="text-center max-w-3xl mx-auto space-y-8">
-        <div className="space-y-4">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
+      <div className="text-center max-w-3xl mx-auto space-y-6">
+        <div className="space-y-3">
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
             Simple, Transparent <span className="text-primary">Pricing.</span>
           </h1>
-          <p className="text-lg text-muted-foreground leading-relaxed">
+          <p className="text-base text-muted-foreground leading-relaxed">
             ReviewScope runs on your own API keys. You pay for the platform's orchestration and advanced RAG features.
           </p>
         </div>
@@ -213,7 +214,7 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
       </div>
 
       {/* Tiers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
         {tiers.map((tier) => {
           const isCurrentPlan = currentPlanId === tier.planId || (currentPlanId === 0 && tier.planId === 3); // 0 (missing) defaults to Free (3)
           const upgradeUrl = tier.id === 'free' 
@@ -292,6 +293,14 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
             </div>
           );
         })}
+      </div>
+
+      <div className="flex justify-center items-center gap-2 mb-12 opacity-70">
+        <span className="text-sm font-semibold text-muted-foreground">Secured by</span>
+        <div className="flex items-center gap-1.5 px-3 py-1 bg-white border rounded-full shadow-sm">
+           <img src="/dodo.jpeg" alt="Dodo Payments" className="w-5 h-5 object-contain" />
+           <span className="text-xs font-bold text-zinc-800">Dodo Payments</span>
+        </div>
       </div>
 
       {/* FAQ Section */}

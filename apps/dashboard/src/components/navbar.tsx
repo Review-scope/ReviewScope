@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { 
   LayoutDashboard, 
+  Book,
   LogIn, 
   LogOut, 
   HelpCircle, 
@@ -36,6 +37,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/docs", label: "Docs", icon: Book },
     { href: "/pricing", label: "Pricing", icon: CreditCard },
     { href: "/settings", label: "Settings", icon: Settings },
     { href: "/support", label: "Support", icon: HelpCircle },
@@ -45,7 +47,9 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
         <Link href="/" className="flex items-center gap-2 font-bold text-xl md:text-2xl hover:opacity-80 transition-opacity shrink-0">
-          <img src="/logo1.png" alt="ReviewScope" className="w-8 h-8 object-contain" />
+          <div className="w-8 h-8 flex items-center justify-center">
+            <img src="/logo1.png" alt="ReviewScope" className="w-full h-full object-contain" />
+          </div>
           <span className="tracking-tighter italic uppercase font-black">Review<span className="text-primary">Scope</span></span>
         </Link>
         

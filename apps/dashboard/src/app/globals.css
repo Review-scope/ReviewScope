@@ -90,9 +90,13 @@
   }
   body {
     @apply bg-background text-foreground antialiased text-sm;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
   html {
     font-size: 14px;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
   h1 {
     @apply text-2xl;

@@ -30,7 +30,7 @@ export default async function LandingPage() {
             </span>
           </h1>
           <p className="text-lg md:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium px-4">
-            Professional AI code reviews that understand your context. 
+            The <span className="text-foreground font-bold">Open Source</span> AI code reviewer that understands your context. 
             Secure, logic-aware, and powered by <span className="text-foreground font-bold">your own API keys.</span>
           </p>
         </div>
@@ -49,6 +49,21 @@ export default async function LandingPage() {
           >
             View Pricing
           </Link>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-4 mt-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+           <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10 backdrop-blur-sm">
+              <img src="/dodo.jpeg" alt="Dodo" className="w-4 h-4 rounded-full" />
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Secured by Dodo</span>
+           </div>
+           <Link
+              href="https://github.com/Review-scope/ReviewScope"
+              target="_blank"
+              className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors cursor-pointer"
+           >
+              <Github className="w-4 h-4 text-zinc-500" />
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Open Source</span>
+           </Link>
         </div>
 
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full">
@@ -99,9 +114,9 @@ export default async function LandingPage() {
                <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6 relative">
                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                    <div className="flex items-center gap-3">
-                     <div className="w-8 h-8 rounded-full bg-primary/8 flex items-center justify-center text-primary-foreground">
-                       <img src="/logo1.png" alt="ReviewScope" className="w-6 h-6 object-contain" />
-                     </div>
+                     <div className="w-8 h-8 rounded-full bg-primary/8 flex items-center justify-center text-primary-foreground overflow-hidden">
+                      <img src="/logo1.png" alt="ReviewScope" className="w-full h-full object-contain" />
+                    </div>
                      <span className="font-bold text-sm">ReviewScope AI</span>
                      <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black">
                        CRITICAL
@@ -173,7 +188,7 @@ export default async function LandingPage() {
               { 
                 icon: <Globe className="w-6 h-6" />, 
                 title: "Private & Public Repos", 
-                desc: "Secure reviews for both internal company code and open-source projects." 
+                desc: "Secure reviews for both internal company code and open-source projects. ReviewScope itself is Open Source!" 
               },
               { 
                 icon: <Lock className="w-6 h-6" />, 
@@ -261,6 +276,10 @@ export default async function LandingPage() {
                 desc: "Smart routing uses cheaper flash models for trivial changes, reserves expensive models for complex logic. You control your AI spend." 
               },
               { 
+                title: "Open Source Core", 
+                desc: "Built in the open. Verify our security, contribute to our rules engine, or self-host the worker. We believe in transparency." 
+              },
+              { 
                 title: "Context Aware", 
                 desc: "RAG retrieval + web context means fewer hallucinations. The AI understands your repo, not just the diff." 
               },
@@ -278,7 +297,7 @@ export default async function LandingPage() {
               },
               { 
                 title: "Transparent Pricing", 
-                desc: "Free tier for individuals. Pro/Team tiers via GitHub Marketplace. No surprise charges." 
+                desc: "Free tier for individuals. Pro/Team tiers via secure payments. No surprise charges." 
               }
             ].map((item) => (
               <div key={item.title} className="bg-card border rounded-2xl p-8 hover:border-primary/50 transition-colors">

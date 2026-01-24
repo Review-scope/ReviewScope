@@ -1,5 +1,5 @@
 import { db, repositories, installations, configs, reviews } from "@/lib/db";
-import { Github, CheckCircle2, AlertCircle, Clock, ArrowRight, Key, Zap, BarChart3, ShieldCheck, Sparkles, Lock, Gauge, Layers, MessageSquare, Check, Power, RefreshCw } from "lucide-react";
+import { Github, CheckCircle2, AlertCircle, Clock, ArrowRight, Key, Zap, BarChart3, ShieldCheck, Sparkles, Lock, Gauge, Layers, MessageSquare, Check, Power, RefreshCw, Book, Server } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/authOptions";
 import { eq, isNotNull, and, count, desc, inArray, or } from "drizzle-orm";
@@ -247,6 +247,8 @@ export default async function DashboardPage({
             </div>
           </section>
         )}
+
+
 
         {/* Repositories Grid */}
         <section className="space-y-8">

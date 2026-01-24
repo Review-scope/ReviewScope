@@ -5,14 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import { eq, and, desc, count, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { getUserOrgIds } from "@/lib/github";
-
-// Plan limits mapping
-const planLimits: { [key: string]: { maxRepos: number } } = {
-  'None': { maxRepos: 0 },
-  'Free': { maxRepos: 3 },
-  'Pro': { maxRepos: 5 },
-  'Team': { maxRepos: 999999 }
-};
+import { getPlanLimits } from "../../../../worker/src/lib/plans";
 
 export const dynamic = 'force-dynamic';
 
@@ -89,12 +82,12 @@ export default async function SettingsPage() {
             </div>
           </div>
           <a 
-            href="https://github.com/apps/review-scope/installations/new"
+            href="https://github.com/Review-scope/ReviewScope"
             target="_blank"
             className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all shadow-lg text-sm shrink-0"
           >
             <Github className="w-4 h-4" />
-            Add Organization
+            View Repository
           </a>
         </div>
       </header>
@@ -141,9 +134,9 @@ export default async function SettingsPage() {
                     <Activity className="w-4 h-4 opacity-50 text-primary" />
                     <span className="font-bold text-foreground">{countsMap[inst.id] || 0}</span>
                     <span className="opacity-60">/</span>
-                    <span className="font-bold opacity-70">{planLimits[inst.planName || 'None'].maxRepos}</span>
+                    <span className="font-bold opacity-70">{getPlanLimits(inst.planId, inst.expiresAt).maxRepos >= 999999 ? '∞' : getPlanLimits(inst.planId, inst.expiresAt).maxRepos}</span>
                     <span className="opacity-60">Repositories</span>
-                    {(countsMap[inst.id] || 0) >= planLimits[inst.planName || 'None'].maxRepos && (
+                    {(countsMap[inst.id] || 0) >= getPlanLimits(inst.planId, inst.expiresAt).maxRepos && (
                       <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 border border-orange-200 rounded-lg ml-2">
                         <AlertCircle className="w-3.5 h-3.5 text-orange-600" />
                         <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Limit Reached</span>
@@ -167,7 +160,7 @@ export default async function SettingsPage() {
                 Configure
               </Link>
               <a 
-                href="https://github.com/apps/review-scope/installations/new"
+                href="https://github.com/Review-scope/ReviewScope"
                 target="_blank"
                 className="p-5 bg-white text-zinc-600 rounded-3xl hover:bg-zinc-50 transition-all border-2 border-zinc-100 hover:border-zinc-200 shadow-xl group-hover:translate-x-1"
               >
@@ -182,11 +175,11 @@ export default async function SettingsPage() {
             <Sparkles className="w-12 h-12 text-zinc-200" />
             <h3 className="text-xl font-black uppercase italic">No Connections Found</h3>
             <a 
-              href="https://github.com/apps/review-scope/installations/new"
+              href="https://github.com/Review-scope/ReviewScope"
               target="_blank"
               className="px-8 py-3 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase"
             >
-              Connect GitHub
+              View Repository
             </a>
           </div>
         )}
