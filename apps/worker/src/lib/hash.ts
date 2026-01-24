@@ -15,8 +15,12 @@ export function generateIssueKey(params: {
     .toLowerCase()
     .replace(/\d+/g, '') // Remove numbers (often line or count specific)
     .replace(/['"`]/g, '')
+    .replace(/\s+/g, ' ') // Collapse whitespace
     .trim();
 
-  const input = `${params.repositoryId}:${params.prNumber}:${params.filePath}:${params.ruleId}:${normalizedMessage}`;
+  // If message includes a code block, strip it for hashing stability
+  const messageWithoutCode = normalizedMessage.split('```')[0].trim();
+
+  const input = `${params.repositoryId}:${params.prNumber}:${params.filePath}:${params.ruleId}:${messageWithoutCode}`;
   return createHash('sha256').update(input).digest('hex').substring(0, 16);
 }
