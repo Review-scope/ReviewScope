@@ -545,7 +545,8 @@ Found ${validatedStaticComments.length} pattern violations.
             prNumber: data.prNumber,
             filePath: c.file,
             ruleId: (c as any).ruleId || 'static-violation',
-            message: c.message
+            message: c.message,
+            line: c.line
         })
       })),
       ...validatedAiComments.map(c => ({
@@ -556,7 +557,8 @@ Found ${validatedStaticComments.length} pattern violations.
             prNumber: data.prNumber,
             filePath: c.file,
             ruleId: 'ai-review',
-            message: c.message
+            message: c.message,
+            line: c.line
         })
       }))
     ];
