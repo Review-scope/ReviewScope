@@ -10,7 +10,7 @@ export default async function LandingPage() {
 
   return (
     <div className="flex flex-col items-center pb-20 overflow-x-hidden">
-      <section className="relative w-full pt-16 md:pt-32 pb-16 md:pb-24 px-4 md:px-8 flex flex-col items-center text-center">
+      <section className="relative w-full pt-16 md:pt-26 pb-16 md:pb-24 px-4 md:px-8 flex flex-col items-center text-center">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-primary/10 via-background to-background"></div>
         <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,#8080800a_3px,transparent_3px),linear-gradient(to_bottom,#8080800a_3px,transparent_3px)] bg-size-[44px_44px] mask-[radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
 

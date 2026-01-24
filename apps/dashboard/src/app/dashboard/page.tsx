@@ -119,19 +119,19 @@ export default async function DashboardPage({
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-12">
       {/* Premium Header */}
-      <header className="relative overflow-hidden rounded-[2.5rem] bg-zinc-900 text-white p-8 md:p-12 shadow-2xl">
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-linear-to-l from-primary/20 to-transparent"></div>
+      <header className="relative overflow-hidden rounded-[2.5rem] bg-card text-card-foreground border border-border p-8 md:p-12 shadow-xl">
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-linear-to-l from-primary/10 to-transparent"></div>
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="space-y-4 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-bold uppercase tracking-widest text-primary-foreground/80">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <ShieldCheck className="w-3 h-3" />
               Verified Developer
             </div>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tighter italic uppercase">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight">
               Developer <span className="text-primary">Control Center</span>
             </h1>
-            <p className="text-lg text-zinc-400 font-medium max-w-xl">
-              Monitor <span className="text-white font-bold italic">your personal</span> AI code review infrastructure and project health across <span className="text-white font-bold">@{session.user.name}</span>&apos;s ecosystem.
+            <p className="text-lg text-muted-foreground font-medium max-w-xl">
+              Monitor <span className="text-foreground font-bold">your personal</span> AI code review infrastructure and project health across <span className="text-foreground font-bold">@{session.user.name}</span>&apos;s ecosystem.
             </p>
           </div>
           <div className="flex flex-col items-center gap-4">
@@ -142,9 +142,9 @@ export default async function DashboardPage({
         {/* Floating Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
           {stats.map((stat) => (
-            <div key={stat.label} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 md:p-6 space-y-2">
+            <div key={stat.label} className="bg-muted/50 backdrop-blur-md border border-border/50 rounded-2xl p-4 md:p-6 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{stat.label}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</span>
                 {stat.icon}
               </div>
               <div className="text-2xl md:text-3xl font-black tracking-tight">{stat.value}</div>

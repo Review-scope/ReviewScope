@@ -159,6 +159,8 @@ export class GitHubClient {
       const results = await Promise.all(
         batch.map(async (item) => {
           let retries = 3;
+          let lastError: any;
+
           while (retries > 0) {
             try {
               const { data: blob } = await octokit.rest.git.getBlob({
@@ -169,25 +171,37 @@ export class GitHubClient {
                   timeout: 15000, // Increase timeout to 15s
                 }
               });
+              
               if (!blob.content) {
                 console.warn(`[GitHub] Blob for ${item.path} has no content, skipping`);
                 return null;
               }
+              
               return {
                 path: item.path!,
                 content: Buffer.from(blob.content, 'base64').toString('utf-8'),
               };
             } catch (e: any) {
-              retries--;
-              if (retries === 0) {
-                console.error(`Failed to fetch blob for ${item.path} after all retries:`, e.message);
-                return null;
+              lastError = e;
+              
+              // If file disappeared (race condition), skip it without retrying
+              if (e.status === 404) {
+                 console.warn(`[GitHub] File ${item.path} not found (404) during batch fetch, skipping.`);
+                 return null;
               }
-              console.warn(`Retrying blob fetch for ${item.path} (${3 - retries}/3)... Error: ${e.message}`);
-              await new Promise(resolve => setTimeout(resolve, 1000 * (3 - retries))); // Exponential-ish backoff
+
+              retries--;
+              if (retries === 0) break;
+
+              // Exponential backoff with jitter: 1s, 2s, 4s + random(0-1s)
+              const delay = Math.pow(2, 3 - retries) * 1000 + Math.random() * 1000;
+              console.warn(`Retrying blob fetch for ${item.path} (${3 - retries}/3) in ${Math.round(delay)}ms... Error: ${e.message}`);
+              await new Promise(resolve => setTimeout(resolve, delay));
             }
           }
-          return null;
+          
+          // If we exhausted retries for a non-404 error, we fail the batch to ensure data integrity
+          throw new Error(`Failed to fetch blob for ${item.path} after 3 retries: ${lastError?.message}`);
         })
       );
 
