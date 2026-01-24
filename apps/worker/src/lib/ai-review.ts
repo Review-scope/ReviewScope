@@ -85,6 +85,7 @@ export interface AIReviewResult {
   assessment: {
     riskLevel: string;
     mergeReadiness: string;
+    confidence: 'high' | 'medium' | 'low';
   };
 }
 
@@ -155,10 +156,28 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
   const result = parseReviewResponse(response.content);
   console.warn(`LLM returned ${result.comments.length} comments. Summary: ${result.summary}`);
 
+  // 5. Calculate Confidence Score
+  let confidence: 'high' | 'medium' | 'low' = 'high';
+  
+  // Lower confidence if PR is complex but using a smaller model
+  if (input.complexity === 'complex' && modelName.includes('flash')) {
+    confidence = 'medium';
+  }
+
+  // Lower confidence if RAG was attempted but returned no context (and it wasn't explicitly disabled)
+  // Note: This is a heuristic, as maybe there really was no relevant context.
+  if (input.ragContext === '' && input.complexity !== 'trivial') {
+    // Slight penalty if we have no RAG context for non-trivial PRs
+    confidence = confidence === 'high' ? 'medium' : 'low'; 
+  }
+
   return {
     comments: result.comments,
     contextHash: assembled.contextHash,
     summary: result.summary,
-    assessment: result.assessment,
+    assessment: {
+        ...result.assessment,
+        confidence
+    },
   };
 }

@@ -13,6 +13,7 @@ import picomatch from 'picomatch';
 import { getPlanLimits, PlanTier } from '../lib/plans.js';
 import { checkRateLimits, logReviewUsage, RateLimitError } from '../lib/rate-limit.js';
 import { Queue } from 'bullmq';
+import { createHash } from 'crypto';
 
 import { ReviewComment } from '@reviewscope/llm-core';
 
@@ -26,6 +27,12 @@ const getReviewQueue = () => {
         port: Number(redisUrl.port),
         password: redisUrl.password,
         tls: redisUrl.protocol === 'rediss:' ? {} : undefined,
+      },
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: 100,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 30000 }
       }
     });
   }
@@ -231,7 +238,8 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
         console.warn(`Loaded ${ignoredPatterns.length} patterns from .reviewscopeignore`);
       }
     } catch (e) {
-      // Ignore if file doesn't exist
+      // Ignore if file doesn't exist, but log for debugging
+      console.warn(`[Worker] .reviewscopeignore not loaded: ${(e as Error).message}`);
     }
 
     // Phase 2 - Fetch PR diff
@@ -256,6 +264,46 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     let filteredFiles = filterNoise(initialFiltered);
 
     console.warn(`Fetched diff: ${parsedFiles.length} files total, ${filteredFiles.length} after noise filtering.`);
+
+    // Review Fingerprinting (Idempotency)
+    const RULES_ENGINE_VERSION = '1.0.0'; 
+    const contentToHash = JSON.stringify({
+      files: filteredFiles.map(f => ({ path: f.path, additions: f.additions.map(a => a.content), deletions: f.deletions.map(d => d.content) })),
+      config: config,
+      rulesVersion: RULES_ENGINE_VERSION
+    });
+    const fingerprint = createHash('sha256').update(contentToHash).digest('hex');
+
+    // Check for existing identical review
+    const [existingReview] = await db.select().from(reviews).where(
+      and(
+        eq(reviews.repositoryId, dbRepo.id),
+        eq(reviews.contextHash, fingerprint),
+        eq(reviews.status, 'completed')
+      )
+    );
+
+    if (existingReview && existingReview.result) {
+        console.warn(`[Worker] Skipping identical review (Fingerprint match: ${fingerprint})`);
+        
+        if (dbReviewId) {
+             await db.update(reviews).set({
+                status: 'completed',
+                contextHash: fingerprint,
+                result: existingReview.result,
+                processedAt: new Date(),
+                updatedAt: new Date(),
+            }).where(eq(reviews.id, dbReviewId));
+        }
+
+        return {
+            success: true,
+            reviewerVersion: '0.0.1',
+            contextHash: fingerprint,
+            comments: (existingReview.result as any).comments || [],
+            summary: (existingReview.result as any).summary || 'Review reused from previous identical run.',
+        };
+    }
 
     // SMART STRATEGY:
     // If we have actual logic/config files, ignore documentation to save budget.
@@ -304,9 +352,21 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
             ...f.deletions.map(d => ({ line: d.lineNumber, type: '-', content: d.content }))
         ].sort((a, b) => a.line - b.line);
 
-        changes.forEach(c => {
-            fileDiff += `${c.line} ${c.type} ${c.content}\n`;
-        });
+        // Cap lines per file to prevent overflow
+        const MAX_LINES_PER_FILE = 500;
+        if (changes.length > MAX_LINES_PER_FILE) {
+            // Keep first 250 and last 250 lines
+            const firstChunk = changes.slice(0, 250);
+            const lastChunk = changes.slice(changes.length - 250);
+            
+            firstChunk.forEach(c => { fileDiff += `${c.line} ${c.type} ${c.content}\n`; });
+            fileDiff += `... [Trimming ${changes.length - 500} lines] ...\n`;
+            lastChunk.forEach(c => { fileDiff += `${c.line} ${c.type} ${c.content}\n`; });
+        } else {
+            changes.forEach(c => {
+                fileDiff += `${c.line} ${c.type} ${c.content}\n`;
+            });
+        }
         return fileDiff;
     }).join('\n\n');
 
@@ -369,7 +429,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     let aiComments: any[] = [];
     let contextHash = 'filtered-empty';
     let aiSummary = 'No AI summary available.';
-    let assessment = { riskLevel: 'Low', mergeReadiness: 'Looks Good' };
+    let assessment = { riskLevel: 'Low', mergeReadiness: 'Looks Good', confidence: 'low' };
 
     // SAAS RULE: Free users MUST provide their own API key to use AI.
     // Pro/Team users can use system keys (depending on your choice) or their own.
@@ -462,6 +522,15 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
         }
       } catch (e) {
         console.error('AI Review failed:', e);
+        aiSummary = `### ⚠️ AI Review Failed\n\nWe encountered an error while analyzing this PR. Our team has been notified.\n\n**Error details:** ${(e as Error).message}`;
+        assessment = { riskLevel: 'Unknown', mergeReadiness: 'Manual Review Required', confidence: 'low' };
+        
+        // Persist error metadata without failing the whole job
+        if (dbReviewId) {
+             await db.update(reviews).set({
+                 error: (e as Error).message
+             }).where(eq(reviews.id, dbReviewId));
+        }
       }
     } else {
 
@@ -479,7 +548,8 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
       contextHash = 'static-only-' + Date.now();
       assessment = { 
         riskLevel: issuesFound > 5 ? 'Medium' : 'Low', 
-        mergeReadiness: issuesFound > 0 ? 'Needs Changes' : 'Looks Good' 
+        mergeReadiness: issuesFound > 0 ? 'Needs Changes' : 'Looks Good',
+        confidence: 'high'
       };
       
       console.warn(`[Plan] Skipping AI review phase for ${limits.tier} installation ${dbInst.id} (Has Key: ${hasCustomKey})`);
@@ -511,25 +581,16 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
         { maxComments: 100 }
     );
 
-    const criticals = validatedAiComments.filter(c => c.severity === 'CRITICAL');
-    const majors = validatedAiComments.filter(c => c.severity === 'MAJOR');
-    const minors = validatedAiComments.filter(c => c.severity === 'MINOR');
-    
     const summaryBody = `
-## ReviewScope Analysis
+## 🧠 Review Summary
 ${aiSummary}
 
-### 📊 Assessment
-- **Risk Level:** ${assessment.riskLevel}
-- **Merge Readiness:** ${assessment.mergeReadiness}
+### 🏁 Verdict
+**Merge Readiness**: ${assessment.mergeReadiness}  
+**Risk Level**: ${assessment.riskLevel}  
+**Confidence**: ${(assessment as any).confidence ? (assessment as any).confidence.toUpperCase() : 'N/A'}
 
-### 🛡️ Static Analysis
-Found ${validatedStaticComments.length} pattern violations.
-
-### 🧠 AI Findings
-- 🔴 Critical: ${criticals.length}
-- 🟠 Major: ${majors.length}
-- 🟡 Minor: ${minors.length}
+${validatedStaticComments.length > 0 ? `> 🛡️ Found ${validatedStaticComments.length} static code analysis issues.` : ''}
 
 ---
 *Generated by [ReviewScope](https://github.com/Review-scope/ReviewScope)*
@@ -614,13 +675,25 @@ Found ${validatedStaticComments.length} pattern violations.
         };
         const emoji = emojiMap[finding.severity] || '⚠️';
         
-        let body = `### ${emoji} ${finding.severity} | ${finding.message}\n\n`;
-        if (finding.why) body += `${finding.why}\n\n`;
-        if (finding.diff) {
-          body += `<details>\n<summary>🔍 <b>Proposed Fix:</b> ${finding.fix || 'View Changes'}</summary>\n\n\`\`\`diff\n${finding.diff}\n\`\`\`\n</details>\n\n`;
-        } else if (finding.fix) {
-          body += `**Suggested Fix:** ${finding.fix}\n\n`;
+        // CodeRabbit-style conversational format
+        let body = `⚠️ **${finding.message} | ${emoji} ${finding.severity}**\n\n`;
+        
+        if (finding.why) {
+            body += `${finding.why}\n\n`;
         }
+
+        if (finding.diff) {
+          body += `� **Suggested fix:**\n\n\`\`\`diff\n${finding.diff}\n\`\`\`\n\n`;
+        } else if (finding.fix) {
+          const ext = finding.file.split('.').pop() || '';
+          const lang = ext === 'ts' || ext === 'tsx' ? 'typescript' : 
+                       ext === 'js' || ext === 'jsx' ? 'javascript' : 
+                       ext === 'py' ? 'python' : 
+                       ext === 'go' ? 'go' : 
+                       ext === 'rs' ? 'rust' : '';
+          body += `🔎 **Suggested fix:**\n\n\`\`\`${lang}\n${finding.fix}\n\`\`\`\n\n`;
+        }
+        
         if (finding.suggestion) {
           body += `\`\`\`suggestion\n${finding.suggestion}\n\`\`\``;
         }
