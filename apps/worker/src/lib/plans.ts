@@ -15,6 +15,11 @@ export interface PlanLimits {
   allowCustomPrompts: boolean;
   chatPerPRLimit: number | 'unlimited';
   allowOrg: boolean;
+  
+  // Rate Limits
+  reviewsPerPR: number;
+  dailyReviewsLimit: number;
+  cooldownMinutes: number;
 }
 
 // Map GitHub Marketplace Plan IDs to our Tiers
@@ -52,6 +57,9 @@ export function getPlanLimits(planId: number | null, expiresAt?: Date | null): P
         allowCustomPrompts: true,
         chatPerPRLimit: 'unlimited',
         allowOrg: true,
+        reviewsPerPR: 50,
+        dailyReviewsLimit: 500,
+        cooldownMinutes: 1,
       };
     case PlanTier.PRO:
       return {
@@ -65,6 +73,9 @@ export function getPlanLimits(planId: number | null, expiresAt?: Date | null): P
         allowCustomPrompts: true,
         chatPerPRLimit: 'unlimited',
         allowOrg: true,
+        reviewsPerPR: 20,
+        dailyReviewsLimit: 100,
+        cooldownMinutes: 5,
       };
     case PlanTier.FREE:
     default:
@@ -79,6 +90,9 @@ export function getPlanLimits(planId: number | null, expiresAt?: Date | null): P
         allowCustomPrompts: false,
         chatPerPRLimit: 3,
         allowOrg: false,
+        reviewsPerPR: 5,
+        dailyReviewsLimit: 20,
+        cooldownMinutes: 10,
       };
   }
 }

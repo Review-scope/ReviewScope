@@ -147,7 +147,7 @@ export default function SignInPage() {
               </Link>
               <span className="text-muted-foreground">•</span>
               <a 
-                href="https://github.com/apps/review-scope" 
+                href="https://github.com/Review-scope/ReviewScope" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"

@@ -167,7 +167,7 @@ export default async function AdminPage({
 
   // Transform for AdminView
   const transformedData = paginatedInstallations.map(inst => {
-    const limits = getPlanLimits(inst.planId);
+    const limits = getPlanLimits(inst.planId, inst.expiresAt);
     const config = configMap.get(inst.id);
     
     return {
@@ -409,12 +409,12 @@ export default async function AdminPage({
             View Support Page
           </Link>
           <a 
-            href="https://github.com/apps/reviewscope"
+            href="https://github.com/Review-scope/ReviewScope"
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/80 transition-all"
           >
-            GitHub App Settings
+            GitHub Repository
           </a>
         </div>
       </div>
