@@ -49,3 +49,87 @@ export async function loadLanguage(lang: string) {
 
   return parser;
 }
+
+export interface BaseTryBlock {
+  tryLine: number;
+  catchLine: number;
+  isEmpty: boolean;
+  content: string;
+}
+
+export interface BaseAsyncFunction {
+  line: number;
+  name?: string;
+  hasAwait: boolean;
+}
+
+export interface BaseConsoleCall {
+  line: number;
+  type: string;
+  context: 'production' | 'test' | 'debug';
+}
+
+export async function traverseTree<T>(
+  source: string,
+  language: string,
+  visitor: (node: any, results: T[]) => void
+): Promise<T[]> {
+  const results: T[] = [];
+  try {
+    const parser = await loadLanguage(language);
+    const tree = parser.parse(source);
+
+    const visit = (node: any) => {
+      visitor(node, results);
+      if (node.children) {
+        for (const child of node.children) {
+          visit(child);
+        }
+      }
+    };
+
+    visit(tree.rootNode);
+    tree.delete();
+  } catch (e) {
+    console.error(`Error parsing ${language}:`, e);
+  }
+  return results;
+}
+
+export function isBlockEmpty(node: any, ignoredTypes: string[] = ['{', '}', 'comment']): boolean {
+  if (!node) return true;
+  const relevantChildren = node.children.filter((c: any) => !ignoredTypes.includes(c.type));
+  return relevantChildren.length === 0;
+}
+
+export async function findStandardTryCatch<T extends BaseTryBlock>(
+  source: string,
+  language: string,
+  blockType: string = 'block'
+): Promise<T[]> {
+  const lines = source.split('\n');
+  return traverseTree<T>(source, language, (node, results) => {
+    if (node.type === 'try_statement') {
+      const tryLine = node.startPosition.row + 1;
+      
+      for (const child of node.children) {
+        if (child.type === 'catch_clause') {
+            const catchLine = child.startPosition.row + 1;
+            let isEmpty = false;
+            
+            const block = child.children.find((c: any) => c.type === blockType);
+            if (block) {
+              isEmpty = isBlockEmpty(block);
+            }
+            
+            results.push({
+              tryLine,
+              catchLine,
+              isEmpty,
+              content: lines[tryLine-1]?.trim() || 'try'
+            } as T);
+        }
+      }
+    }
+  });
+}

@@ -2,6 +2,7 @@ import { parse } from '@babel/parser';
 import _traverse from '@babel/traverse';
 import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
+import type { BaseTryBlock, BaseAsyncFunction, BaseConsoleCall } from './tree-sitter-utils.js';
 
 // Workaround for import issues with @babel/traverse
 const traverse = (_traverse as any).default || _traverse;
@@ -21,31 +22,27 @@ export interface ASTNode {
   parent?: ASTNode;
 }
 
+export interface JavaScriptTryBlock extends BaseTryBlock {
+  tryStart?: number;
+  tryEnd?: number;
+  catchStart?: number;
+  catchEnd?: number;
+}
+
+export interface JavaScriptAsyncFunction extends BaseAsyncFunction {}
+
+export interface JavaScriptConsoleCall extends BaseConsoleCall {
+  content: string;
+}
+
 export class JavaScriptParser {
   /**
    * Find all try-catch statements in source code
    * Returns line numbers where try/catch blocks are found
    */
-  static findTryCatchBlocks(source: string): Array<{
-    tryLine: number;
-    catchLine: number;
-    isEmpty: boolean;
-    content: string;
-    tryStart?: number;
-    tryEnd?: number;
-    catchStart?: number;
-    catchEnd?: number;
-  }> {
-    const results: Array<{
-      tryLine: number;
-      catchLine: number;
-      isEmpty: boolean;
-      content: string;
-      tryStart?: number;
-      tryEnd?: number;
-      catchStart?: number;
-      catchEnd?: number;
-    }> = [];
+  static findTryCatchBlocks(source: string): JavaScriptTryBlock[] {
+    const results: JavaScriptTryBlock[] = [];
+    const lines = source.split('\n');
 
     try {
       const ast = parse(source, {
@@ -74,7 +71,6 @@ export class JavaScriptParser {
             const isEmpty = body.length === 0;
 
             // Get content of the try block line for context
-            const lines = source.split('\n');
             const content = lines[tryLine - 1] || '';
 
             results.push({
@@ -101,16 +97,8 @@ export class JavaScriptParser {
   /**
    * Find all async functions (which may have unhandled promise rejections)
    */
-  static findAsyncFunctions(source: string): Array<{
-    line: number;
-    name?: string;
-    hasAwait: boolean;
-  }> {
-    const results: Array<{
-      line: number;
-      name?: string;
-      hasAwait: boolean;
-    }> = [];
+  static findAsyncFunctions(source: string): JavaScriptAsyncFunction[] {
+    const results: JavaScriptAsyncFunction[] = [];
 
     try {
       const ast = parse(source, {
@@ -152,16 +140,13 @@ export class JavaScriptParser {
   /**
    * Find all console.* calls
    */
-  static findConsoleCalls(source: string): Array<{
-    line: number;
-    type: string;
-    content: string;
-  }> {
-    const results: Array<{
-      line: number;
-      type: string;
-      content: string;
-    }> = [];
+  static findConsoleCalls(source: string, filePath?: string): JavaScriptConsoleCall[] {
+    const results: JavaScriptConsoleCall[] = [];
+    const lines = source.split('\n');
+
+    const context = filePath && (/\.(test|spec)\./.test(filePath) || /__tests__/.test(filePath))
+      ? 'test'
+      : 'production';
 
     try {
       const ast = parse(source, {
@@ -183,12 +168,12 @@ export class JavaScriptParser {
             const line = node.loc?.start.line || 0;
             
             // Get content
-            const lines = source.split('\n');
             const content = lines[line - 1] || '';
 
             results.push({
               line,
               type,
+              context,
               content: content.trim(),
             });
           }

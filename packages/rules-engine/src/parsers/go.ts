@@ -1,33 +1,17 @@
-import { loadLanguage } from './tree-sitter-utils.js';
+import { traverseTree, BaseTryBlock, BaseAsyncFunction, BaseConsoleCall } from './tree-sitter-utils.js';
 
-export interface GoConsoleCall {
-  line: number;
+export interface GoConsoleCall extends BaseConsoleCall {
   type: 'fmt' | 'log';
-  context: 'production' | 'test' | 'debug';
 }
 
-export interface GoTryBlock {
-  tryLine: number;
-  catchLine: number;
-  isEmpty: boolean;
-  content: string;
-}
+export interface GoTryBlock extends BaseTryBlock {}
 
-export interface GoAsyncFunction {
-  line: number;
-  name?: string;
-  hasAwait: boolean;
-}
+export interface GoAsyncFunction extends BaseAsyncFunction {}
 
 export class GoParser {
   static async findTryCatchBlocks(source: string): Promise<GoTryBlock[]> {
-    try {
-      const parser = await loadLanguage('go');
-      const tree = parser.parse(source);
-      const results: GoTryBlock[] = [];
-      const lines = source.split('\n');
-
-      const visit = (node: any) => {
+    const lines = source.split('\n');
+    return traverseTree<GoTryBlock>(source, 'go', (node, results) => {
         // In Go, try/catch is defer/recover
         // We look for calls to 'recover()'
         if (node.type === 'call_expression') {
@@ -72,16 +56,7 @@ export class GoParser {
             }
           }
         }
-        for (const child of node.children) visit(child);
-      };
-
-      visit(tree.rootNode);
-      tree.delete();
-      return results;
-    } catch (e) {
-      console.error('Error parsing Go:', e);
-      return [];
-    }
+    });
   }
 
   static async findAsyncFunctions(_source: string): Promise<GoAsyncFunction[]> {
@@ -89,43 +64,29 @@ export class GoParser {
   }
 
   static async findConsoleCalls(source: string): Promise<GoConsoleCall[]> {
-    try {
-      const parser = await loadLanguage('go');
-      const tree = parser.parse(source);
-      const results: GoConsoleCall[] = [];
-
-      const visit = (node: any) => {
-        if (node.type === 'call_expression') {
-          const func = node.children[0];
-          if (func.type === 'selector_expression') {
-            const operand = func.children[0];
-            const selector = func.children[2];
-            
-            if (operand.text === 'fmt' && selector.text.startsWith('Print')) {
-               results.push({
-                 line: node.startPosition.row + 1,
-                 type: 'fmt',
-                 context: 'production'
-               });
-            } else if (operand.text === 'log' && (selector.text.startsWith('Print') || selector.text.startsWith('Fatal') || selector.text.startsWith('Panic'))) {
-               results.push({
-                 line: node.startPosition.row + 1,
-                 type: 'log',
-                 context: 'production'
-               });
-            }
+    return traverseTree<GoConsoleCall>(source, 'go', (node, results) => {
+      if (node.type === 'call_expression') {
+        const func = node.children[0];
+        if (func.type === 'selector_expression') {
+          const operand = func.children[0];
+          const selector = func.children[2];
+          
+          if (operand.text === 'fmt' && selector.text.startsWith('Print')) {
+             results.push({
+               line: node.startPosition.row + 1,
+               type: 'fmt',
+               context: 'production'
+             });
+          } else if (operand.text === 'log' && (selector.text.startsWith('Print') || selector.text.startsWith('Fatal') || selector.text.startsWith('Panic'))) {
+             results.push({
+               line: node.startPosition.row + 1,
+               type: 'log',
+               context: 'production'
+             });
           }
         }
-        for (const child of node.children) visit(child);
-      };
-
-      visit(tree.rootNode);
-      tree.delete();
-      return results;
-    } catch (e) {
-      console.error('Error parsing Go:', e);
-      return [];
-    }
+      }
+    });
   }
 }
 

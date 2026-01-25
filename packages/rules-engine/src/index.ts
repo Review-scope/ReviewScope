@@ -89,5 +89,62 @@ export async function runRules(diff: PRDiff, config?: ReviewScopeConfig, rules: 
     }
   }
 
-  return results;
+  // Post-processing: Global Aggregation by Rule + File + Message
+  // This handles both consecutive lines AND identical issues separated by distance.
+  
+  // 1. Group by unique key
+  const groups = new Map<string, RuleResult[]>();
+  
+  for (const res of results) {
+    // Key must include file, ruleId, and the message text
+    const key = `${res.file}::${res.ruleId}::${res.message}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)!.push(res);
+  }
+
+  const aggregated: RuleResult[] = [];
+
+  // 2. Process each group
+  for (const group of groups.values()) {
+    if (group.length === 1) {
+      aggregated.push(group[0]);
+      continue;
+    }
+
+    // Sort by line number
+    group.sort((a, b) => a.line - b.line);
+
+    const lines = group.map(r => r.line);
+    const ranges: string[] = [];
+    
+    let start = lines[0];
+    let end = lines[0];
+
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i] === end + 1) {
+        end = lines[i];
+      } else {
+        ranges.push(start === end ? `${start}` : `${start}-${end}`);
+        start = lines[i];
+        end = lines[i];
+      }
+    }
+    ranges.push(start === end ? `${start}` : `${start}-${end}`);
+
+    // Update the first result's message to include all ranges
+    const primary = group[0];
+    // Avoid double-appending if the message already has "lines ..." (though unlikely with this logic)
+    primary.message = `${primary.message} (lines ${ranges.join(', ')})`;
+    
+    aggregated.push(primary);
+  }
+
+  // Sort final results for deterministic output
+  return aggregated.sort((a, b) => {
+    if (a.file !== b.file) return a.file.localeCompare(b.file);
+    if (a.ruleId !== b.ruleId) return a.ruleId.localeCompare(b.ruleId);
+    return a.line - b.line;
+  });
 }

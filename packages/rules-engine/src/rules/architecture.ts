@@ -51,6 +51,10 @@ export const duplicateLogicRule: Rule = {
   detect(ctx: RuleContext): RuleResult[] {
     const results: RuleResult[] = [];
     
+    // Exclude config/lock files from duplicate checks
+    if (/\.(json|lock|yaml|yml|toml|md|txt)$/i.test(ctx.file.path)) return results;
+    if (/(package|yarn|pnpm|bun)\.lock$/i.test(ctx.file.path)) return results;
+
     const MIN_LINES = 3;
 
     const normalize = (s: string) => s.replace(/\s+/g, '');
@@ -87,9 +91,11 @@ export const duplicateLogicRule: Rule = {
       });
     }
 
-    const reportedLines = new Set<number>();
+    
+    // 1. Collect all matches first
+    const matches: { line: number; endLine: number; others: string[]; content: string }[] = [];
+    
     for (const block of blocks) {
-      if (reportedLines.has(block.line)) continue;
       const occ = cache.get(block.signature);
       if (!occ) continue;
 
@@ -100,15 +106,47 @@ export const duplicateLogicRule: Rule = {
       if (ctx.file.path !== leader) continue;
 
       const others = paths.filter(p => p !== ctx.file.path);
-      results.push({
+      matches.push({
+        line: block.line,
+        endLine: block.line + MIN_LINES - 1,
+        others,
+        content: block.content
+      });
+    }
+
+    // 2. Merge overlapping matches
+    matches.sort((a, b) => a.line - b.line);
+    
+    const merged: typeof matches = [];
+    if (matches.length > 0) {
+      let current = matches[0];
+      for (let i = 1; i < matches.length; i++) {
+        const next = matches[i];
+        // If next block overlaps or is adjacent to current
+        if (next.line <= current.endLine + 1) {
+          // Merge
+          current.endLine = Math.max(current.endLine, next.endLine);
+          // Union of 'others' (though usually they should be the same for identical logic blocks)
+          current.others = Array.from(new Set([...current.others, ...next.others]));
+        } else {
+          merged.push(current);
+          current = next;
+        }
+      }
+      merged.push(current);
+    }
+
+    // 3. Generate results
+    for (const m of merged) {
+       const othersFormatted = m.others.map(o => `\`${o}\``).join(', ');
+       results.push({
         ruleId: this.id,
         file: ctx.file.path,
-        line: block.line,
+        line: m.line,
         severity: this.severity,
-        message: `Identical logic detected; also appears in ${others.join(', ')}`,
-        snippet: block.content.trim() + '...'
+        message: `Identical logic detected (lines ${m.line}-${m.endLine}); also appears in ${othersFormatted}`,
+        snippet: m.content.trim() + '...'
       });
-      reportedLines.add(block.line);
     }
 
     return results;
@@ -120,6 +158,10 @@ const duplicateLogicIndexCache = new WeakMap<PRDiff, Map<string, Array<{ path: s
 function buildDuplicateIndex(diff: PRDiff, MIN_LINES: number, normalize: (s: string) => string) {
   const index = new Map<string, Array<{ path: string; line: number }>>();
   for (const file of diff.files) {
+    // Exclude config/lock files from duplicate checks (must match detect exclusions)
+    if (/\.(json|lock|yaml|yml|toml|md|txt)$/i.test(file.path)) continue;
+    if (/(package|yarn|pnpm|bun)\.lock$/i.test(file.path)) continue;
+
     const adds = file.additions;
     if (adds.length < MIN_LINES) continue;
     for (let i = 0; i <= adds.length - MIN_LINES; i++) {

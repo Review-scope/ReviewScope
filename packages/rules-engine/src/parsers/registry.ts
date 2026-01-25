@@ -20,7 +20,7 @@ export class ParserRegistry {
         language: 'javascript',
         tryCatchBlocks: JavaScriptParser.findTryCatchBlocks(content),
         asyncFunctions: JavaScriptParser.findAsyncFunctions(content),
-        consoleCalls: [], // JS console calls often handled by regex rules, but we could implement
+        consoleCalls: JavaScriptParser.findConsoleCalls(content, filePath),
       };
     }
 
