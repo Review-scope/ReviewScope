@@ -1,28 +1,28 @@
-import type { Rule, PRDiff, RuleViolation } from '../types.js';
+import type { Rule, RuleContext, RuleResult } from '../types.js';
 
 export const todoFixmeRule: Rule = {
   id: 'todo-fixme',
-  name: 'TODO/FIXME Detection',
   description: 'Flags TODO and FIXME comments in new code',
-  check(diff: PRDiff): RuleViolation[] {
-    const violations: RuleViolation[] = [];
+  severity: 'INFO',
+  appliesTo: ['*'],
+  detect(ctx: RuleContext): RuleResult[] {
+    const results: RuleResult[] = [];
     const pattern = /\b(TODO|FIXME|HACK|XXX)\b/gi;
 
-    for (const file of diff.files) {
-      for (const line of file.additions) {
-        const matches = line.content.match(pattern);
-        if (matches) {
-          violations.push({
-            ruleId: this.id,
-            file: file.path,
-            line: line.lineNumber,
-            severity: 'warning',
-            message: `Found ${matches[0]} comment - consider tracking in issue tracker`,
-          });
-        }
+    for (const line of ctx.file.additions) {
+      const matches = line.content.match(pattern);
+      if (matches) {
+        results.push({
+          ruleId: this.id,
+          file: ctx.file.path,
+          line: line.lineNumber,
+          severity: this.severity,
+          message: `Found ${matches[0]} comment - consider tracking in issue tracker`,
+          snippet: line.content.trim()
+        });
       }
     }
 
-    return violations;
-  },
+    return results;
+  }
 };

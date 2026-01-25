@@ -15,6 +15,7 @@ import { getPlanLimits, PlanTier } from '../lib/plans.js';
 import { checkRateLimits, logReviewUsage, RateLimitError } from '../lib/rate-limit.js';
 import { Queue } from 'bullmq';
 import { createHash } from 'crypto';
+import path from 'path';
 
 import { ReviewComment } from '@reviewscope/llm-core';
 
@@ -447,9 +448,80 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     let aiSummary = 'No AI summary available.';
     let assessment = { riskLevel: 'Low', mergeReadiness: 'Looks Good', confidence: 'low' };
 
-    // SAAS RULE: Free users MUST provide their own API key to use AI.
-    // Pro/Team users can use system keys (depending on your choice) or their own.
+    // Phase 8.8 - Targeted Context Expansion (Imports)
+    let relatedContext = '';
     const canRunAI = limits.allowAI && (limits.tier !== PlanTier.FREE || hasCustomKey);
+
+    if (canRunAI) {
+      try {
+        const { extractImports, resolveImportPath, extractContextSummary } = await import('../lib/imports.js');
+        const relatedFiles = new Set<string>();
+        
+        // 1. Detect imports in changed files
+        for (const file of aiReviewFiles) {
+             const additions = file.additions.map(a => a.content).join('\n');
+             const imports = extractImports(additions, file.path);
+             
+             for (const imp of imports) {
+                 const resolved = resolveImportPath(file.path, imp.module);
+                 if (resolved && !aiReviewFiles.some(f => f.path === resolved)) {
+                     relatedFiles.add(resolved);
+                 }
+             }
+        }
+        
+        // 2. Limit related files (e.g. top 5)
+        const topRelatedFiles = Array.from(relatedFiles).slice(0, 5);
+        if (topRelatedFiles.length > 0) {
+            console.warn(`[Context] Found ${topRelatedFiles.length} related files: ${topRelatedFiles.join(', ')}`);
+            
+            // 3. Fetch content
+            const contextParts = await Promise.all(topRelatedFiles.map(async (filePath) => {
+                try {
+                    let content: string | null = null;
+                    let finalPath = filePath;
+
+                    // Helper to try fetching
+                    const tryFetch = async (p: string) => {
+                        try {
+                            return await gh.getFileContent(data.installationId, owner, repo, p, data.headSha);
+                        } catch {
+                            return null;
+                        }
+                    };
+
+                    // 1. Try exact path
+                    content = await tryFetch(filePath);
+
+                    // 2. If not found and no extension, try extensions
+                    if (!content && !path.extname(filePath)) {
+                        const extensions = ['.ts', '.tsx', '.js', '.jsx', '.d.ts', '/index.ts', '/index.js'];
+                        for (const ext of extensions) {
+                            const candidate = filePath + ext;
+                            content = await tryFetch(candidate);
+                            if (content) {
+                                finalPath = candidate;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (content) {
+                        const summary = extractContextSummary(content);
+                        return `File: ${finalPath}\n${summary}`;
+                    }
+                } catch (e) {
+                    console.warn(`[Context] Failed to fetch related file ${filePath}: ${(e as Error).message}`);
+                }
+                return null;
+            }));
+            
+            relatedContext = contextParts.filter(Boolean).join('\n\n');
+        }
+      } catch (e) {
+          console.warn('[Context] Failed to extract related files:', e);
+      }
+    }
 
     if (canRunAI) {
       try {
@@ -492,6 +564,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
               prBody: data.prBody,
               diff: batchDiff,
               issueContext: issueContext,
+              relatedContext: relatedContext,
               ragContext: ragContext,
               ruleViolations: ruleViolations,
               complexity: complexity,
@@ -523,6 +596,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
             prBody: data.prBody,
             diff: optimizedDiff, 
             issueContext: issueContext,
+            relatedContext: relatedContext,
             ragContext: ragContext,
             ruleViolations: ruleViolations,
             complexity: complexity,

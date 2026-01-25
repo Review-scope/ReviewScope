@@ -1,54 +1,36 @@
-import type { Rule, PRDiff, RuleViolation } from '../types.js';
-import { ParserRegistry } from '../parsers/index.js';
+import type { Rule, RuleContext, RuleResult } from '../types.js';
 
 export const consoleLogRule: Rule = {
   id: 'console-log',
-  name: 'Console Log Detection',
-  description: 'Flags console.log statements (except in tests and debug functions)',
-  check(diff: PRDiff): RuleViolation[] {
-    const violations: RuleViolation[] = [];
+  description: 'Flags console.log statements (except in tests)',
+  severity: 'MINOR',
+  appliesTo: ['*.ts', '*.js', '*.tsx', '*.jsx'],
+  detect(ctx: RuleContext): RuleResult[] {
+    const results: RuleResult[] = [];
 
-    for (const file of diff.files) {
-      // Skip test files entirely
-      if (file.path.includes('.test.') || file.path.includes('.spec.')) {
-        continue;
-      }
+    // Skip test files
+    if (ctx.file.path.includes('.test.') || ctx.file.path.includes('.spec.')) {
+      return results;
+    }
 
-      // Reconstruct source from additions for parsing
-      const sourceCode = file.additions.map(line => line.content).join('\n');
-      
-      // Parse using language-specific parser
-      const parsed = ParserRegistry.parse(file.path, sourceCode);
-
-      // Check console calls
-      for (const call of parsed.consoleCalls) {
-        // Skip debug context (debug function or intentional logging)
-        if (call.context === 'debug') {
-          continue;
-        }
-
-        // Flag console statements in production code
-        if (call.context === 'production') {
-          // call.line is 1-based index relative to the `sourceCode` constructed from additions
-          // We need to map it back to the original file's additions array
-          const addition = file.additions[call.line - 1];
-          
-          if (addition) {
-             const actualLine = addition.lineNumber;
-             const codeSnippet = addition.content.trim();
-
-             violations.push({
-               ruleId: this.id,
-               file: file.path,
-               line: actualLine,
-               severity: 'warning',
-               message: `console.${call.type}() found in production code - use a logger instead\n\n\`\`\`typescript\n${codeSnippet}\n\`\`\``,
-             });
-          }
-        }
+    for (const line of ctx.file.additions) {
+      // Simple regex check for console.log/warn/error
+      if (/console\.(log|warn|error|info|debug)\s*\(/.test(line.content)) {
+        // Skip comments (simple check)
+        if (line.content.trim().startsWith('//')) continue;
+        
+        results.push({
+          ruleId: this.id,
+          file: ctx.file.path,
+          line: line.lineNumber,
+          severity: this.severity,
+          message: 'Console statement detected. Use a proper logger in production code.',
+          snippet: line.content.trim()
+        });
       }
     }
 
-    return violations;
-  },
+    return results;
+  }
 };
+
