@@ -388,7 +388,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
       }))
     );
     const ruleViolations = [
-      ...runRules({ files: filteredFiles }, config),
+      ...(await runRules({ files: filteredFiles }, config)),
       ...duplicateKeyViolations
     ];
     const staticComments = ruleViolations.map((v) => ({
