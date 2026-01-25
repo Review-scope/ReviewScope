@@ -1,3 +1,5 @@
+import { loadLanguage } from './tree-sitter-utils.js';
+
 export interface JavaTryBlock {
   tryLine: number;
   catchLine: number;
@@ -18,75 +20,86 @@ export interface JavaAsyncFunction {
 }
 
 export class JavaParser {
-  static findTryCatchBlocks(source: string): JavaTryBlock[] {
-    const lines = source.split('\n');
-    const results: JavaTryBlock[] = [];
+  static async findTryCatchBlocks(source: string): Promise<JavaTryBlock[]> {
+    try {
+      const parser = await loadLanguage('java');
+      const tree = parser.parse(source);
+      const results: JavaTryBlock[] = [];
+      const lines = source.split('\n');
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (/\btry\s*\{/.test(line)) {
-        let catchLineIdx = -1;
-        let braceDepth = 0;
-        let inTryBlock = false;
-
-        for (let j = i; j < lines.length; j++) {
-          const current = lines[j];
-          braceDepth += (current.match(/{/g) || []).length;
-          braceDepth -= (current.match(/}/g) || []).length;
-          if (braceDepth > 0) {
-            inTryBlock = true;
-          }
-          if (braceDepth === 0 && inTryBlock && j > i) {
-            for (let k = j; k < Math.min(j + 10, lines.length); k++) {
-              if (/\bcatch\s*\(/.test(lines[k])) {
-                catchLineIdx = k;
-                break;
-              }
+      const visit = (node: any) => {
+        if (node.type === 'try_statement') {
+          const tryLine = node.startPosition.row + 1;
+          
+          for (const child of node.children) {
+            if (child.type === 'catch_clause') {
+               const catchLine = child.startPosition.row + 1;
+               let isEmpty = false;
+               
+               const block = child.children.find((c: any) => c.type === 'block');
+               if (block) {
+                 // Check if block contains only braces
+                 const relevantChildren = block.children.filter((c: any) => c.type !== '{' && c.type !== '}' && c.type !== 'comment');
+                 if (relevantChildren.length === 0) isEmpty = true;
+               }
+               
+               results.push({
+                 tryLine,
+                 catchLine,
+                 isEmpty,
+                 content: lines[tryLine-1]?.trim() || 'try'
+               });
             }
-            break;
           }
         }
+        for (const child of node.children) visit(child);
+      };
 
-        if (catchLineIdx !== -1) {
-          results.push({
-            tryLine: i + 1,
-            catchLine: catchLineIdx + 1,
-            isEmpty: false,
-            content: line.trim(),
-          });
+      visit(tree.rootNode);
+      tree.delete();
+      return results;
+    } catch (e) {
+      console.error('Error parsing Java:', e);
+      return [];
+    }
+  }
+
+  static async findAsyncFunctions(_source: string): Promise<JavaAsyncFunction[]> {
+    return []; 
+  }
+
+  static async findConsoleCalls(source: string): Promise<JavaConsoleCall[]> {
+    try {
+      const parser = await loadLanguage('java');
+      const tree = parser.parse(source);
+      const results: JavaConsoleCall[] = [];
+
+      const visit = (node: any) => {
+        if (node.type === 'method_invocation') {
+          if (node.text.startsWith('System.out.println') || node.text.startsWith('System.err.println')) {
+             results.push({
+               line: node.startPosition.row + 1,
+               type: 'system',
+               context: 'production'
+             });
+          } else if (/\blogger\.(info|debug|error|warn|trace)\s*\(/.test(node.text)) {
+             results.push({
+               line: node.startPosition.row + 1,
+               type: 'logger',
+               context: 'production'
+             });
+          }
         }
-      }
+        for (const child of node.children) visit(child);
+      };
+
+      visit(tree.rootNode);
+      tree.delete();
+      return results;
+    } catch (e) {
+      console.error('Error parsing Java:', e);
+      return [];
     }
-
-    return results;
-  }
-
-  static findAsyncFunctions(): JavaAsyncFunction[] {
-    return [];
-  }
-
-  static findConsoleCalls(source: string): JavaConsoleCall[] {
-    const lines = source.split('\n');
-    const results: JavaConsoleCall[] = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (/\bSystem\.out\.println\s*\(/.test(line) || /\bSystem\.err\.println\s*\(/.test(line)) {
-        results.push({
-          line: i + 1,
-          type: 'system',
-          context: 'production',
-        });
-      } else if (/\blogger\.(info|debug|error|warn|trace)\s*\(/i.test(line)) {
-        results.push({
-          line: i + 1,
-          type: 'logger',
-          context: 'production',
-        });
-      }
-    }
-
-    return results;
   }
 }
 

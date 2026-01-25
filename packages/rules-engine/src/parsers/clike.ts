@@ -1,3 +1,5 @@
+import { loadLanguage } from './tree-sitter-utils.js';
+
 export interface CLikeTryBlock {
   tryLine: number;
   catchLine: number;
@@ -18,75 +20,95 @@ export interface CLikeAsyncFunction {
 }
 
 export class CLikeParser {
-  static findTryCatchBlocks(source: string): CLikeTryBlock[] {
-    const lines = source.split('\n');
-    const results: CLikeTryBlock[] = [];
+  static async findTryCatchBlocks(source: string): Promise<CLikeTryBlock[]> {
+    try {
+      const parser = await loadLanguage('cpp'); 
+      const tree = parser.parse(source);
+      const results: CLikeTryBlock[] = [];
+      const lines = source.split('\n');
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (/\btry\s*\{/.test(line)) {
-        let catchLineIdx = -1;
-        let braceDepth = 0;
-        let inTryBlock = false;
-
-        for (let j = i; j < lines.length; j++) {
-          const current = lines[j];
-          braceDepth += (current.match(/{/g) || []).length;
-          braceDepth -= (current.match(/}/g) || []).length;
-          if (braceDepth > 0) {
-            inTryBlock = true;
-          }
-          if (braceDepth === 0 && inTryBlock && j > i) {
-            for (let k = j; k < Math.min(j + 10, lines.length); k++) {
-              if (/\bcatch\s*\(/.test(lines[k])) {
-                catchLineIdx = k;
-                break;
-              }
+      const visit = (node: any) => {
+        if (node.type === 'try_statement') {
+          const tryLine = node.startPosition.row + 1;
+          
+          for (const child of node.children) {
+            if (child.type === 'catch_clause') {
+               const catchLine = child.startPosition.row + 1;
+               let isEmpty = false;
+               
+               const block = child.children.find((c: any) => c.type === 'compound_statement');
+               if (block) {
+                  const relevantChildren = block.children.filter((c: any) => c.type !== '{' && c.type !== '}' && c.type !== 'comment');
+                  if (relevantChildren.length === 0) isEmpty = true;
+               }
+               
+               results.push({
+                 tryLine,
+                 catchLine,
+                 isEmpty,
+                 content: lines[tryLine-1]?.trim() || 'try'
+               });
             }
-            break;
           }
         }
+        for (const child of node.children) visit(child);
+      };
 
-        if (catchLineIdx !== -1) {
-          results.push({
-            tryLine: i + 1,
-            catchLine: catchLineIdx + 1,
-            isEmpty: false,
-            content: line.trim(),
-          });
-        }
-      }
+      visit(tree.rootNode);
+      tree.delete();
+      return results;
+    } catch (e) {
+      console.error('Error parsing C/C++:', e);
+      return [];
     }
-
-    return results;
   }
 
-  static findAsyncFunctions(): CLikeAsyncFunction[] {
+  static async findAsyncFunctions(_source: string): Promise<CLikeAsyncFunction[]> {
     return [];
   }
 
-  static findConsoleCalls(source: string): CLikeConsoleCall[] {
-    const lines = source.split('\n');
-    const results: CLikeConsoleCall[] = [];
+  static async findConsoleCalls(source: string): Promise<CLikeConsoleCall[]> {
+    try {
+      const parser = await loadLanguage('cpp');
+      const tree = parser.parse(source);
+      const results: CLikeConsoleCall[] = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (/\bprintf\s*\(/.test(line)) {
-        results.push({
-          line: i + 1,
-          type: 'printf',
-          context: 'production',
-        });
-      } else if (/\bstd::(cout|cerr)\s*<</.test(line)) {
-        results.push({
-          line: i + 1,
-          type: 'iostream',
-          context: 'production',
-        });
-      }
+      const visit = (node: any) => {
+        if (node.type === 'call_expression') {
+          const func = node.children[0];
+          if (func.text === 'printf') {
+             results.push({
+               line: node.startPosition.row + 1,
+               type: 'printf',
+               context: 'production'
+             });
+          }
+        }
+        
+        if ((node.type === 'qualified_identifier' || node.type === 'identifier') && 
+            (node.text === 'std::cout' || node.text === 'std::cerr' || node.text === 'cout' || node.text === 'cerr')) {
+           let p = node.parent;
+           // Check if it's being shifted to
+           // This is a rough check, as tree structure can vary
+           if (p && (p.type === 'shift_expression' || p.parent?.type === 'shift_expression')) {
+              results.push({
+                line: node.startPosition.row + 1,
+                type: 'iostream',
+                context: 'production'
+              });
+           }
+        }
+
+        for (const child of node.children) visit(child);
+      };
+
+      visit(tree.rootNode);
+      tree.delete();
+      return results;
+    } catch (e) {
+      console.error('Error parsing C/C++:', e);
+      return [];
     }
-
-    return results;
   }
 }
 

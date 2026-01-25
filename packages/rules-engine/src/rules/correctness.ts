@@ -34,14 +34,14 @@ export const missingErrorHandlingRule: Rule = {
   description: 'Async operations or risky calls without error handling',
   severity: 'CRITICAL',
   appliesTo: ['*.ts', '*.js', '*.tsx', '*.jsx'],
-  detect(ctx: RuleContext): RuleResult[] {
+  async detect(ctx: RuleContext): Promise<RuleResult[]> {
     const results: RuleResult[] = [];
     
     // Reconstruct source from additions for AST parsing
     const sourceCode = ctx.file.additions.map(line => line.content).join('\n');
     
     // Parse using language-specific parser
-    const parsed = ParserRegistry.parse(ctx.file.path, sourceCode);
+    const parsed = await ParserRegistry.parse(ctx.file.path, sourceCode);
 
     // 1. Check for empty catch blocks
     for (const block of parsed.tryCatchBlocks) {

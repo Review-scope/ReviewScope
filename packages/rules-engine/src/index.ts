@@ -46,7 +46,7 @@ import type { ReviewScopeConfig } from './config.js';
 /**
  * Run all registered rules against a PR diff
  */
-export function runRules(diff: PRDiff, config?: ReviewScopeConfig, rules: Rule[] = allRules): RuleResult[] {
+export async function runRules(diff: PRDiff, config?: ReviewScopeConfig, rules: Rule[] = allRules): Promise<RuleResult[]> {
   const results: RuleResult[] = [];
   const disabled = new Set(config?.disabledRules || []);
 
@@ -62,7 +62,7 @@ export function runRules(diff: PRDiff, config?: ReviewScopeConfig, rules: Rule[]
       if (!applies) continue;
 
       const ctx: RuleContext = { file, diff };
-      const ruleResults = rule.detect(ctx);
+      const ruleResults = await rule.detect(ctx);
 
       if (ruleResults) {
         for (const res of ruleResults) {
