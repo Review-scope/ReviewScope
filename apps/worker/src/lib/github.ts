@@ -1,5 +1,6 @@
 import { App } from '@octokit/app';
 import { Octokit } from '@octokit/rest';
+import { isIgnoredFile } from './validation.js';
 
 export class GitHubClient {
   private app: App;
@@ -143,14 +144,33 @@ export class GitHubClient {
     const files: Array<{ path: string; content: string }> = [];
 
     // 3. Fetch content for each file (limit to common code files to avoid binary noise)
-    const allowedExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.go', '.java', '.c', '.cpp', '.h', '.rb', '.rs', '.md'];
+    const allowedExtensions = [
+      // Code
+      '.ts', '.js', '.tsx', '.jsx', '.py', '.go', '.java', '.c', '.cpp', '.h', '.hpp', '.rb', '.rs', '.php', '.cs', '.swift', '.kt',
+      // Docs
+      '.md', '.txt',
+      // Config & Infra
+      '.json', '.yaml', '.yml', '.toml', '.xml', '.gradle', '.properties', '.sql', '.sh', '.dockerfile'
+    ];
+    
+    const allowedFilenames = [
+      'Dockerfile', 'Makefile', 'Gemfile', 'go.mod', 'pom.xml', 'build.gradle', 'package.json', 'tsconfig.json'
+    ];
     
     // Process in small batches to avoid rate limits
-    const treeFiles = tree.tree.filter(item => 
-      item.type === 'blob' && 
-      item.path && 
-      allowedExtensions.some(ext => item.path!.endsWith(ext))
-    );
+    const treeFiles = tree.tree.filter(item => {
+      if (item.type !== 'blob' || !item.path) return false;
+      
+      // 1. Security/Noise Check (explicitly ignore node_modules, dist, locks, etc.)
+      if (isIgnoredFile(item.path)) return false;
+
+      // 2. Whitelist Check
+      const filename = item.path.split('/').pop() || '';
+      const hasAllowedExtension = allowedExtensions.some(ext => item.path!.toLowerCase().endsWith(ext));
+      const isAllowedFile = allowedFilenames.includes(filename);
+
+      return hasAllowedExtension || isAllowedFile;
+    });
 
     console.warn(`Found ${treeFiles.length} files to index in ${owner}/${repo}`);
 

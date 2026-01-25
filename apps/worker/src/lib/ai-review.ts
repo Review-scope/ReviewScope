@@ -3,6 +3,7 @@ import {
   systemGuardrailsLayer,
   repoMetadataLayer,
   issueIntentLayer,
+  relatedFilesLayer,
   ragContextLayer,
   prDiffLayer,
   userPromptLayer,
@@ -74,6 +75,7 @@ interface AIReviewInput {
   prBody: string;
   diff: string;
   issueContext?: string;
+  relatedContext?: string; // Deterministic context from imports
   ragContext?: string; // Pre-fetched RAG context if any
   ruleViolations?: unknown[]; // Static rule violations for LLM validation
   complexity?: 'trivial' | 'simple' | 'complex'; // Complexity tier for model routing
@@ -120,6 +122,7 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
   assembler.addLayer(systemGuardrailsLayer);
   assembler.addLayer(repoMetadataLayer);
   assembler.addLayer(issueIntentLayer);
+  assembler.addLayer(relatedFilesLayer);
   assembler.addLayer(ragContextLayer);
   assembler.addLayer(webContextLayer);
   assembler.addLayer(prDiffLayer);
@@ -132,6 +135,7 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
     prBody: input.prBody,
     diff: input.diff,
     issueContext: input.issueContext,
+    relatedContext: input.relatedContext,
     ragContext: input.ragContext,
     userPrompt: options.userGuidelines, // Pass user guidelines as userPrompt
     ruleViolations: input.ruleViolations, // Static rules for LLM validation
@@ -165,10 +169,12 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
     confidence = 'medium';
   }
 
-  // Lower confidence if RAG was attempted but returned no context (and it wasn't explicitly disabled)
-  // Note: This is a heuristic, as maybe there really was no relevant context.
-  if (input.ragContext === '' && input.complexity !== 'trivial') {
-    // Slight penalty if we have no RAG context for non-trivial PRs
+  // Lower confidence if no extra context (RAG or Related) was provided for non-trivial PRs
+  const hasExtraContext = (input.ragContext && input.ragContext.length > 0) || 
+                          (input.relatedContext && input.relatedContext.length > 0);
+
+  if (!hasExtraContext && input.complexity !== 'trivial') {
+    // Slight penalty if we have no context for non-trivial PRs
     confidence = confidence === 'high' ? 'medium' : 'low'; 
   }
 

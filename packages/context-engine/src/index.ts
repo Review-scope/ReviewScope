@@ -8,6 +8,7 @@ export { ContextAssembler, type AssembledContext } from './assembler.js';
 export { systemGuardrailsLayer } from './layers/system-guardrails.js';
 export { repoMetadataLayer } from './layers/repo-metadata.js';
 export { issueIntentLayer } from './layers/issue-intent.js';
+export { relatedFilesLayer } from './layers/related-files.js';
 export { ragContextLayer } from './layers/rag-context.js';
 export { webContextLayer } from './layers/web-context.js';
 export { prDiffLayer } from './layers/pr-diff.js';
