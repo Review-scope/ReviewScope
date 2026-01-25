@@ -40,7 +40,7 @@ export interface Rule {
   description: string;
   severity: RuleSeverity;
   appliesTo: string[]; // file globs
-  detect(ctx: RuleContext): RuleResult[] | null;
+  detect(ctx: RuleContext): RuleResult[] | null | Promise<RuleResult[] | null>;
 }
 
 // Legacy types for backward compatibility during migration (if needed)

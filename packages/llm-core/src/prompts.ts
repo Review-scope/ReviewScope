@@ -59,6 +59,8 @@ You are a Senior Engineer reviewing this PR. Focus your analysis on these key ar
 - **High Impact Only**: Skip trivial style nitpicks (formatting, missing semicolons) unless they cause bugs.
 - **Avoid Redundancy**: Do not repeat static analysis findings unless adding deeper context.
 - **Ignore**: Generated files, vendor code, and simple configuration changes (unless dangerous).
+- **Respect Intentional Trade-offs**: If a line has a comment like "skipped for performance", "intentional", or "trade-off", DO NOT flag it as an issue unless it causes a crash or security hole.
+- **Ignore Placeholders**: Do not flag hardcoded values (like 0, "", false) if they are documented as intentional defaults.
 
 ## ACTIONABLE FEEDBACK
 - Every issue MUST have a specific technical explanation ("Why this matters").
@@ -394,6 +396,15 @@ function normalizeSeverity(comment: ReviewComment): ReviewComment | null {
 
   // 1. High-gate ignore categories
   if (file.includes('prompts/') || file.includes('system-messages')) return null;
+
+  // 1.5. Filter out specific noise patterns (Explicit user complaints)
+  if (
+    (message.includes('line number') && message.includes('0') && message.includes('import')) ||
+    message.includes('skipped for performance') ||
+    why.includes('skipped for performance')
+  ) {
+    return null;
+  }
 
   // 2. Forced downgrades to INFO (Noisy but helpful)
   const isNoise = 

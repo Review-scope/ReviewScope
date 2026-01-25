@@ -113,8 +113,8 @@ export default function DocsPage() {
                       </h5>
                       <ul className="space-y-2 text-sm text-muted-foreground">
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> <strong>Google Gemini</strong> (Recommended for speed/cost)</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> <strong>OpenAI</strong> (GPT-4o, GPT-3.5 Turbo)</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> <strong>Anthropic Claude</strong> (Coming Soon)</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> <strong>OpenAI</strong> (GPT-5, GPT-3.5 Turbo)</li>
+                        {/* <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> <strong>Anthropic Claude</strong> (Coming Soon)</li> */}
                       </ul>
                     </div>
                     <div>
@@ -416,7 +416,7 @@ Reviews
                   <h4 className="font-bold text-sm">LLM Inference</h4>
                   <p className="text-xs text-muted-foreground mt-1">
                     Constructs prompt with: Diff + Rule Violations + RAG Context.
-                    Sends to Gemini/GPT-4.
+                    Sends to Gemini/GPT.
                   </p>
                 </div>
 
@@ -452,15 +452,15 @@ Reviews
 git clone https://github.com/Review-scope/ReviewScope
 cd ReviewScope
 
-# 2. Install dependencies (pnpm recommended)
-pnpm install
+# 2. Install dependencies
+npm install
 
 # 3. Environment Variables
 cp .env.example .env
 # Fill in: DATABASE_URL, REDIS_URL, GITHUB_APP_ID, etc.
 
 # 4. Start Development Server
-pnpm run dev`}
+npm run dev`}
                   </pre>
                 </div>
                 <p className="text-muted-foreground mt-4 text-xs">

@@ -15,5 +15,16 @@
     "build": "tsc",
     "dev": "tsc --watch"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@babel/parser": "^7.28.6",
+    "@babel/traverse": "^7.28.6",
+    "tree-sitter-go": "^0.25.0",
+    "tree-sitter-java": "^0.23.5",
+    "tree-sitter-python": "^0.25.0",
+    "web-tree-sitter": "^0.26.3"
+  },
+  "devDependencies": {
+    "@types/babel__parser": "^7.0.0",
+    "@types/babel__traverse": "^7.28.0"
+  }
 }

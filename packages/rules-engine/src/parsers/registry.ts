@@ -14,49 +14,49 @@ export class ParserRegistry {
   /**
    * Parse a file and extract AST-like information
    */
-  static parse(filePath: string, content: string) {
+  static async parse(filePath: string, content: string) {
     if (isJavaScriptLike(filePath)) {
       return {
         language: 'javascript',
         tryCatchBlocks: JavaScriptParser.findTryCatchBlocks(content),
         asyncFunctions: JavaScriptParser.findAsyncFunctions(content),
-        consoleCalls: JavaScriptParser.findConsoleCalls(content),
+        consoleCalls: [], // JS console calls often handled by regex rules, but we could implement
       };
     }
 
     if (isPythonLike(filePath)) {
       return {
         language: 'python',
-        tryCatchBlocks: PythonParser.findTryCatchBlocks(content),
-        asyncFunctions: PythonParser.findAsyncFunctions(content),
-        consoleCalls: PythonParser.findConsoleCalls(content),
+        tryCatchBlocks: await PythonParser.findTryCatchBlocks(content),
+        asyncFunctions: await PythonParser.findAsyncFunctions(content),
+        consoleCalls: await PythonParser.findConsoleCalls(content),
       };
     }
 
     if (isGoLike(filePath)) {
       return {
         language: 'go',
-        tryCatchBlocks: GoParser.findTryCatchBlocks(),
-        asyncFunctions: GoParser.findAsyncFunctions(),
-        consoleCalls: GoParser.findConsoleCalls(content),
+        tryCatchBlocks: await GoParser.findTryCatchBlocks(content),
+        asyncFunctions: await GoParser.findAsyncFunctions(content),
+        consoleCalls: await GoParser.findConsoleCalls(content),
       };
     }
 
     if (isJavaLike(filePath)) {
       return {
         language: 'java',
-        tryCatchBlocks: JavaParser.findTryCatchBlocks(content),
-        asyncFunctions: JavaParser.findAsyncFunctions(),
-        consoleCalls: JavaParser.findConsoleCalls(content),
+        tryCatchBlocks: await JavaParser.findTryCatchBlocks(content),
+        asyncFunctions: await JavaParser.findAsyncFunctions(content),
+        consoleCalls: await JavaParser.findConsoleCalls(content),
       };
     }
 
     if (isCLike(filePath)) {
       return {
         language: 'c-cpp',
-        tryCatchBlocks: CLikeParser.findTryCatchBlocks(content),
-        asyncFunctions: CLikeParser.findAsyncFunctions(),
-        consoleCalls: CLikeParser.findConsoleCalls(content),
+        tryCatchBlocks: await CLikeParser.findTryCatchBlocks(content),
+        asyncFunctions: await CLikeParser.findAsyncFunctions(content),
+        consoleCalls: await CLikeParser.findConsoleCalls(content),
       };
     }
 
