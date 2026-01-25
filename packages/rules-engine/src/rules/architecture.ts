@@ -1,4 +1,4 @@
-import type { Rule, RuleContext, RuleResult } from '../types.js';
+import type { Rule, RuleContext, RuleResult, PRDiff } from '../types.js';
 
 export const fatControllerRule: Rule = {
   id: 'fat-controller',
@@ -48,8 +48,99 @@ export const duplicateLogicRule: Rule = {
   description: 'Identical code blocks detected in multiple files',
   severity: 'MINOR',
   appliesTo: ['*'],
-  detect(_ctx: RuleContext): RuleResult[] {
-    // TODO: Implement cross-file duplication check using _ctx.diff.files
-    return [];
+  detect(ctx: RuleContext): RuleResult[] {
+    const results: RuleResult[] = [];
+    
+    const MIN_LINES = 3;
+
+    const normalize = (s: string) => s.replace(/\s+/g, '');
+
+    const cache = duplicateLogicIndexCache.get(ctx.diff) ?? buildDuplicateIndex(ctx.diff, MIN_LINES, normalize);
+    if (!duplicateLogicIndexCache.has(ctx.diff)) {
+      duplicateLogicIndexCache.set(ctx.diff, cache);
+    }
+
+    const additions = ctx.file.additions;
+    if (additions.length < MIN_LINES) return results;
+
+    const blocks: { signature: string; line: number; content: string }[] = [];
+    for (let i = 0; i <= additions.length - MIN_LINES; i++) {
+      let isConsecutive = true;
+      let content = '';
+      for (let k = 0; k < MIN_LINES; k++) {
+        if (k > 0 && additions[i + k].lineNumber !== additions[i + k - 1].lineNumber + 1) {
+          isConsecutive = false;
+          break;
+        }
+        content += additions[i + k].content;
+      }
+      if (!isConsecutive) continue;
+
+      const trimmed = content.trim();
+      if (trimmed.length < 20) continue;
+      if (/^(import|export|const|let|var|package|return)/.test(trimmed)) continue;
+
+      blocks.push({
+        signature: normalize(content),
+        line: additions[i].lineNumber,
+        content: additions[i].content
+      });
+    }
+
+    const reportedLines = new Set<number>();
+    for (const block of blocks) {
+      if (reportedLines.has(block.line)) continue;
+      const occ = cache.get(block.signature);
+      if (!occ) continue;
+
+      const paths = Array.from(new Set(occ.map(o => o.path)));
+      if (paths.length <= 1) continue; // only present in this file
+
+      const leader = paths.sort()[0];
+      if (ctx.file.path !== leader) continue;
+
+      const others = paths.filter(p => p !== ctx.file.path);
+      results.push({
+        ruleId: this.id,
+        file: ctx.file.path,
+        line: block.line,
+        severity: this.severity,
+        message: `Identical logic detected; also appears in ${others.join(', ')}`,
+        snippet: block.content.trim() + '...'
+      });
+      reportedLines.add(block.line);
+    }
+
+    return results;
   }
 };
+
+const duplicateLogicIndexCache = new WeakMap<PRDiff, Map<string, Array<{ path: string; line: number }>>>();
+
+function buildDuplicateIndex(diff: PRDiff, MIN_LINES: number, normalize: (s: string) => string) {
+  const index = new Map<string, Array<{ path: string; line: number }>>();
+  for (const file of diff.files) {
+    const adds = file.additions;
+    if (adds.length < MIN_LINES) continue;
+    for (let i = 0; i <= adds.length - MIN_LINES; i++) {
+      let isConsecutive = true;
+      let content = '';
+      for (let k = 0; k < MIN_LINES; k++) {
+        if (k > 0 && adds[i + k].lineNumber !== adds[i + k - 1].lineNumber + 1) {
+          isConsecutive = false;
+          break;
+        }
+        content += adds[i + k].content;
+      }
+      if (!isConsecutive) continue;
+      const trimmed = content.trim();
+      if (trimmed.length < 20) continue;
+      if (/^(import|export|const|let|var|package|return)/.test(trimmed)) continue;
+      const sig = normalize(content);
+      const arr = index.get(sig) ?? [];
+      arr.push({ path: file.path, line: adds[i].lineNumber });
+      index.set(sig, arr);
+    }
+  }
+  return index;
+}

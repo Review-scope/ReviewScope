@@ -27,6 +27,7 @@ export interface ChatJobData {
   prNumber: number;
   userQuestion: string;
   commentId: number;
+  commentType: 'issue' | 'review';
 }
 
 let reviewQueueInstance: Queue<ReviewJobData> | null = null;

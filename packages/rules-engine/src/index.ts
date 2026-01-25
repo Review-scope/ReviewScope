@@ -1,5 +1,6 @@
-import type { Rule, PRDiff, RuleResult, RuleContext } from './types.js';
+import type { Rule, PRDiff, RuleResult, RuleContext, DiffFile } from './types.js';
 import { matchesGlob } from './utils.js';
+import { ParserRegistry } from './parsers/index.js';
 
 // Import rules
 import { missingAwaitRule, missingErrorHandlingRule, unsafeJsonParseRule } from './rules/correctness.js';
@@ -52,6 +53,17 @@ export async function runRules(diff: PRDiff, config?: ReviewScopeConfig, rules: 
 
   // Deduplication Set
   const seen = new Set<string>();
+  
+  // Parse cache: attach parsed AST-like info to files when full content is available
+  await Promise.all(diff.files.map(async (file: DiffFile) => {
+    if (file.content && typeof file.parsed === 'undefined') {
+      try {
+        file.parsed = await ParserRegistry.parse(file.path, file.content);
+      } catch {
+        // ignore parser failures; rules may fall back to heuristics
+      }
+    }
+  }));
 
   for (const rule of rules) {
     if (disabled.has(rule.id)) continue;
@@ -66,8 +78,8 @@ export async function runRules(diff: PRDiff, config?: ReviewScopeConfig, rules: 
 
       if (ruleResults) {
         for (const res of ruleResults) {
-           // Create a unique key for deduplication
-           const key = `${res.ruleId}:${res.file}:${res.line}:${res.message}`;
+           // Stable deduplication key: rule ID + file + line
+           const key = `${res.ruleId}:${res.file}:${res.line}`;
            if (!seen.has(key)) {
              seen.add(key);
              results.push(res);

@@ -13,6 +13,7 @@ export interface ChatJobData {
   prNumber: number;
   userQuestion: string;
   commentId: number;
+  commentType: 'issue' | 'review';
 }
 
 const gh = new GitHubClient();
@@ -102,14 +103,25 @@ ${data.userQuestion}
 
     // 3. Post Reply to GitHub
     const octokit = await gh.getInstallationClient(data.installationId);
-    await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: data.prNumber,
-      body: `> ${data.userQuestion.split('\n')[0]}...\n\n${response.content}`,
-    });
+    
+    if (data.commentType === 'review') {
+      await octokit.rest.pulls.createReplyForReviewComment({
+        owner,
+        repo,
+        pull_number: data.prNumber,
+        comment_id: data.commentId,
+        body: `> ${data.userQuestion.split('\n')[0]}...\n\n${response.content}`,
+      });
+    } else {
+      await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: data.prNumber,
+        body: `> ${data.userQuestion.split('\n')[0]}...\n\n${response.content}`,
+      });
+    }
 
-    console.warn(`[Chat] Replied to PR #${data.prNumber}`);
+    console.warn(`[Chat] Replied to PR #${data.prNumber} (Type: ${data.commentType || 'issue'})`);
 
   } catch (err) {
     console.error(`[Chat] Failed to reply:`, err);

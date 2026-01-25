@@ -32,20 +32,45 @@ class WebContextProvider {
    */
   private extractPackages(diff: string): string[] {
     const packages: string[] = [];
-    
-    // Match package.json changes: "package-name": "version"
-    const packageRegex = /"([^"]+)":\s*"([^"]+)"/g;
-    let match;
-    
-    while ((match = packageRegex.exec(diff)) !== null) {
-      const [, name] = match;
-      // Simple check: if it looks like a package name (has alphanumeric or hyphens)
-      if (/^[@a-z0-9-]+\/[@a-z0-9-]+$|^[a-z0-9-]+$/.test(name)) {
-        packages.push(name);
+    const lines = diff.split('\n');
+    let inPackageJson = false;
+    let inDeps = false;
+
+    for (const line of lines) {
+      if (line.startsWith('+++ b/')) {
+        inPackageJson = line.endsWith('package.json');
+        inDeps = false;
+        continue;
+      }
+      if (!inPackageJson) continue;
+
+      if (line.startsWith('@@')) {
+        inDeps = false;
+        continue;
+      }
+
+      if (!line.startsWith('+') || line.startsWith('+++')) continue;
+      const content = line.slice(1);
+
+      if (/"(dependencies|devDependencies|peerDependencies|optionalDependencies)"\s*:/.test(content)) {
+        inDeps = true;
+        continue;
+      }
+
+      if (inDeps && /}/.test(content)) {
+        inDeps = false;
+        continue;
+      }
+
+      if (inDeps) {
+        const match = content.match(/"(@?[a-z0-9-_.]+\/?[a-z0-9-_.]*)"\s*:\s*"[^"]+"/i);
+        if (match && match[1]) {
+          packages.push(match[1]);
+        }
       }
     }
-    
-    return [...new Set(packages)]; // Deduplicate
+
+    return [...new Set(packages)];
   }
 
   /**

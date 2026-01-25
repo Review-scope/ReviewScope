@@ -12,6 +12,8 @@ export interface DiffFile {
   path: string;
   additions: DiffLine[];
   deletions: DiffLine[];
+  content?: string;
+  parsed?: unknown;
 }
 
 export interface DiffLine {

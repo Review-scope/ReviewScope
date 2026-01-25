@@ -294,6 +294,7 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
           prNumber: issue.number,
           userQuestion: comment.body,
           commentId: comment.id,
+          commentType: 'issue',
         });
         console.warn(`[Webhook] Chat job enqueued for PR #${issue.number}`);
       }
@@ -303,6 +304,59 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
       return c.json({ error: 'Failed to enqueue command job' }, 500);
     }
 
+    return c.json({ status: 'command_received' });
+  }
+
+  // Handle Review Comments (Inline)
+  if (eventName === 'pull_request_review_comment' && payload.action === 'created') {
+    const { comment, pull_request: pr, repository: repo, installation } = payload;
+    
+    if (comment.user.type === 'Bot') {
+      return c.json({ status: 'ignored' });
+    }
+
+    const body = comment.body.toLowerCase();
+    if (!body.includes('@review-scope')) {
+      return c.json({ status: 'ignored', reason: 'no_mention' });
+    }
+
+    console.warn(`[Webhook] Review comment command received in PR #${pr.number}: ${body}`);
+
+    // Check DB status
+    const [dbInst] = await db.select().from(installations).where(eq(installations.githubInstallationId, installation.id));
+    if (!dbInst || dbInst.status !== 'active') {
+        return c.json({ status: 'ignored_inactive_installation' });
+    }
+    
+    // Check Repo
+     const [dbRepo] = await db.select().from(repositories).where(
+      and(
+        eq(repositories.githubRepoId, repo.id),
+        eq(repositories.installationId, dbInst?.id || '')
+      )
+    );
+    
+    if (!dbRepo || dbRepo.status !== 'active' || !dbRepo.isActive) {
+      return c.json({ status: 'ignored_inactive_repo' });
+    }
+
+    try {
+        await enqueueChatJob({
+          installationId: installation.id,
+          repositoryId: repo.id,
+          repositoryFullName: repo.full_name,
+          prNumber: pr.number,
+          userQuestion: comment.body,
+          commentId: comment.id,
+          commentType: 'review',
+        });
+        console.warn(`[Webhook] Chat job enqueued for review comment in PR #${pr.number}`);
+    } catch (err: unknown) {
+       /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+       console.error(`[Webhook] Failed to enqueue chat job: ${(err as any).message}`);
+       return c.json({ error: 'Failed to enqueue chat job' }, 500);
+    }
+    
     return c.json({ status: 'command_received' });
   }
 

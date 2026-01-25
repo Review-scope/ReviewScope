@@ -8,42 +8,40 @@ export const nPlusOneRule: Rule = {
   detect(ctx: RuleContext): RuleResult[] {
     const results: RuleResult[] = [];
     
-    // Simple heuristic: Look for `await` or `fetch` or `db.` inside `map`, `forEach`, `for` loop body lines.
-    // Iterating lines is safer than full source regex.
-    
-    let inLoop = false;
-    let loopDepth = 0;
-    
-    // Note: This line-by-line state machine is fragile for diffs because we might not see the loop start/end.
-    // But we try our best on the *added* code.
-    
+    const isAsyncOrIO = (s: string) =>
+      /\bawait\b/.test(s) || /\bfetch\s*\(/.test(s) || /db\.|repository\./.test(s);
+    const isLoopContext = (s: string) =>
+      /\bfor\s*\(/.test(s) || /\bwhile\s*\(/.test(s) || /\.map\s*\(/.test(s) || /\.forEach\s*\(/.test(s) || /\bfor\s+await\s*\(/.test(s);
+    const isAsyncCallbackLoop = (s: string) =>
+      /\.map\s*\(\s*async\b/.test(s) || /\.forEach\s*\(\s*async\b/.test(s);
+
     for (const line of ctx.file.additions) {
-        if (/for\s*\(|while\s*\(|\.map\(|\.forEach\(/.test(line.content)) {
-            inLoop = true;
-            loopDepth++;
-        }
-        if (line.content.includes('}')) {
-            loopDepth = Math.max(0, loopDepth - 1);
-            if (loopDepth === 0) inLoop = false;
-        }
-        
-        if (inLoop && (
-            line.content.includes('await ') || 
-            line.content.includes('fetch(') || 
-            /db\.|repository\./.test(line.content)
-        )) {
-            // Check if it's Promise.all
-            if (!line.content.includes('Promise.all')) {
-                results.push({
-                    ruleId: this.id,
-                    file: ctx.file.path,
-                    line: line.lineNumber,
-                    severity: this.severity,
-                    message: 'Potential N+1 problem: Async/DB call inside a loop. Use Promise.all() or batching.',
-                    snippet: line.content.trim()
-                });
-            }
-        }
+      const content = line.content;
+
+      // Case 1: async callback inside map/forEach
+      if (isAsyncCallbackLoop(content)) {
+        results.push({
+          ruleId: this.id,
+          file: ctx.file.path,
+          line: line.lineNumber,
+          severity: this.severity,
+          message: 'Potential N+1: async callback inside map/forEach. Consider batching or Promise.all().',
+          snippet: content.trim()
+        });
+        continue;
+      }
+
+      // Case 2: single line shows loop context and async/IO together
+      if (isLoopContext(content) && isAsyncOrIO(content) && !/Promise\.all/.test(content)) {
+        results.push({
+          ruleId: this.id,
+          file: ctx.file.path,
+          line: line.lineNumber,
+          severity: this.severity,
+          message: 'Potential N+1: async/IO call inside loop. Use Promise.all() or batching.',
+          snippet: content.trim()
+        });
+      }
     }
     return results;
   }

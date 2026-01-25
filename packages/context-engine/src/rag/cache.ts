@@ -5,6 +5,10 @@
  * Used to cache npm package info and security advisories.
  */
 
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 export interface CacheOptions {
   ttl?: number; // Time to live in milliseconds
   maxSize?: number; // Maximum number of entries
@@ -89,7 +93,6 @@ export class RedisCache<K extends string, V> {
     // Try to initialize Redis (optional)
     try {
       if (process.env.REDIS_URL) {
-        /* eslint-disable-next-line @typescript-eslint/no-var-requires */
         const redis = require('redis');
         const client = redis.createClient({ url: process.env.REDIS_URL });
         this.client = client;

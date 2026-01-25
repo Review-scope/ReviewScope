@@ -29,7 +29,7 @@ export class ParserRegistry {
         language: 'python',
         tryCatchBlocks: await PythonParser.findTryCatchBlocks(content),
         asyncFunctions: await PythonParser.findAsyncFunctions(content),
-        consoleCalls: await PythonParser.findConsoleCalls(content),
+        consoleCalls: await PythonParser.findConsoleCalls(content, filePath),
       };
     }
 

@@ -32,6 +32,10 @@ export function parseDiff(diff: string): ParsedFile[] {
         deletions: [],
         hunks: [],
       };
+      
+      // Reset line counters for the new file
+      currentOldLine = 0;
+      currentNewLine = 0;
     } else if (!currentFile) {
       continue;
     } else if (line.startsWith('@@')) {

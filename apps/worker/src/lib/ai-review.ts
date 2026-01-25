@@ -145,7 +145,10 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
 
   // 2. Build Prompt
   const messages = [
-    { role: 'system' as const, content: REVIEW_SYSTEM_PROMPT },
+    { 
+      role: 'system' as const, 
+      content: REVIEW_SYSTEM_PROMPT
+    },
     { role: 'user' as const, content: assembled.content }
   ];
 

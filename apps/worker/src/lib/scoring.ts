@@ -91,7 +91,7 @@ export function scoreFile(file: DiffFile): number {
   return Math.max(0, score);
 }
 
-export function sortAndLimitFiles(files: DiffFile[], maxFiles = 15): DiffFile[] {
+export function sortAndLimitFiles<T extends DiffFile>(files: T[], maxFiles = 15): T[] {
   // 1. Score files
   const scored = files.map(f => ({ file: f, score: scoreFile(f) }));
 

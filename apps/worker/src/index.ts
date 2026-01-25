@@ -52,7 +52,7 @@ export async function startWorker() {
     'review-jobs',
     async (job) => {
       console.warn(`📝 Processing review job ${job.id} for PR #${job.data.prNumber}`);
-      return processReviewJob(job.data);
+      return processReviewJob(job.data, job);
     },
     { connection, concurrency: 5 }
   );

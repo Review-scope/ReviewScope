@@ -32,63 +32,90 @@ export const missingAwaitRule: Rule = {
 export const missingErrorHandlingRule: Rule = {
   id: 'missing-error-handling',
   description: 'Async operations or risky calls without error handling',
-  severity: 'CRITICAL',
+  severity: 'MINOR',
   appliesTo: ['*.ts', '*.js', '*.tsx', '*.jsx'],
   async detect(ctx: RuleContext): Promise<RuleResult[]> {
     const results: RuleResult[] = [];
+    const isRiskyCall = (s: string) => 
+      /\bawait\b/.test(s) || 
+      /\bfetch\s*\(/.test(s) || 
+      /\baxios\./.test(s) || 
+      /\bdb\./.test(s) || 
+      /\brepository\./.test(s);
     
-    // Reconstruct source from additions for AST parsing
-    const sourceCode = ctx.file.additions.map(line => line.content).join('\n');
-    
-    // Parse using language-specific parser
-    const parsed = await ParserRegistry.parse(ctx.file.path, sourceCode);
+    const isTryStart = (s: string) => /\btry\s*\{/.test(s);
+    const isCatchStart = (s: string) => /\bcatch\b/.test(s);
 
-    // 1. Check for empty catch blocks
-    for (const block of parsed.tryCatchBlocks) {
-      if (block.isEmpty) {
-        // Map relative line to absolute line
-        const addition = ctx.file.additions[block.catchLine - 1];
-        if (addition) {
+    const windowSize = 5;
+    const additions = ctx.file.additions;
+    const fullContent = ctx.file.content;
+    let tryRanges: Array<{ start: number; end: number }> = [];
+
+    if (fullContent && /\.(ts|tsx|js|jsx)$/.test(ctx.file.path)) {
+      const parsed = (ctx.file as any).parsed;
+      if (parsed && parsed.tryCatchBlocks) {
+        tryRanges = parsed.tryCatchBlocks
+          .map((b: any) => {
+            const start = (b.tryStart || b.tryLine || 0) as number;
+            const end = (b.tryEnd || start) as number;
+            return start > 0 && end >= start ? { start, end } : null;
+          })
+          .filter(Boolean) as Array<{ start: number; end: number }>;
+      } else {
+        try {
+          const fresh = await ParserRegistry.parse(ctx.file.path, fullContent);
+          tryRanges = (fresh.tryCatchBlocks || [])
+            .map((b: any) => {
+              const start = (b.tryStart || b.tryLine || 0) as number;
+              const end = (b.tryEnd || start) as number;
+              return start > 0 && end >= start ? { start, end } : null;
+            })
+            .filter(Boolean) as Array<{ start: number; end: number }>;
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    for (let i = 0; i < additions.length; i++) {
+      const line = additions[i];
+      const content = line.content;
+
+      if (!isRiskyCall(content)) continue;
+
+      let hasLocalHandling = false;
+      for (let k = Math.max(0, i - windowSize); k <= Math.min(additions.length - 1, i + windowSize); k++) {
+        const neighbor = additions[k].content;
+        if (isTryStart(neighbor) || isCatchStart(neighbor)) {
+          hasLocalHandling = true;
+          break;
+        }
+      }
+
+      if (!hasLocalHandling) {
+        if (tryRanges.length > 0) {
+          const withinTry = tryRanges.some(r => line.lineNumber >= r.start && line.lineNumber <= r.end);
+          if (!withinTry) {
+            results.push({
+              ruleId: this.id,
+              file: ctx.file.path,
+              line: line.lineNumber,
+              severity: 'MAJOR',
+              message: 'Async/IO call without surrounding try/catch in full file context.',
+              snippet: content.trim()
+            });
+          }
+        } else {
           results.push({
             ruleId: this.id,
             file: ctx.file.path,
-            line: addition.lineNumber,
+            line: line.lineNumber,
             severity: this.severity,
-            message: `Empty catch block detected. Errors should be handled or logged.`,
-            snippet: addition.content.trim()
+            message: 'Async/IO call — ensure this is wrapped in try/catch (context not visible in diff).',
+            snippet: content.trim()
           });
         }
       }
-    }
-
-    // 2. Check for async functions without try-catch
-    for (const asyncFunc of parsed.asyncFunctions) {
-      if (asyncFunc.hasAwait) {
-        const hasCatch = parsed.tryCatchBlocks.some(
-          block => Math.abs(block.tryLine - asyncFunc.line) < 20 // Heuristic: catch nearby
-        );
-
-        if (!hasCatch && asyncFunc.name) {
-           const addition = ctx.file.additions[asyncFunc.line - 1];
-           if (addition) {
-             results.push({
-                ruleId: this.id,
-                file: ctx.file.path,
-                line: addition.lineNumber,
-                severity: this.severity,
-                message: `Async function '${asyncFunc.name}' uses await but has no try-catch block nearby.`,
-                snippet: addition.content.trim()
-             });
-           }
-        }
-      }
-    }
-
-    // 3. Fallback/Extra: JSON.parse checks (heuristic)
-    for (const line of ctx.file.additions) {
-        if (line.content.includes('JSON.parse(') && !line.content.includes('try {')) {
-             // This is covered by unsafe-json-parse but good to double check or ignore
-        }
     }
     
     return results;

@@ -51,26 +51,7 @@ export class RAGIndexer {
   async indexRepository(repoId: string, installationId: string, files: { path: string, content: string }[]) {
     await this.ensureCollection();
     const client = getQdrantClient();
-    
-    // 0. Clean up existing vectors for this repo to avoid duplicates/stale code
-    // Since this is a full re-index, we replace the entire knowledge base for this repo.
-    try {
-      await client.delete(COLLECTION_NAME, {
-        filter: {
-          must: [
-            {
-              key: 'repoId',
-              match: {
-                value: repoId,
-              },
-            },
-          ],
-        },
-      });
-      console.warn(`[Indexer] Cleared existing vectors for repo ${repoId}`);
-    } catch (e) {
-      console.warn(`[Indexer] Failed to clear existing vectors (might be first run or connection issue):`, e);
-    }
+    const batchId = uuidv4();
 
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     const points: any[] = [];
@@ -102,6 +83,7 @@ export class RAGIndexer {
           payload: {
             repoId,
             installationId,
+            batchId,
             file: chunk.file,
             chunkId: chunk.chunkId,
             content: chunk.content,
@@ -118,6 +100,21 @@ export class RAGIndexer {
         wait: true,
         points,
       });
+
+      try {
+        await client.delete(COLLECTION_NAME, {
+          filter: {
+            must: [
+              { key: 'repoId', match: { value: repoId } },
+            ],
+            must_not: [
+              { key: 'batchId', match: { value: batchId } },
+            ],
+          },
+        });
+      } catch (e) {
+        console.warn(`[Indexer] Failed to clear old vectors for repo ${repoId}:`, e);
+      }
     }
 
     return points.length;

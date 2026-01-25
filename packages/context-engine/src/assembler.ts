@@ -39,15 +39,15 @@ export class ContextAssembler {
       const rawContent = await layer.getContext(input);
       if (!rawContent) continue;
 
-      const tokens = Math.ceil(rawContent.length / 4); // Rough estimate for planning
+      const tokens = Math.ceil(rawContent.length / 3.5);
       
       // Determine how many tokens this layer can take
       const layerMax = layer.maxTokens || remainingBudget;
       const allowedTokens = Math.min(layerMax, remainingBudget);
 
       if (tokens > allowedTokens) {
-        // Truncate to allowed budget
-        const truncated = rawContent.slice(0, allowedTokens * 4);
+        const allowedChars = Math.floor(allowedTokens * 3.5);
+        const truncated = Array.from(rawContent).slice(0, allowedChars).join('');
         parts.push(truncated);
         usedTokens += allowedTokens;
       } else {

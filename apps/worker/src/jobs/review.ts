@@ -13,7 +13,7 @@ import { generateIssueKey } from '../lib/hash.js';
 import picomatch from 'picomatch';
 import { getPlanLimits, PlanTier } from '../lib/plans.js';
 import { checkRateLimits, logReviewUsage, RateLimitError } from '../lib/rate-limit.js';
-import { Queue } from 'bullmq';
+import { Queue, Job } from 'bullmq';
 import { createHash } from 'crypto';
 import path from 'path';
 
@@ -67,7 +67,7 @@ const gh = new GitHubClient();
 import { sortAndLimitFiles, scoreFile } from '../lib/scoring.js';
 import { validateReviewComments } from '../lib/validation.js';
 
-export async function processReviewJob(data: ReviewJobData): Promise<ReviewResult> {
+export async function processReviewJob(data: ReviewJobData, job?: Job): Promise<ReviewResult> {
   console.warn(`[Worker] Started processing review for PR #${data.prNumber} in ${data.repositoryFullName}`);
   
   let dbReviewId: string | null = null;
@@ -270,8 +270,13 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     // Review Fingerprinting (Idempotency)
     const RULES_ENGINE_VERSION = '1.0.0'; 
     const contentToHash = JSON.stringify({
-      files: filteredFiles.map(f => ({ path: f.path, additions: f.additions.map(a => a.content), deletions: f.deletions.map(d => d.content) })),
-      config: config,
+      files: filteredFiles
+        .map(f => ({ 
+          path: f.path, 
+          additions: f.additions.map(a => a.content), 
+          deletions: f.deletions.map(d => d.content) 
+        }))
+        .sort((a, b) => a.path.localeCompare(b.path)),
       rulesVersion: RULES_ENGINE_VERSION
     });
     const fingerprint = createHash('sha256').update(contentToHash).digest('hex');
@@ -351,10 +356,8 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     // We send explicit line numbers to help the LLM target comments accurately.
     const optimizedDiff = aiReviewFiles.map(f => {
         let fileDiff = `File: ${f.path}\n`;
-        const changes = [
-            ...f.additions.map(a => ({ line: a.lineNumber, type: '+', content: a.content })),
-            ...f.deletions.map(d => ({ line: d.lineNumber, type: '-', content: d.content }))
-        ].sort((a, b) => a.line - b.line);
+        // Only send additions to the AI model to prevent hallucinations about removed code
+        const changes = f.additions.map(a => ({ line: a.lineNumber, type: '+', content: a.content }));
 
         // Cap lines per file to prevent overflow
         const MAX_LINES_PER_FILE = 500;
@@ -377,6 +380,15 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     console.warn(`Sending ${aiReviewFiles.length} files to AI (Selected from ${filteredFiles.length} candidates).`);
 
     // Phase 8 - Rules Engine
+    // Fetch full file contents for higher-accuracy static analysis
+    const filteredFilesWithContent = await Promise.all(filteredFiles.map(async (file) => {
+      try {
+        const content = await gh.getFileContent(data.installationId, owner, repo, file.path, data.headSha);
+        return { ...file, content: content || undefined };
+      } catch {
+        return file;
+      }
+    }));
     // Run rules on ALL filtered files (not just the top N) because rules are cheap and deterministic
     const duplicateKeyViolations = filteredFiles.flatMap((file) =>
       detectDuplicateKeys(file).map((dup) => ({
@@ -388,7 +400,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
       }))
     );
     const ruleViolations = [
-      ...(await runRules({ files: filteredFiles }, config)),
+      ...(await runRules({ files: filteredFilesWithContent }, config)),
       ...duplicateKeyViolations
     ];
     const staticComments = ruleViolations.map((v) => ({
@@ -408,7 +420,7 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
 
     // Phase 6 - RAG Retrieval
     let ragContext = '';
-    if (dbRepo.indexedAt && limits.allowRAG) {
+    if (dbRepo.indexedAt && limits.allowRAG && filteredFiles.length >= 2) {
       try {
         const { provider } = await createConfiguredProvider(dbInst.id);
         
@@ -450,7 +462,13 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
 
     // Phase 8.8 - Targeted Context Expansion (Imports)
     let relatedContext = '';
-    const canRunAI = limits.allowAI && (limits.tier !== PlanTier.FREE || hasCustomKey);
+    let canRunAI = limits.allowAI && (limits.tier !== PlanTier.FREE || hasCustomKey);
+
+    // Guardrail: Skip if diff is too small
+    if (optimizedDiff.length < 50) {
+        console.warn('Skipping AI review: Change too small for meaningful review.');
+        canRunAI = false;
+    }
 
     if (canRunAI) {
       try {
@@ -656,8 +674,39 @@ export async function processReviewJob(data: ReviewJobData): Promise<ReviewResul
     }
 
     // Validate comments before processing
-    const validatedAiComments = validateReviewComments(aiComments, parsedFiles, { maxComments: 20 });
+    const validatedAiComments = validateReviewComments(aiComments, aiReviewFiles, { maxComments: 20 });
     
+    // Step 1: Extract added lines only
+    const addedLinesByFile = new Map<string, Set<string>>();
+    for (const file of aiReviewFiles) {
+      const set = new Set(
+        file.additions.map(a =>
+          a.content.trim().replace(/\s+/g, ' ')
+        )
+      );
+      addedLinesByFile.set(file.path, set);
+    }
+
+    // Step 2 & 3: Reject suggestions that already exist
+    const finalAiComments = validatedAiComments.filter(c => {
+        const fileLines = addedLinesByFile.get(c.file);
+        if (!fileLines) return true; 
+
+        const normalized = (c.suggestion || c.fix || '')
+            .trim()
+            .replace(/\s+/g, ' ');
+
+        if (!normalized) return true; 
+
+        for (const line of fileLines) {
+            if (line.includes(normalized)) {
+                console.warn(`[AI] Skipping resolved suggestion: ${c.message}`);
+                return false;
+            }
+        }
+        return true;
+    });
+
     // We also validate static comments to ensure they are within diff hunks and not on ignored files
     const validatedStaticComments = validateReviewComments(
         staticComments.map(c => ({
@@ -703,7 +752,7 @@ ${validatedStaticComments.length > 0 ? `> 🛡️ Found ${validatedStaticComment
             line: c.line
         })
       })),
-      ...validatedAiComments.map(c => ({
+      ...finalAiComments.map(c => ({
         ...c,
         source: 'ai' as const,
         issueKey: generateIssueKey({
@@ -736,8 +785,13 @@ ${validatedStaticComments.length > 0 ? `> 🛡️ Found ${validatedStaticComment
     
     const githubComments = [];
     const dbComments = [];
+    const seenIssueKeys = new Set<string>();
 
     for (const finding of allFindings) {
+      // Deduplicate within this run (Fix C)
+      if (seenIssueKeys.has(finding.issueKey)) continue;
+      seenIssueKeys.add(finding.issueKey);
+
       const alreadyReported = existingThreads.some(t => t.issueKey === finding.issueKey);
       if (alreadyReported) continue;
 
@@ -890,6 +944,40 @@ ${validatedStaticComments.length > 0 ? `> 🛡️ Found ${validatedStaticComment
         processedAt: new Date(),
       }).where(eq(reviews.id, dbReviewId));
     }
+
+    // Notify user on GitHub if this is the final attempt
+    const maxAttempts = job?.opts.attempts || 3;
+    const currentAttempt = job?.attemptsMade || 0;
+
+    if (!job || (currentAttempt + 1 >= maxAttempts)) {
+        try {
+            const [owner, repo] = data.repositoryFullName.split('/');
+            const octokit = await gh.getInstallationClient(data.installationId);
+            
+            const errorBody = `
+## ❌ Review System Error
+
+ReviewScope encountered an unexpected error while processing this PR.
+
+**Error Details:**
+\`\`\`
+${(err as Error).message}
+\`\`\`
+
+If this persists, please contact support.
+`;
+            await octokit.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: data.prNumber,
+                body: errorBody
+            });
+            console.warn(`[Worker] Posted error notification to PR #${data.prNumber}`);
+        } catch (notifyErr) {
+            console.error('[Worker] Failed to post error notification:', notifyErr);
+        }
+    }
+
     throw err;
   }
 }

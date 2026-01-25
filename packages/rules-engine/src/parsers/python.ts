@@ -153,11 +153,15 @@ export class PythonParser {
     }
   }
 
-  static async findConsoleCalls(source: string): Promise<PythonConsoleCall[]> {
+  static async findConsoleCalls(source: string, filePath?: string): Promise<PythonConsoleCall[]> {
     try {
       const parser = await loadLanguage('python');
       const tree = parser.parse(source);
       const results: PythonConsoleCall[] = [];
+      
+      const context = filePath && (filePath.includes('test') || filePath.includes('spec') || filePath.includes('mock')) 
+        ? 'test' 
+        : 'production';
 
       const visit = (node: any) => {
         if (node.type === 'call_expression') {
@@ -167,7 +171,7 @@ export class PythonParser {
              results.push({
                line: node.startPosition.row + 1,
                type: 'print',
-               context: 'production' // TODO: check file path or context
+               context: context
              });
           }
           // Check for logging.xxx
@@ -179,7 +183,7 @@ export class PythonParser {
                 results.push({
                    line: node.startPosition.row + 1,
                    type: 'logging',
-                   context: 'production'
+                   context: context
                 });
              }
           }

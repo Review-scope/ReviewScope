@@ -31,12 +31,20 @@ export class JavaScriptParser {
     catchLine: number;
     isEmpty: boolean;
     content: string;
+    tryStart?: number;
+    tryEnd?: number;
+    catchStart?: number;
+    catchEnd?: number;
   }> {
     const results: Array<{
       tryLine: number;
       catchLine: number;
       isEmpty: boolean;
       content: string;
+      tryStart?: number;
+      tryEnd?: number;
+      catchStart?: number;
+      catchEnd?: number;
     }> = [];
 
     try {
@@ -50,10 +58,14 @@ export class JavaScriptParser {
         TryStatement(path: NodePath<t.TryStatement>) {
           const { node } = path;
           const tryLine = node.loc?.start.line || 0;
+          const tryStart = node.block?.loc?.start.line || tryLine;
+          const tryEnd = node.block?.loc?.end.line || tryLine;
           
           if (node.handler) {
             const catchClause = node.handler;
             const catchLine = catchClause.loc?.start.line || 0;
+            const catchStart = catchClause.body?.loc?.start.line || catchLine;
+            const catchEnd = catchClause.body?.loc?.end.line || catchLine;
             
             // Check if catch block is empty or only contains comments
             // Note: Babel AST doesn't strictly include comments in body by default in a way that's easy to check for "empty but comments",
@@ -70,6 +82,10 @@ export class JavaScriptParser {
               catchLine,
               isEmpty,
               content: content.trim(),
+              tryStart,
+              tryEnd,
+              catchStart,
+              catchEnd,
             });
           }
         }
