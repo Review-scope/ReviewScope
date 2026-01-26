@@ -43,7 +43,8 @@ export async function validateJob(data: ReviewJobData): Promise<JobContext> {
     )
   );
   if (!dbRepo) throw new Error(`Repository ${data.repositoryId} not found`);
-  if (dbRepo.status !== 'active') throw new Error(`Repository ${data.repositoryFullName} is ${dbRepo.status}`);
+  // Allow inactive repositories to proceed (for AST only) - checked later in job
+  // if (dbRepo.status !== 'active') throw new Error(`Repository ${data.repositoryFullName} is ${dbRepo.status}`);
 
   const limits = getPlanLimits(dbInst.planId);
   
@@ -241,7 +242,7 @@ export async function runAIReview(
             batches.push(aiReviewFiles.slice(i, i + BATCH_SIZE));
           }
 
-          let combinedComments: ReviewComment[] = [];
+          const combinedComments: ReviewComment[] = [];
           let combinedSummary = '';
 
           for (let i = 0; i < batches.length; i++) {

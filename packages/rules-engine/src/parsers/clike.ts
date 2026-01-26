@@ -32,7 +32,7 @@ export class CLikeParser {
       
       if ((node.type === 'qualified_identifier' || node.type === 'identifier') && 
           (node.text === 'std::cout' || node.text === 'std::cerr' || node.text === 'cout' || node.text === 'cerr')) {
-          let p = node.parent;
+          const p = node.parent;
           // Check if it's being shifted to
           // This is a rough check, as tree structure can vary
           if (p && (p.type === 'shift_expression' || p.parent?.type === 'shift_expression')) {

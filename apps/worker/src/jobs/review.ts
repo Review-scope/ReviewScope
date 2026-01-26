@@ -177,7 +177,7 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
     const parsedFiles = parseDiff(diffText);
 
     // Filter and Refine
-    let filteredFiles = await filterAndRefineFiles(gh, data, parsedFiles);
+    const filteredFiles = await filterAndRefineFiles(gh, data, parsedFiles);
 
     // AI Review Guardrail: Skip if diff is tiny
     // If we have very few changes, skip AI to save cost and avoid hallucinations
@@ -252,35 +252,51 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
     let aiSummary = '';
     let riskAnalysis: string | undefined;
     let assessment = { riskLevel: 'low', mergeReadiness: 'ready', confidence: 'high' as 'high' | 'medium' | 'low' };
-    let contextHash = currentHash;
+    const contextHash = currentHash;
     let skipReason = '';
+    let aiError: Error | null = null;
 
     // AI Review Guardrail: Skip if diff is tiny (User Request)
     const optimizedDiffLength = aiReviewFiles.reduce((sum, f) => sum + f.additions.map(add => add.content.length).reduce((cSum, c) => cSum + c, 0), 0);
     
+    // Check repository active status
+    const isRepoActive = dbRepo.status === 'active';
+
     if (optimizedDiffLength < 50) {
         skipReason = 'Change too small for meaningful AI review';
     } else if (aiReviewFiles.length === 1 && optimizedDiffLength < 200 && limits.tier === PlanTier.FREE) {
         skipReason = 'Tiny diff (Free Tier optimization)';
+    } else if (!isRepoActive) {
+        skipReason = 'Repository is not active (AST only)';
     }
 
     if (limits.allowAI && !skipReason) {
-        const aiResult = await runAIReview(
-            data,
-            dbInst,
-            limits,
-            config,
-            aiReviewFiles,
-            issueContext,
-            ragContext,
-            ruleViolations
-        );
-        aiComments = aiResult.comments;
-        aiSummary = aiResult.summary;
-        assessment = aiResult.assessment;
-        riskAnalysis = aiResult.riskAnalysis;
+        try {
+            const aiResult = await runAIReview(
+                data,
+                dbInst,
+                limits,
+                config,
+                aiReviewFiles,
+                issueContext,
+                ragContext,
+                ruleViolations
+            );
+            aiComments = aiResult.comments;
+            aiSummary = aiResult.summary;
+            assessment = aiResult.assessment;
+            riskAnalysis = aiResult.riskAnalysis;
+        } catch (e: any) {
+            aiError = e instanceof Error ? e : new Error(String(e));
+            console.error('[Worker] AI review failed, continuing with static analysis only:', aiError.message || aiError.toString());
+        }
     } else {
         aiSummary = skipReason ? `AI Review skipped: ${skipReason}` : 'AI Review disabled for this plan.';
+    }
+
+    if (aiError) {
+        const message = aiError.message || 'AI review failed';
+        aiSummary = `Static analysis only. AI review could not run: ${message}`;
     }
 
     // ---------------------------------------------------------

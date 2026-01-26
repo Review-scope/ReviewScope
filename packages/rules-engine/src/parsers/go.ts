@@ -31,7 +31,7 @@ export class GoParser {
                 const catchLine = parent.startPosition.row + 1;
                 
                 // Let's find the defer statement that wraps this func_literal
-                let deferNode = parent.parent;
+                const deferNode = parent.parent;
                // parent is func_literal. parent.parent is call_expression (invoking the func). parent.parent.parent is defer_statement
                // OR: defer funcName() -> defer_statement -> call_expression -> identifier (funcName)
                
@@ -42,7 +42,7 @@ export class GoParser {
                   // The recover() is usually in an if statement: if r := recover(); r != nil { BODY }
                   // We need to find that BODY.
                   
-                  let isEmpty = false;
+                  const isEmpty = false;
                   // Traverse up to find the block containing recover
                   // If recover is just called and nothing else?
                   
