@@ -52,6 +52,7 @@ Focus your analysis on these key areas:
 ## PARTIAL CONTEXT (IMPORTANT)
 - You are given partial project context (PR diff + selected related files).
 - Only comment on issues you can clearly infer from the provided code and context.
+- If a symbol is referenced but its definition is not shown in the diff or related context, assume it behaves correctly unless the usage clearly violates type safety or contracts.
 - If behavior is unclear, explain the risk and state assumptions; do not assert a bug.
 - Focus on behavior and risk rather than restating changes.
 
@@ -99,6 +100,7 @@ Respond ONLY with a JSON object:
     "mergeReadiness": "Looks Good | Needs Changes | Blocked"
   },
   "summary": "A conversational, human-like summary of the review. Start with high-level context, then mention key risks. Be encouraging but firm on critical issues.",
+  "riskAnalysis": "A specific paragraph analyzing why this PR is risky (files touched, business logic changes, complexity).",
   "comments": [
     {
       "file": "path/to/file.ts",
@@ -303,6 +305,7 @@ export interface ReviewComment {
 
 export interface ReviewResult {
   summary: string;
+  riskAnalysis?: string;
   comments: ReviewComment[];
   assessment: {
     riskLevel: string;
@@ -438,8 +441,14 @@ function normalizeSeverity(comment: ReviewComment): ReviewComment | null {
       message.includes('corrupt') ||
       message.includes('integrity') ||
       message.includes('unhandled promise') ||
+      message.includes('panic') ||
+      message.includes('deadlock') ||
+      message.includes('infinite loop') ||
+      message.includes('authentication') ||
+      message.includes('authorization') ||
       why.includes('crash') ||
-      why.includes('exploit');
+      why.includes('exploit') ||
+      why.includes('security');
 
     if (!isActuallyCritical) {
       comment.severity = 'MAJOR';
@@ -500,6 +509,7 @@ export function parseReviewResponse(response: string): ReviewResult {
     const { comments, overflow, criticalCount } = prioritizeComments(rawComments);
 
     let summary = parsed.summary || 'Review completed.';
+    const riskAnalysis = parsed.riskAnalysis;
     
     // Add context about what was included/omitted
     if (criticalCount > DEFAULT_MAX_COMMENTS) {
@@ -511,6 +521,7 @@ export function parseReviewResponse(response: string): ReviewResult {
 
     return {
       summary,
+      riskAnalysis,
       assessment: parsed.assessment || { riskLevel: 'Medium', mergeReadiness: 'Needs Changes' },
       comments,
       ruleValidations: rawValidations,

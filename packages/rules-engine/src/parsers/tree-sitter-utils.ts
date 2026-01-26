@@ -67,6 +67,8 @@ export interface BaseConsoleCall {
   line: number;
   type: string;
   context: 'production' | 'test' | 'debug';
+  inLoop?: boolean;
+  inCatchWithoutRethrow?: boolean;
 }
 
 export async function traverseTree<T>(

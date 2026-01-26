@@ -6,5 +6,9 @@ export interface ReviewScopeConfig {
     model?: string;
     temperature?: number;
     guidelines?: string;
+    force_review?: boolean;
+  };
+  github?: {
+    post_comments?: boolean;
   };
 }

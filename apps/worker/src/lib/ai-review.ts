@@ -85,6 +85,7 @@ export interface AIReviewResult {
   comments: ReviewComment[];
   contextHash: string;
   summary: string;
+  riskAnalysis?: string;
   assessment: {
     riskLevel: string;
     mergeReadiness: string;
@@ -185,6 +186,7 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
     comments: result.comments,
     contextHash: assembled.contextHash,
     summary: result.summary,
+    riskAnalysis: result.riskAnalysis,
     assessment: {
         ...result.assessment,
         confidence

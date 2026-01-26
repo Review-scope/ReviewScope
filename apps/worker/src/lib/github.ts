@@ -258,6 +258,21 @@ export class GitHubClient {
     }
   }
 
+  async getReviewComments(
+    installationId: number,
+    owner: string,
+    repo: string,
+    pullNumber: number
+  ) {
+    const octokit = await this.getInstallationClient(installationId);
+    const { data } = await octokit.rest.pulls.listReviewComments({
+      owner,
+      repo,
+      pull_number: pullNumber,
+    });
+    return data;
+  }
+
   async postReview(
     installationId: number,
     owner: string,

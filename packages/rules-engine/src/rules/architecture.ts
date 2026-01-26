@@ -102,9 +102,6 @@ export const duplicateLogicRule: Rule = {
       const paths = Array.from(new Set(occ.map(o => o.path)));
       if (paths.length <= 1) continue; // only present in this file
 
-      const leader = paths.sort()[0];
-      if (ctx.file.path !== leader) continue;
-
       const others = paths.filter(p => p !== ctx.file.path);
       matches.push({
         line: block.line,

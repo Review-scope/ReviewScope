@@ -81,6 +81,16 @@ export function parseDiff(diff: string): ParsedFile[] {
 }
 
 export function detectDuplicateKeys(file: ParsedFile): Array<{ key: string; lines: number[] }> {
+  // This naive regex-based check is only safe for flat configuration files.
+  // For code (JS, TS, Java, etc.) or nested data (JSON, YAML), it produces false positives
+  // because it ignores scope, object boundaries, and nesting.
+  const FLATTENED_CONFIG_EXTENSIONS = ['.properties', '.ini', '.cnf', '.conf'];
+  const ext = file.path.split('.').pop()?.toLowerCase();
+  
+  if (!ext || !FLATTENED_CONFIG_EXTENSIONS.includes(`.${ext}`)) {
+    return [];
+  }
+
   const keyMap = new Map<string, number[]>();
 
   for (const add of file.additions) {
@@ -156,8 +166,8 @@ const NOISE_PATTERNS = [
   /constants\/prompts/i,
   /system-messages?/i,
   /\.env(\..*)?$/,     // Environment variables
-  /\.md$/,             // Documentation
-  /\.markdown$/,
+  // /\.md$/,             // Documentation (Handled conditionally in review job)
+  // /\.markdown$/,
   /LICENSE$/,
   /CNAME$/,
   /\.txt$/,
@@ -168,13 +178,14 @@ const NOISE_PATTERNS = [
   /\.pb\.go$/,
   /\.gen\.ts$/,
   /drizzle\/meta\//,
-  /migrations\//,
-
+  // /migrations\//, // Migrations can be relevant for logic review
+  
   // Tests (Separate mental model, skip for core logic review)
-  /\.test\./i,
-  /\.spec\./i,
-  /__tests__\//,
-  /tests\//i,
+  // Tests are now conditionally filtered in the review job if "core code" exists
+  // /\.test\./i,
+  // /\.spec\./i,
+  // /__tests__\//,
+  // /tests\//i,
 ];
 
 export function filterNoise<T extends DiffFile>(files: T[]): T[] {

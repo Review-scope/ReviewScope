@@ -170,11 +170,40 @@ export class JavaScriptParser {
             // Get content
             const content = lines[line - 1] || '';
 
+            // Check if in loop
+            const inLoop = !!path.findParent((p) => p.isLoop());
+
+            // Check if in catch without rethrow
+            let inCatchWithoutRethrow = false;
+            const catchClause = path.findParent((p) => p.isCatchClause());
+            if (catchClause && catchClause.isCatchClause()) {
+                // Check if the catch block contains a throw
+                let hasRethrow = false;
+                
+                // We only check the direct body or immediate blocks for a throw to avoid complex CFG analysis
+                // A simple traversal of the catch block body is a good heuristic
+                catchClause.traverse({
+                    ThrowStatement(throwPath) {
+                        // Ensure this throw belongs to THIS catch clause (not a nested one)
+                        // Actually, if there is ANY throw in the catch block, it's likely a rethrow or error handling.
+                        // We can be permissive: if we see a throw, we assume it's handled.
+                        hasRethrow = true;
+                        throwPath.stop();
+                    }
+                });
+                
+                if (!hasRethrow) {
+                    inCatchWithoutRethrow = true;
+                }
+            }
+
             results.push({
               line,
               type,
               context,
               content: content.trim(),
+              inLoop,
+              inCatchWithoutRethrow,
             });
           }
         }
