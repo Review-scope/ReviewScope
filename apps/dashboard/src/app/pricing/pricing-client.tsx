@@ -50,7 +50,7 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
     }
   }, [paramId, accounts]);
 
-  const selectedAccount = accounts.find(a => a.id === selectedAccountId) || accounts[0];
+  const selectedAccount = accounts.find(a => a.id === selectedAccountId);
 
   // Sync URL when selection changes
   const handleAccountChange = (accountId: number) => {
@@ -130,11 +130,7 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
     },
   ];
 
-  if (!selectedAccount) {
-    return <div className="text-center py-20">Please log in to view pricing for your account.</div>;
-  }
-
-  const currentPlanId = selectedAccount.planId;
+  const currentPlanId = selectedAccount?.planId;
 
   return (
     <div className="py-12 px-4 md:px-8 max-w-7xl mx-auto space-y-12">
@@ -149,8 +145,8 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
           </p>
         </div>
 
-        {/* Account Selector */}
-        {accounts.length > 0 && (
+        {/* Account Selector - Only show if logged in */}
+        {accounts.length > 0 && selectedAccount && (
           <div className="relative inline-block text-left z-20">
             <div className="flex items-center justify-center gap-3 mb-2">
               <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Upgrading for:</span>
@@ -216,12 +212,12 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
       {/* Tiers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
         {tiers.map((tier) => {
-          const isCurrentPlan = currentPlanId === tier.planId || (currentPlanId === 0 && tier.planId === 3); // 0 (missing) defaults to Free (3)
-          const upgradeUrl = tier.id === 'free' 
+          const isCurrentPlan = selectedAccount && (currentPlanId === tier.planId || (currentPlanId === 0 && tier.planId === 3)); 
+          const upgradeUrl = !selectedAccount ? '/signin' : (tier.id === 'free' 
             ? getPaymentLink(dodoLinks.free, selectedAccountId)
             : tier.id === 'pro'
             ? getPaymentLink(dodoLinks.pro, selectedAccountId)
-            : getPaymentLink(dodoLinks.team, selectedAccountId);
+            : getPaymentLink(dodoLinks.team, selectedAccountId));
 
           return (
             <div 
@@ -278,8 +274,8 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
 
               <a
                 href={isCurrentPlan ? '#' : upgradeUrl}
-                target={isCurrentPlan ? undefined : (tier.planId === 3 ? '_self' : '_blank')}
-                rel={isCurrentPlan ? undefined : (tier.planId === 3 ? undefined : 'noopener noreferrer')}
+                target={isCurrentPlan || !selectedAccount ? '_self' : (tier.planId === 3 ? '_self' : '_blank')}
+                rel={isCurrentPlan || !selectedAccount ? undefined : (tier.planId === 3 ? undefined : 'noopener noreferrer')}
                 className={`w-full py-4 rounded-xl font-bold text-base text-center transition-all ${
                   isCurrentPlan
                     ? 'bg-green-600 text-white cursor-default opacity-90 pointer-events-none'
@@ -288,7 +284,7 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
                     : "bg-primary text-primary-foreground hover:opacity-90 shadow-lg"
                 }`}
               >
-                {isCurrentPlan ? 'Current Plan' : (tier.planId === 3 ? 'Downgrade to Free' : tier.cta)}
+                {isCurrentPlan ? 'Current Plan' : (!selectedAccount ? 'Sign in to Start' : (tier.planId === 3 ? 'Downgrade to Free' : tier.cta))}
               </a>
             </div>
           );

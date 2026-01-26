@@ -48,13 +48,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="light overflow-x-hidden">
+    <html lang="en" className="light">
       <head>
         <script
           defer
           src="https://cloud.umami.is/script.js"
           data-website-id="aad390a0-befb-424e-a755-6ef57aa9157f"
-        />
+        ></script>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col overflow-x-hidden`}

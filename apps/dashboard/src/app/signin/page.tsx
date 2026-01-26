@@ -21,7 +21,7 @@ export default function SignInPage() {
           <div className="space-y-8">
             <h1 className="text-4xl font-extrabold tracking-tight leading-tight">
               AI-Powered Code Reviews<br />
-              <span className="text-primary">for Every Pull Request</span>
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-primary to-primary/70">for Every Pull Request</span>
             </h1>
             
             <p className="text-lg text-muted-foreground max-w-md">

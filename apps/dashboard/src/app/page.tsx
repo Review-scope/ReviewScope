@@ -269,43 +269,58 @@ export default async function LandingPage() {
             <h2 className="text-3xl font-bold tracking-tight">Why Choose ReviewScope?</h2>
             <p className="text-muted-foreground">Built for teams that want intelligent, cost-effective code reviews.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[minmax(160px,auto)]">
             {[
               { 
                 title: "30%+ Cost Savings", 
-                desc: "Smart routing uses cheaper flash models for trivial changes, reserves expensive models for complex logic. You control your AI spend." 
+                desc: "Smart routing uses cheaper flash models for trivial changes, reserves expensive models for complex logic. You control your AI spend.",
+                className: "md:col-span-2 md:row-span-2 bg-gradient-to-br from-card to-primary/5"
               },
               { 
                 title: "Open Source Core", 
-                desc: "Built in the open. Verify our security, contribute to our rules engine, or self-host the worker. We believe in transparency." 
+                desc: "Built in the open. Verify our security, contribute to our rules engine, or self-host the worker. We believe in transparency.",
+                className: "md:col-span-1 md:row-span-1"
               },
               { 
                 title: "Context Aware", 
-                desc: "RAG retrieval + web context means fewer hallucinations. The AI understands your repo, not just the diff." 
+                desc: "RAG retrieval + web context means fewer hallucinations. The AI understands your repo, not just the diff.",
+                className: "md:col-span-1 md:row-span-1"
               },
               { 
                 title: "Hybrid Reviews", 
-                desc: "Static rules catch obvious bugs instantly. AI validates and adds nuance. Best of both worlds." 
+                desc: "Static rules catch obvious bugs instantly. AI validates and adds nuance. Best of both worlds.",
+                className: "md:col-span-1 md:row-span-1"
               },
               { 
                 title: "No Vendor Lock-In", 
-                desc: "Your API keys = your data. No secrets sent to us. Cancel anytime, your reviews stay yours." 
+                desc: "Your API keys = your data. No secrets sent to us. Cancel anytime, your reviews stay yours.",
+                className: "md:col-span-2 md:row-span-1"
               },
               { 
                 title: "Fast for Simple PRs", 
-                desc: "Trivial changes reviewed in <30 seconds. Complex reviews get deep analysis—as fast as your model allows." 
+                desc: "Trivial changes reviewed in <30 seconds. Complex reviews get deep analysis—as fast as your model allows.",
+                className: "md:col-span-1 md:row-span-1"
               },
               { 
                 title: "Transparent Pricing", 
-                desc: "Free tier for individuals. Pro/Team tiers via secure payments. No surprise charges." 
+                desc: "Free tier for individuals. Pro/Team tiers via secure payments. No surprise charges.",
+                className: "md:col-span-2 md:row-span-1"
               }
-            ].map((item) => (
-              <div key={item.title} className="bg-card border rounded-2xl p-8 hover:border-primary/50 transition-colors">
-                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-primary" />
+            ].map((item, i) => (
+              <div 
+                key={item.title} 
+                className={`group relative border rounded-3xl p-6 md:p-8 hover:border-primary/50 transition-all duration-300 hover:shadow-lg flex flex-col justify-start ${item.className || "bg-card"}`}
+              >
+                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                   <CheckCircle2 className="w-12 h-12" />
+                </div>
+                <h3 className="font-bold text-xl mb-3 flex items-center gap-3 relative z-10">
+                  <div className="p-1.5 bg-primary/10 rounded-full text-primary">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
                   {item.title}
                 </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed relative z-10">{item.desc}</p>
               </div>
             ))}
           </div>
