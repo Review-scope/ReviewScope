@@ -11,7 +11,7 @@ export function Footer() {
             <div className="w-6 h-6 flex items-center justify-center grayscale opacity-70">
               <img src="/logo1.png" alt="ReviewScope" className="w-full h-full object-contain" />
             </div>
-            <span className="text-sm font-black uppercase tracking-tighter italic">ReviewScope <span className="text-zinc-400 font-medium">// AI Code Integrity</span></span>
+            <span className="text-sm font-black uppercase tracking-tighter italic">ReviewScope</span>
           </div>
           
           <div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-4 text-xs font-bold uppercase tracking-widest text-zinc-500">

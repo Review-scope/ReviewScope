@@ -44,7 +44,7 @@ export function Navbar() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/80 supports-backdrop-filter:bg-background/60 backdrop-blur-md">
       <div className="flex h-16 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
         <Link href="/" className="flex items-center gap-2 font-bold text-xl md:text-2xl hover:opacity-80 transition-opacity shrink-0">
           <div className="w-8 h-8 flex items-center justify-center">

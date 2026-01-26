@@ -15,8 +15,8 @@ export default async function SettingsPage() {
   if (!session?.user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
-        <div className="bg-zinc-100 p-6 rounded-3xl mb-8">
-          <Github className="w-16 h-16 text-zinc-400" />
+        <div className="bg-muted/50 p-6 rounded-[2rem] mb-8 backdrop-blur-sm border border-border/50">
+          <Github className="w-16 h-16 text-muted-foreground" />
         </div>
         <h1 className="text-4xl font-black tracking-tight mb-4 uppercase italic">Access Denied</h1>
         <p className="text-xl text-muted-foreground max-w-md mb-10 font-medium">
@@ -24,7 +24,7 @@ export default async function SettingsPage() {
         </p>
         <Link 
           href="/signin"
-          className="inline-flex items-center gap-3 px-10 py-4 bg-primary text-primary-foreground rounded-2xl font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl shadow-primary/20"
+          className="inline-flex items-center gap-3 px-10 py-4 bg-primary text-primary-foreground rounded-full font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl shadow-primary/20 hover:scale-105"
         >
           <LogIn className="w-5 h-5" />
           Authorize
