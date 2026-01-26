@@ -162,51 +162,64 @@ export default async function LandingPage() {
       </section>
 
       {/* Global Features Section */}
-      <section className="w-full bg-accent/30 py-16 md:py-24 border-y">
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="text-center mb-12 md:mb-16 space-y-4">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Enterprise Features</h2>
-            <p className="text-sm md:text-base text-muted-foreground px-4">The core features that make ReviewScope elite.</p>
+      <section className="w-full bg-accent/30 py-24 px-8 border-y relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent opacity-50 blur-3xl pointer-events-none"></div>
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-20 space-y-6">
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+              Everything you need to ship faster.
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              ReviewScope replaces the "LGTM" rubber stamp with intelligent, context-aware code analysis.
+            </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 text-left">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               { 
                 icon: <Key className="w-6 h-6" />, 
-                title: "BYO AI Key", 
-                desc: "AI reviews run using your own API keys. You control the costs and choices." 
+                title: "Your Keys, Your Costs", 
+                desc: "We don't markup AI costs. Plug in your own OpenAI or Gemini API key and pay the provider directly. Zero middleman fees." 
               },
               { 
                 icon: <Sparkles className="w-6 h-6" />, 
-                title: "Complexity-Aware Routing", 
-                desc: "Smart model selection: trivial changes use flash models, complex reviews use advanced models. 30%+ cost savings." 
+                title: "Smart Context", 
+                desc: "The AI doesn't just read the diff. It reads related files, type definitions, and imports to understand the full picture." 
               },
               { 
                 icon: <Zap className="w-6 h-6" />, 
-                title: "AST-Based Static Rules", 
-                desc: "High-signal AST checks for JavaScript, TypeScript, Go, Java, and more that flag risky patterns and logic bugs before AI runs." 
+                title: "Hybrid Engine", 
+                desc: "Static analysis catches syntax and logic errors instantly. AI focuses on architecture, readability, and complex bugs." 
               },
               { 
                 icon: <Globe className="w-6 h-6" />, 
-                title: "Private & Public Repos", 
-                desc: "Secure reviews for both internal company code and open-source projects. ReviewScope itself is Open Source!" 
+                title: "Private & Secure", 
+                desc: "Your code never trains our models. We only process what's needed for the review and discard it immediately." 
               },
               { 
                 icon: <Lock className="w-6 h-6" />, 
-                title: "AI + Deterministic Fusion", 
-                desc: "Static rules feed into AI for validation—LLM judges each finding as valid, false-positive, or contextual." 
+                title: "Guardrails", 
+                desc: "Define custom rules and instructions. Tell the AI to watch out for specific patterns or enforce your team's style guide." 
               },
               { 
                 icon: <MessagesSquare className="w-6 h-6" />, 
-                title: "Flexible Billing", 
-                desc: "Seamless upgrades via secure payments. Plan expiration tracking with auto-downgrade to Free." 
+                title: "Interactive Chat", 
+                desc: "Don't agree with a comment? Reply to the AI directly in the PR. It will explain its reasoning or adjust its feedback." 
               }
             ].map((feat) => (
-              <div key={feat.title} className="group p-5 md:p-6 border rounded-2xl bg-card hover:border-primary/50 transition-colors shadow-sm">
-                <div className="mb-4 text-primary bg-primary/10 w-fit p-3 rounded-xl group-hover:bg-primary group-hover:text-primary-foreground transition-colors transition-all duration-300">
-                  {feat.icon}
+              <div 
+                key={feat.title} 
+                className="group relative p-8 rounded-3xl bg-card border hover:border-primary/40 transition-all duration-500 hover:shadow-[0_0_40px_-10px_rgba(var(--primary),0.1)]"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+                
+                <div className="relative z-10">
+                  <div className="mb-6 inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-500">
+                    {feat.icon}
+                  </div>
+                  <h3 className="font-bold text-xl mb-3 tracking-tight">{feat.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{feat.desc}</p>
                 </div>
-                <h3 className="font-bold text-base md:text-lg mb-2">{feat.title}</h3>
-                <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">{feat.desc}</p>
               </div>
             ))}
           </div>
@@ -262,70 +275,9 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Why ReviewScope Section */}
-      <section className="w-full bg-muted/30 py-24 px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16 space-y-4">
-            <h2 className="text-3xl font-bold tracking-tight">Why Choose ReviewScope?</h2>
-            <p className="text-muted-foreground">Built for teams that want intelligent, cost-effective code reviews.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[minmax(160px,auto)]">
-            {[
-              { 
-                title: "30%+ Cost Savings", 
-                desc: "Smart routing uses cheaper flash models for trivial changes, reserves expensive models for complex logic. You control your AI spend.",
-                className: "md:col-span-2 md:row-span-2 bg-gradient-to-br from-card to-primary/5"
-              },
-              { 
-                title: "Open Source Core", 
-                desc: "Built in the open. Verify our security, contribute to our rules engine, or self-host the worker. We believe in transparency.",
-                className: "md:col-span-1 md:row-span-1"
-              },
-              { 
-                title: "Context Aware", 
-                desc: "RAG retrieval + web context means fewer hallucinations. The AI understands your repo, not just the diff.",
-                className: "md:col-span-1 md:row-span-1"
-              },
-              { 
-                title: "Hybrid Reviews", 
-                desc: "Static rules catch obvious bugs instantly. AI validates and adds nuance. Best of both worlds.",
-                className: "md:col-span-1 md:row-span-1"
-              },
-              { 
-                title: "No Vendor Lock-In", 
-                desc: "Your API keys = your data. No secrets sent to us. Cancel anytime, your reviews stay yours.",
-                className: "md:col-span-2 md:row-span-1"
-              },
-              { 
-                title: "Fast for Simple PRs", 
-                desc: "Trivial changes reviewed in <30 seconds. Complex reviews get deep analysis—as fast as your model allows.",
-                className: "md:col-span-1 md:row-span-1"
-              },
-              { 
-                title: "Transparent Pricing", 
-                desc: "Free tier for individuals. Pro/Team tiers via secure payments. No surprise charges.",
-                className: "md:col-span-2 md:row-span-1"
-              }
-            ].map((item, i) => (
-              <div 
-                key={item.title} 
-                className={`group relative border rounded-3xl p-6 md:p-8 hover:border-primary/50 transition-all duration-300 hover:shadow-lg flex flex-col justify-start ${item.className || "bg-card"}`}
-              >
-                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                   <CheckCircle2 className="w-12 h-12" />
-                </div>
-                <h3 className="font-bold text-xl mb-3 flex items-center gap-3 relative z-10">
-                  <div className="p-1.5 bg-primary/10 rounded-full text-primary">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  {item.title}
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed relative z-10">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+
+
+
 
       {/* Pricing Section */}
       <section className="w-full bg-accent/30 py-24 px-8 border-y">
