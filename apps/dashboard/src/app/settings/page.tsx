@@ -133,15 +133,7 @@ export default async function SettingsPage() {
                   <div className="flex items-center gap-2">
                     <Activity className="w-4 h-4 opacity-50 text-primary" />
                     <span className="font-bold text-foreground">{countsMap[inst.id] || 0}</span>
-                    <span className="opacity-60">/</span>
-                    <span className="font-bold opacity-70">{getPlanLimits(inst.planId, inst.expiresAt).maxRepos >= 999999 ? '∞' : getPlanLimits(inst.planId, inst.expiresAt).maxRepos}</span>
                     <span className="opacity-60">Repositories</span>
-                    {(countsMap[inst.id] || 0) >= getPlanLimits(inst.planId, inst.expiresAt).maxRepos && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 border border-orange-200 rounded-lg ml-2">
-                        <AlertCircle className="w-3.5 h-3.5 text-orange-600" />
-                        <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Limit Reached</span>
-                      </div>
-                    )}
                   </div>
                   <div className="flex items-center gap-2 text-green-600">
                     <Shield className="w-4 h-4" />

@@ -32,8 +32,6 @@ export async function assertRepoQuotaByInstallationId(installationId: string) {
     throw new QuotaError('Installation not found', 404, 'INSTALLATION_NOT_FOUND');
   }
 
-  const limits = getPlanLimits(inst.planName ?? null);
-
   // Count active repos
   // Check removed per user request
 }

@@ -4,7 +4,6 @@ import { createConfiguredProvider } from '../lib/ai-review.js';
 import { CHAT_SYSTEM_PROMPT } from '@reviewscope/llm-core';
 import { db, repositories, installations } from '../../../api/src/db/index.js';
 import { eq, and } from 'drizzle-orm';
-import { getPlanLimits } from '../lib/plans.js';
 
 export interface ChatJobData {
   installationId: number;
@@ -27,8 +26,6 @@ export async function processChatJob(data: ChatJobData): Promise<void> {
     // 1. Get Context
     const [dbInst] = await db.select().from(installations).where(eq(installations.githubInstallationId, data.installationId));
     const [dbRepo] = await db.select().from(repositories).where(and(eq(repositories.githubRepoId, data.repositoryId), eq(repositories.installationId, dbInst.id)));
-
-    const limits = getPlanLimits(dbInst.planId);
 
     // Enforce Chat limits for Free plan: REMOVED
 

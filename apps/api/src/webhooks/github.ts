@@ -8,8 +8,8 @@ import {
   getIndexingQueue,
   getChatQueue 
 } from '../lib/queue.js';
-import { db, installations, repositories, configs, reviews } from '../db/index.js';
-import { eq, and, gte } from 'drizzle-orm';
+import { db, installations, repositories, configs } from '../db/index.js';
+import { eq, and } from 'drizzle-orm';
 import { GitHubClient } from '../../../worker/src/lib/github.js';
 import { getPlanLimits } from '../../../worker/src/lib/plans.js';
 import { checkRateLimits, RateLimitError } from '../../../worker/src/lib/rate-limit.js';
@@ -456,9 +456,7 @@ githubWebhook.post('/', async (c) => {
       
       // [MODIFIED] Removed auto-quota check and auto-indexing.
       // Repos are added as isActive: false. User must activate them in Dashboard.
-      
-      const limits = getPlanLimits(dbInst.planId);
-      
+            
       for (const repo of repositories_added) {
         await db
           .insert(repositories)

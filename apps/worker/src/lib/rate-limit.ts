@@ -1,6 +1,6 @@
 
 import { db, apiUsageLogs } from '../../../api/src/db/index.js';
-import { eq, and, gt, desc, sql } from 'drizzle-orm';
+import { eq, and, gt, desc } from 'drizzle-orm';
 import { PlanLimits } from './plans.js';
 
 export class RateLimitError extends Error {
