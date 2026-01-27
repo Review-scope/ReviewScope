@@ -48,62 +48,40 @@ export async function checkRateLimits(
     }
   }
 
-  // 2. Check Max Reviews per PR
-  const [prCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(apiUsageLogs)
-    .where(and(
-      eq(apiUsageLogs.repositoryId, repositoryId),
-      eq(apiUsageLogs.apiService, service),
-      eq(apiUsageLogs.query, prQuery)
-    ));
-
-  if (Number(prCount.count) >= limits.reviewsPerPR) {
-    throw new RateLimitError(
-      `Max reviews reached for PR #${prNumber} (${limits.reviewsPerPR} limit). Upgrade your plan for more.`
-    );
-  }
-
-  // 3. Check Installation Daily Limit
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  
-  // To calculate reset time accurately, we need the Nth oldest record in the window
-  const dailyLogs = await db
-    .select({ createdAt: apiUsageLogs.createdAt })
-    .from(apiUsageLogs)
-    .where(and(
-      eq(apiUsageLogs.installationId, installationId),
-      eq(apiUsageLogs.apiService, service),
-      gt(apiUsageLogs.createdAt, oneDayAgo)
-    ))
-    .orderBy(desc(apiUsageLogs.createdAt));
-
-  if (dailyLogs.length >= limits.dailyReviewsLimit) {
-    // The slot opens when the oldest record in the window expires
-    // dailyLogs is sorted DESC (newest first). 
-    // The record that is "holding" the last slot is the one at index (limit - 1)
-    // Actually, if we have N records, the one that needs to expire to make room for 1 new one 
-    // is the one at index (limit - 1) if we currently have exactly limit records?
-    // No, if we have 'limit' records, we are full. 
-    // We can add a new one when the *oldest* of those 'limit' records is > 24h old.
-    // The oldest of the relevant records is the last one in the list (since we fetched > oneDayAgo).
-    // But technically, the one that defines the "window edge" for the Nth slot is the (Nth) record.
+  // 2. Check Installation Monthly Limit (rolling 30-day window)
+  if (limits.monthlyReviewsLimit < Infinity) {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     
-    // Example: Limit 3. Logs: [10:00, 09:00, 08:00]. Now is 12:00.
-    // Window starts at 12:00 yesterday.
-    // We can add a review when 08:00 becomes > 24h old.
-    // So resetAt = 08:00 + 24h.
-    
-    const oldestRelevantLog = dailyLogs[limits.dailyReviewsLimit - 1]; // Get the Nth log
-    const resetAt = new Date(oldestRelevantLog.createdAt.getTime() + 24 * 60 * 60 * 1000);
-    
-    // Add a small buffer (e.g. 1 minute) to ensure we are safely past the window
-    resetAt.setMinutes(resetAt.getMinutes() + 1);
+    // Count unique PRs reviewed in the last 30 days
+    // We group by repositoryId and query (pr:{number}) to count each PR only once
+    const usage = await db
+      .select({ 
+        repositoryId: apiUsageLogs.repositoryId,
+        query: apiUsageLogs.query 
+      })
+      .from(apiUsageLogs)
+      .where(and(
+        eq(apiUsageLogs.installationId, installationId),
+        eq(apiUsageLogs.apiService, service),
+        gt(apiUsageLogs.createdAt, thirtyDaysAgo)
+      ))
+      .groupBy(apiUsageLogs.repositoryId, apiUsageLogs.query);
 
-    throw new RateLimitError(
-      `Daily review limit reached for this installation (${limits.dailyReviewsLimit}/day). Limit resets at ${resetAt.toISOString()}.`,
-      resetAt
-    );
+    if (usage.length >= limits.monthlyReviewsLimit) {
+      // Check if the current PR is already in the usage list (re-review of an active PR)
+      const isCurrentPrAlreadyCounted = usage.some(
+        u => u.repositoryId === repositoryId && u.query === prQuery
+      );
+
+      if (!isCurrentPrAlreadyCounted) {
+        const resetAt = new Date(Date.now() + 24 * 60 * 60 * 1000); 
+        
+        throw new RateLimitError(
+          `Monthly review limit reached (${limits.monthlyReviewsLimit} PRs). Upgrade to Pro for unlimited reviews.`,
+          resetAt
+        );
+      }
+    }
   }
 }
 

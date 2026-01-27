@@ -39,7 +39,7 @@ export default async function PricingPage() {
       id: userId,
       name: userName,
       type: 'User',
-      planId: userPlan?.planId || 3, // Default Free
+      planId: userPlan?.planId || 0, // Default Free
       planName: userPlan?.planName || 'Free',
     });
 
@@ -50,7 +50,7 @@ export default async function PricingPage() {
         id: org.id,
         name: org.login,
         type: 'Organization',
-        planId: orgPlan?.planId || 3,
+        planId: orgPlan?.planId || 0,
         planName: orgPlan?.planName || 'Free',
       });
     }

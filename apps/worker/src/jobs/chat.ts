@@ -30,39 +30,7 @@ export async function processChatJob(data: ChatJobData): Promise<void> {
 
     const limits = getPlanLimits(dbInst.planId);
 
-    // Enforce Chat limits for Free plan
-    if (limits.chatPerPRLimit !== 'unlimited') {
-      const octokit = await gh.getInstallationClient(data.installationId);
-      
-      // List all issue comments for this PR
-      const comments = await octokit.rest.issues.listComments({
-        owner,
-        repo,
-        issue_number: data.prNumber,
-      });
-
-      // Count how many times ReviewScope has replied to a @mention in this PR
-      // This is a simple heuristic: count comments by the bot that look like replies
-      const botLogin = 'review-scope[bot]'; // Use your app's actual bot name
-      const reviewScopeReplies = comments.data.filter(c => 
-        c.user?.login === botLogin && 
-        c.body?.startsWith('> ') // Replies in processChatJob start with quote
-      ).length;
-
-      if (reviewScopeReplies >= limits.chatPerPRLimit) {
-        console.warn(`[Chat] Limit exceeded for PR #${data.prNumber}: ${reviewScopeReplies}/${limits.chatPerPRLimit}`);
-        await octokit.rest.issues.createComment({
-          owner,
-          repo,
-          issue_number: data.prNumber,
-          body: `> ${data.userQuestion.split('\n')[0]}...\n\n### 🛑 Chat Limit Reached
-You have reached the limit of **${limits.chatPerPRLimit} follow-up questions** per PR for the **${limits.tier}** plan.
-
-To continue the discussion or ask more questions, please [upgrade to the Pro or Team plan](${process.env.DASHBOARD_URL || '#'}/pricing).`,
-        });
-        return;
-      }
-    }
+    // Enforce Chat limits for Free plan: REMOVED
 
     const diff = await gh.getPullRequestDiff(data.installationId, owner, repo, data.prNumber);
 

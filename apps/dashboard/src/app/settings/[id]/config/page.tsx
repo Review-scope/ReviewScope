@@ -1,5 +1,5 @@
-import { db, configs, installations, repositories } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { db, configs, installations, repositories, apiUsageLogs } from "@/lib/db";
+import { eq, and, gt, sql } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft, Settings2, ShieldCheck, Zap, Sparkles } from "lucide-react";
 import { getServerSession } from "next-auth";
@@ -50,6 +50,18 @@ export default async function ConfigPage({ params }: { params: Promise<{ id: str
 
   const plan = installation.planName || 'None';
   const limits = getPlanLimits(installation.planId, installation.expiresAt);
+
+  // Get monthly usage
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [usage] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(apiUsageLogs)
+    .where(and(
+      eq(apiUsageLogs.installationId, id),
+      eq(apiUsageLogs.apiService, 'review-run'),
+      gt(apiUsageLogs.createdAt, thirtyDaysAgo)
+    ));
+  const usageCount = usage?.count || 0;
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-12">
@@ -106,14 +118,11 @@ export default async function ConfigPage({ params }: { params: Promise<{ id: str
                 ) : (
                   <div className="flex flex-col gap-1">
                     <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                      PR file limit: <span className="font-bold">{limits.maxFiles >= 999999 ? 'Unlimited' : limits.maxFiles}</span> • 
-                      RAG snippets: <span className="font-bold">{limits.ragK}</span> • 
-                      Chat: <span className="font-bold">{limits.chatPerPRLimit === 'unlimited' ? 'Unlimited' : limits.chatPerPRLimit}</span>
-                    </p>
-                    <p className="text-xs text-blue-700 leading-relaxed">
-                      Daily Reviews: <span className="font-bold">{limits.dailyReviewsLimit}</span> • 
-                      Reviews/PR: <span className="font-bold">{limits.reviewsPerPR}</span> • 
+                      RAG snippets: <span className="font-bold">{limits.ragK}</span> •
                       Cooldown: <span className="font-bold">{limits.cooldownMinutes}m</span>
+                      {limits.monthlyReviewsLimit < Infinity && (
+                        <> • Reviews: <span className={usageCount >= limits.monthlyReviewsLimit ? "font-bold text-red-600" : "font-bold"}>{usageCount}/{limits.monthlyReviewsLimit}</span></>
+                      )}
                     </p>
                   </div>
                 )}

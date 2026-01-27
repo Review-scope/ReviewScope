@@ -1,4 +1,4 @@
-import { Github, CheckCircle2, ArrowRight, Key, Zap, Globe, Lock, MessagesSquare, Sparkles } from "lucide-react";
+import { Github, CheckCircle2, ArrowRight, Key, Zap, Globe, Lock, MessagesSquare, Sparkles, X } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/authOptions";
 import Link from "next/link";
@@ -283,25 +283,38 @@ export default async function LandingPage() {
       <section className="w-full bg-accent/30 py-24 px-8 border-y">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 space-y-4">
-            <h2 className="text-3xl font-bold tracking-tight">Simple, Transparent Pricing</h2>
+            <h2 className="text-3xl font-bold tracking-tight">ReviewScope Pricing Plans</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Pay only for what you use. All tiers include static analysis and RAG context. Your API keys = you control the costs.
+              Simple, transparent pricing. Run on your own API keys.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
                 name: "Free",
-                price: "$0",
+                price: "Free",
                 period: "forever",
-                description: "Perfect for individual developers and open-source",
+                description: "For individual developers & open-source projects. Try ReviewScope with zero risk.",
                 features: [
-                  "Up to 3 repositories",
-                  "Reviews up to 30 files per PR",
-                  "RAG enabled (2 snippets)",
-                  "Static analysis always free",
-                  "AI reviews via BYO key",
-                  "3 PR follow-up questions"
+                  "PR review on GitHub",
+                  "AST-based analysis",
+                  "Issue-to-PR validation",
+                  "Suggested fixes",
+                  "Bring your own API key",
+                  "Basic noise control",
+                  "Works with public & private repos"
+                ],
+                notIncluded: [
+                  "Cross-repo context",
+                  "Vector memory",
+                  "Review history",
+                  "Team features",
+                  "Priority support"
+                ],
+                limits: [
+                  "30 PR reviews / month",
+                  "No persistent storage",
+                  "No background indexing"
                 ],
                 cta: "Get Started",
                 highlighted: false
@@ -310,38 +323,47 @@ export default async function LandingPage() {
                 name: "Pro",
                 price: "$15",
                 period: "/month",
-                description: "For power users & serious developers",
+                description: "For serious developers & small teams. Everything you need for high-quality PR reviews.",
                 features: [
-                  "Up to 5 repositories",
-                  "Reviews up to 100 files per PR",
-                  "RAG enabled (5 snippets)",
-                  "Custom review prompts",
-                  "Unlimited PR follow-up questions",
-                  "Personal & Org accounts"
+                  "Everything in Free, plus:",
+                  "Unlimited PR reviews",
+                  "Unlimited repositories",
+                  "Smart model selection",
+                  "Custom prompts",
+                  "Advanced AST analysis",
+                  "Better context awareness",
+                  "Faster processing",
+                  "Optional vector memory",
+                  "Priority feature updates"
                 ],
+                notIncluded: [],
                 cta: "Upgrade to Pro",
                 highlighted: true
               },
               {
-                name: "Team",
-                price: "$50",
-                period: "/month",
-                description: "For organizations & growing companies",
+                name: "Enterprise",
+                price: "Contact Sales",
+                period: "",
+                description: "For teams that need control, security & scale. Built for organizations with compliance and scale needs.",
                 features: [
-                  "Unlimited repositories",
-                  "Unlimited files (Smart Batching)",
-                  "RAG enabled (8 snippets)",
-                  "Org-wide shared guidelines",
-                  "Audit logs & Admin controls",
-                  "Priority 24/7 support"
+                  "Everything in Pro, plus:",
+                  "Team & org-level configuration",
+                  "Shared review rules",
+                  "Self-hosted or private deployment",
+                  "Dedicated support channel",
+                  "Custom usage limits",
+                  "Security & compliance assistance",
+                  "Audit-friendly setup",
+                  "Optional SLA"
                 ],
+                notIncluded: [],
                 cta: "Contact Sales",
                 highlighted: false
               }
             ].map((plan) => (
               <div 
                 key={plan.name} 
-                className={`relative flex flex-col p-8 rounded-3xl border transition-all ${
+                className={`relative flex flex-col p-8 rounded-3xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
                   plan.highlighted 
                     ? "bg-primary text-primary-foreground scale-105 border-primary shadow-lg z-10" 
                     : "bg-card border-border shadow-sm"
@@ -353,27 +375,50 @@ export default async function LandingPage() {
                   </div>
                 )}
                 <div className="mb-8">
-                  <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                  <h3 className="text-2xl font-bold mb-2">
+                    {plan.name}
+                  </h3>
                   <p className={`text-sm ${plan.highlighted ? "opacity-90" : "text-muted-foreground"}`}>
                     {plan.description}
                   </p>
                 </div>
                 <div className="mb-8 flex items-baseline gap-1">
-                  <span className="text-5xl font-extrabold tracking-tight">{plan.price}</span>
-                  <span className={`text-xl ${plan.highlighted ? "opacity-70" : "text-muted-foreground"}`}>
+                  <span className="text-4xl font-extrabold tracking-tight">{plan.price}</span>
+                  <span className={`text-lg ${plan.highlighted ? "opacity-70" : "text-muted-foreground"}`}>
                     {plan.period}
                   </span>
                 </div>
-                <ul className="space-y-4 mb-10 flex-1">
+                
+                {plan.limits && (
+                   <div className="mb-6 p-4 rounded-xl bg-muted/20 border border-border/10">
+                      <h4 className="font-bold text-xs uppercase tracking-wider mb-2 opacity-80">Limits</h4>
+                      <ul className="space-y-1">
+                        {plan.limits.map(limit => (
+                          <li key={limit} className="text-xs opacity-80 flex items-center gap-1.5">
+                             <div className="w-1 h-1 rounded-full bg-current"></div>
+                             {limit}
+                          </li>
+                        ))}
+                      </ul>
+                   </div>
+                )}
+
+                <ul className="space-y-3 mb-10 flex-1">
                   {plan.features.map((feat) => (
                     <li key={feat} className="flex items-start gap-3">
                       <CheckCircle2 className={`w-5 h-5 shrink-0 ${plan.highlighted ? "text-primary-foreground" : "text-primary"}`} />
                       <span className="text-sm font-medium leading-normal">{feat}</span>
                     </li>
                   ))}
+                  {plan.notIncluded && plan.notIncluded.map((feat) => (
+                    <li key={feat} className="flex items-start gap-3 opacity-50">
+                      <X className="w-5 h-5 shrink-0" />
+                      <span className="text-sm font-medium leading-normal">{feat}</span>
+                    </li>
+                  ))}
                 </ul>
                 <Link
-                  href="/pricing"
+                  href={plan.name === 'Enterprise' ? 'mailto:parasverma7454@gmail.com' : '/pricing'}
                   className={`w-full py-4 rounded-xl font-bold text-base text-center transition-all ${
                     plan.highlighted 
                       ? "bg-white text-primary hover:bg-gray-100" 

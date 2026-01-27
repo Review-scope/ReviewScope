@@ -178,8 +178,6 @@ export default async function AdminPage({
       planName: inst.planName,
       planLimits: {
         tier: limits.tier,
-        maxRepos: limits.maxRepos,
-        maxMonthlyActivations: limits.maxMonthlyActivations,
       },
       swapCount: inst.swapCount,
       lastSwapReset: inst.lastSwapReset,

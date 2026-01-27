@@ -55,8 +55,6 @@ type Installation = {
   planName: string | null;
   planLimits: {
     tier: 'FREE' | 'PRO' | 'TEAM';
-    maxRepos: number;
-    maxMonthlyActivations: number;
   };
   swapCount: number;
   lastSwapReset: Date | null;
@@ -241,9 +239,6 @@ export function AdminView({
                       <option value="Team">Team</option>
                     </select>
                   </div>
-                  <span className="text-[11px] text-muted-foreground">
-                    {inst.planLimits.maxRepos >= 999999 ? 'Unlimited repos' : `${inst.planLimits.maxRepos} repos`} • {inst.planLimits.maxMonthlyActivations >= 999999 ? 'Unlimited activations' : `${inst.planLimits.maxMonthlyActivations} activations/mo`}
-                  </span>
                   <span className="text-[11px] text-muted-foreground">
                     Swaps used this period: {inst.swapCount}
                   </span>

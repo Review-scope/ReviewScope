@@ -12,6 +12,7 @@ import { db, installations, repositories, configs, reviews } from '../db/index.j
 import { eq, and, gte } from 'drizzle-orm';
 import { GitHubClient } from '../../../worker/src/lib/github.js';
 import { getPlanLimits } from '../../../worker/src/lib/plans.js';
+import { checkRateLimits, RateLimitError } from '../../../worker/src/lib/rate-limit.js';
 import { QdrantClient } from '@qdrant/js-client-rest';
 
 
@@ -25,32 +26,6 @@ function getQdrantClient() {
   const apiKey = process.env.QDRANT_API_KEY;
   if (!url) return null; // Optional - don't fail if not configured
   return new QdrantClient({ url, apiKey });
-}
-
-/**
- * Check if installation has exceeded daily review limit for their plan tier
- */
-async function checkDailyLimit(installationId: string, planLimits: ReturnType<typeof getPlanLimits>): Promise<boolean> {
-  // Unlimited tier doesn't need limit checks
-  if (planLimits.chatPerPRLimit === 'unlimited') {
-    return false; // No limit exceeded
-  }
-
-  // Get today's date at 00:00 UTC
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-
-  // Count reviews created today
-  const todayReviews = await db.select().from(reviews)
-    .innerJoin(repositories, eq(reviews.repositoryId, repositories.id))
-    .where(
-      and(
-        eq(repositories.installationId, installationId),
-        gte(reviews.createdAt, today)
-      )
-    );
-
-  return todayReviews.length >= (planLimits.chatPerPRLimit as number);
 }
 
 export const githubWebhook = new Hono();
@@ -189,25 +164,15 @@ githubWebhook.post('/', async (c) => {
       console.warn(`[Webhook] No user API key configured for ${repo.full_name}. Proceeding with system fallback if available.`);
     }
 
-    // Check daily limit
-    const limitExceeded = await checkDailyLimit(dbInst.id, limits);
-    if (limitExceeded) {
-      console.warn(`[Webhook] Daily limit exceeded for installation ${dbInst.id} (${limits.tier} tier)`);
-      try {
-        const octokit = await gh.getInstallationClient(installation.id);
-        await octokit.rest.issues.createComment({
-          owner: repo.owner.login,
-          repo: repo.name,
-          issue_number: pr.number,
-          body: `### 📊 ReviewScope Daily Limit Reached
-Your **${limits.tier}** plan allows **${limits.chatPerPRLimit}** reviews per day. You've reached today's limit.
-
-Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${process.env.DASHBOARD_URL || '#'}/pricing) for higher limits.`,
-        });
-      } catch (err: unknown) {
-        console.error(`[Webhook] Failed to post limit-exceeded comment: ${(err as Error).message}`);
+    // Check monthly limit
+    try {
+      await checkRateLimits(dbInst.id, dbRepo.id, pr.number, limits);
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        console.warn(`[Webhook] Rate limit exceeded for PR #${pr.number}: ${error.message}`);
+        return c.json({ status: 'ignored_rate_limit', message: error.message });
       }
-      return c.json({ status: 'daily_limit_exceeded' });
+      throw error;
     }
 
     try {
@@ -267,8 +232,13 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
       return c.json({ status: 'ignored_inactive_repo' });
     }
 
+    const limits = getPlanLimits(dbInst.planId);
+
     try {
       if (body.includes('re-review')) {
+        // Check monthly limit before re-review
+        await checkRateLimits(dbInst.id, dbRepo.id, issue.number, limits);
+
         const [owner, name] = repo.full_name.split('/');
         const pr = await gh.getPullRequest(installation.id, owner, name, issue.number);
         
@@ -299,6 +269,10 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
         console.warn(`[Webhook] Chat job enqueued for PR #${issue.number}`);
       }
     } catch (err: unknown) {
+      if (err instanceof RateLimitError) {
+         console.warn(`[Webhook] Rate limit exceeded for command in PR #${issue.number}: ${err.message}`);
+         return c.json({ status: 'ignored_rate_limit', message: err.message });
+      }
       /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       console.error(`[Webhook] Failed to enqueue command job: ${(err as any).message}`);
       return c.json({ error: 'Failed to enqueue command job' }, 500);
@@ -509,7 +483,6 @@ Reviews will resume tomorrow at 00:00 UTC, or you can [upgrade your plan](${proc
         status: 'repositories_added', 
         count: repositories_added.length, 
         indexed: false, // No longer auto-indexing
-        maxRepos: limits.maxRepos,
       });
     }
 

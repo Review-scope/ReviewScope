@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Check, X, Star, HelpCircle, User, Building2, ChevronDown, CheckCircle2 } from "lucide-react";
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { Mail, Check, X, User, Building2, ChevronDown, CheckCircle2 } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 type Account = {
   id: number;
@@ -32,15 +31,13 @@ function getPaymentLink(baseUrl: string | undefined, accountId: number) {
 export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
-  // Default to the first account (usually User) if no param or invalid param
-  const paramId = searchParams.get('accountId') ? parseInt(searchParams.get('accountId')!) : null;
+
+  const paramId = searchParams.get("accountId") ? parseInt(searchParams.get("accountId")!) : null;
   const initialAccount = accounts.find(a => a.id === paramId) || accounts[0];
 
   const [selectedAccountId, setSelectedAccountId] = useState<number>(initialAccount?.id || 0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Update selection if URL param changes (e.g. navigation)
   useEffect(() => {
     if (paramId) {
       const account = accounts.find(a => a.id === paramId);
@@ -52,104 +49,105 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
 
   const selectedAccount = accounts.find(a => a.id === selectedAccountId);
 
-  // Sync URL when selection changes
   const handleAccountChange = (accountId: number) => {
     setSelectedAccountId(accountId);
     setIsDropdownOpen(false);
     router.replace(`/pricing?accountId=${accountId}`, { scroll: false });
   };
 
-  const tiers = [
+  const plans = [
     {
       name: "Free",
-      id: "free",
-      planId: 3,
-      description: "Best for individual developers trying ReviewScope",
-      price: "$0",
+      price: "Free",
+      period: "forever",
+      description: "For individual developers & open-source projects. Try ReviewScope with zero risk.",
       features: [
-        "Up to 3 repositories",
-        "Reviews up to 30 files per PR",
-        "RAG enabled (limited context)",
-        "AI reviews via your own key",
-        "Personal GitHub accounts only",
-        "3 PR follow-up questions",
+        "Unlimited repositories",
+        "PR review on GitHub",
+        "AST-based analysis",
+        "Issue-to-PR validation",
+        "Suggested fixes",
+        "Bring your own API key",
+        "Basic noise control",
+        "Works with public & private repos",
       ],
       notIncluded: [
-        "Unlimited repos",
-        "Large PR smart batching",
-        "Custom review prompts",
-        "Org-wide shared rules",
+        // "Cross-repo context",
+        // "Vector memory",
+        // "Review history",
+        // "Team features",
+        // "Priority support",
       ],
+      limits: [
+        "60 PR reviews / month",
+        "No persistent storage",
+        "No background indexing",
+      ],
+      highlighted: false,
       cta: "Get Started",
-      featured: false,
     },
     {
       name: "Pro",
-      id: "pro",
-      planId: 7,
-      description: "Best for power users & serious developers",
       price: "$15",
-      period: "/mo",
+      period: "/month",
+      description: "For serious developers & small teams. Everything you need for high-quality PR reviews.",
       features: [
-        "Up to 5 repositories",
-        "Reviews up to 100 files per PR",
-        "Full RAG (all files context)",
-        "Optional custom prompts",
-        "Unlimited PR follow-up questions",
-        "Personal or Org accounts",
-        "Priority processing",
-      ],
-      notIncluded: [
-        "Unlimited repos",
-        "Large PR smart batching",
-        "Audit logs & Admin controls",
-      ],
-      cta: "Upgrade to Pro",
-      featured: true,
-    },
-    {
-      name: "Team",
-      id: "team",
-      planId: 8,
-      description: "Best for organizations & growing companies",
-      price: "$50",
-      period: "/mo",
-      features: [
-        "Unlimited repositories",
-        "Unlimited files (Smart Batching)",
-        "Full RAG + Historical Memory",
-        "Org-wide shared guidelines",
-        "Custom review prompts",
-        "Shared team dashboard",
-        "Audit logs & controls",
-        "Priority 24/7 support",
+        "Everything in Free, plus:",
+        "Unlimited PR reviews",
+        "Smart model selection",
+        "Custom prompts",
+        "Advanced AST analysis",
+        "Better context awareness",
+        "Faster processing",
+        "Optional vector memory",
+        "Priority feature updates",
       ],
       notIncluded: [],
-      cta: "Upgrade to Team",
-      featured: false,
+      limits: [],
+      highlighted: true,
+      cta: "Upgrade to Pro",
+    },
+    {
+      name: "Enterprise",
+      price: "Contact Sales",
+      period: "",
+      description: "For teams that need control, security & scale. Built for organizations with compliance and scale needs.",
+      features: [
+        "Everything in Pro, plus:",
+        "Team & org-level configuration",
+        "Shared review rules",
+        "Self-hosted or private deployment",
+        "Dedicated support channel",
+        "Custom usage limits",
+        "Security & compliance assistance",
+        "Audit-friendly setup",
+        "Optional SLA",
+      ],
+      notIncluded: [],
+      limits: [],
+      highlighted: false,
+      cta: "Contact Sales",
     },
   ];
 
-  const currentPlanId = selectedAccount?.planId;
-
   return (
-    <div className="py-12 px-4 md:px-8 max-w-7xl mx-auto space-y-12">
-      {/* Header & Account Selector */}
-      <div className="text-center max-w-3xl mx-auto space-y-6">
-        <div className="space-y-3">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-            Simple, Transparent <span className="text-primary">Pricing.</span>
-          </h1>
-          <p className="text-base text-muted-foreground leading-relaxed">
-            ReviewScope runs on your own API keys. You pay for the platform's orchestration and advanced RAG features.
-          </p>
-        </div>
+    <div className="py-20 px-4 md:px-8 max-w-7xl mx-auto space-y-16">
+      <div className="max-w-3xl mx-auto text-center space-y-6">
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
+          Simple, Transparent <span className="text-primary">Pricing.</span>
+        </h1>
+        <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
+          Run ReviewScope on your own API keys. You control the AI spend; we provide the orchestration, context, and review engine.
+        </p>
+      </div>
 
-        {/* Account Selector - Only show if logged in */}
-        {accounts.length > 0 && selectedAccount && (
+      {accounts.length > 0 && selectedAccount && (
+        <div className="flex justify-center">
           <div className="relative inline-block text-left z-20">
             <div className="flex items-center justify-center gap-3 mb-2">
-              <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Upgrading for:</span>
+              <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                Upgrading for:
+              </span>
             </div>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -162,17 +160,25 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
                   <User className="w-5 h-5 text-blue-600 shrink-0" />
                 )}
                 <div className="flex flex-col items-start truncate">
-                  <span className="font-bold text-sm truncate w-full text-left">{selectedAccount.name}</span>
-                  <span className="text-xs text-muted-foreground capitalize">{selectedAccount.type} • {selectedAccount.planName}</span>
+                  <span className="font-bold text-sm truncate w-full text-left">
+                    {selectedAccount.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {selectedAccount.type} • {selectedAccount.planName}
+                  </span>
                 </div>
               </div>
-              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`w-4 h-4 text-muted-foreground transition-transform ${
+                  isDropdownOpen ? 'rotate-180' : ''
+                }`}
+              />
             </button>
 
             {isDropdownOpen && (
               <>
-                <div 
-                  className="fixed inset-0 z-10" 
+                <div
+                  className="fixed inset-0 z-10"
                   onClick={() => setIsDropdownOpen(false)}
                 />
                 <div className="absolute right-0 mt-2 w-[280px] bg-card border border-border rounded-xl shadow-xl z-20 max-h-[300px] overflow-y-auto">
@@ -182,8 +188,8 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
                         key={account.id}
                         onClick={() => handleAccountChange(account.id)}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                          selectedAccountId === account.id 
-                            ? 'bg-primary/10 text-primary' 
+                          selectedAccountId === account.id
+                            ? 'bg-primary/10 text-primary'
                             : 'hover:bg-accent text-foreground'
                         }`}
                       >
@@ -193,8 +199,12 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
                           <User className="w-4 h-4 shrink-0" />
                         )}
                         <div className="flex flex-col items-start truncate flex-1">
-                          <span className="font-medium truncate w-full text-left">{account.name}</span>
-                          <span className="text-[10px] opacity-70 capitalize">{account.planName} Plan</span>
+                          <span className="font-medium truncate w-full text-left">
+                            {account.name}
+                          </span>
+                          <span className="text-[10px] opacity-70 capitalize">
+                            {account.planName} Plan
+                          </span>
                         </div>
                         {selectedAccountId === account.id && (
                           <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -206,145 +216,116 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
               </>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Tiers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-        {tiers.map((tier) => {
-          const isCurrentPlan = selectedAccount && (currentPlanId === tier.planId || (currentPlanId === 0 && tier.planId === 3)); 
-          const upgradeUrl = !selectedAccount ? '/signin' : (tier.id === 'free' 
-            ? getPaymentLink(dodoLinks.free, selectedAccountId)
-            : tier.id === 'pro'
-            ? getPaymentLink(dodoLinks.pro, selectedAccountId)
-            : getPaymentLink(dodoLinks.team, selectedAccountId));
-
-          return (
-            <div 
-              key={tier.id} 
-              className={`relative flex flex-col p-8 rounded-3xl border transition-all hover:shadow-xl ${
-                tier.featured 
-                  ? "bg-primary text-primary-foreground scale-105 border-primary shadow-lg z-10" 
-                  : "bg-card border-border shadow-sm"
-              }`}
-            >
-              {tier.featured && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-bold tracking-wide flex items-center gap-1 shadow-md">
-                  <Star className="w-4 h-4 fill-white" />
-                  MOST POPULAR
-                </div>
-              )}
-
-              {isCurrentPlan && (
-                <div className="absolute top-0 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-md">
-                  ACTIVE PLAN
-                </div>
-              )}
-              
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-2">{tier.name}</h3>
-                <p className={`text-sm ${tier.featured ? "opacity-90" : "text-muted-foreground"}`}>
-                  {tier.description}
-                </p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {plans.map((plan) => (
+          <div
+            key={plan.name}
+            className={`relative flex flex-col p-8 rounded-3xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
+              plan.highlighted
+                ? "bg-primary text-primary-foreground scale-[1.03] border-primary shadow-lg z-10"
+                : "bg-card border-border shadow-sm"
+            }`}
+          >
+            {plan.highlighted && (
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold tracking-wide">
+                Most Popular
               </div>
+            )}
 
-              <div className="mb-8 flex items-baseline gap-1">
-                <span className="text-5xl font-extrabold tracking-tight">{tier.price}</span>
-                {tier.period && (
-                  <span className={`text-xl ${tier.featured ? "opacity-70" : "text-muted-foreground"}`}>
-                    {tier.period}
-                  </span>
-                )}
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-2">{plan.name}</h2>
+              <p className={plan.highlighted ? "text-sm opacity-90" : "text-sm text-muted-foreground"}>
+                {plan.description}
+              </p>
+            </div>
+
+            <div className="mb-6 flex items-baseline gap-1">
+              <span className="text-4xl font-extrabold tracking-tight">{plan.price}</span>
+              {plan.period && (
+                <span className={plan.highlighted ? "text-lg opacity-80" : "text-lg text-muted-foreground"}>
+                  {plan.period}
+                </span>
+              )}
+            </div>
+
+            {plan.limits && plan.limits.length > 0 && (
+              <div className={`mb-6 p-4 rounded-xl border ${plan.highlighted ? "border-white/20 bg-white/10" : "border-border/50 bg-muted/30"}`}>
+                <h3 className="text-xs font-semibold uppercase tracking-wider mb-2 opacity-80">
+                  Limits
+                </h3>
+                <ul className="space-y-1">
+                  {plan.limits.map((limit) => (
+                    <li key={limit} className="text-xs flex items-center gap-2 opacity-80">
+                      <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                      {limit}
+                    </li>
+                  ))}
+                </ul>
               </div>
+            )}
 
-              <ul className="space-y-4 mb-10 flex-1">
-                {tier.features.map((feat) => (
-                  <li key={feat} className="flex items-start gap-3">
-                    <Check className={`w-5 h-5 shrink-0 ${tier.featured ? "text-primary-foreground" : "text-primary"}`} />
-                    <span className="text-sm font-medium leading-normal">{feat}</span>
-                  </li>
-                ))}
-                {tier.notIncluded.map((feat) => (
-                  <li key={feat} className="flex items-start gap-3 opacity-40">
+            <ul className="space-y-3 mb-8 flex-1">
+              {plan.features.map((feat) => (
+                <li key={feat} className="flex items-start gap-3">
+                  <Check
+                    className={`w-5 h-5 shrink-0 ${
+                      plan.highlighted ? "text-primary-foreground" : "text-primary"
+                    }`}
+                  />
+                  <span className="text-sm font-medium leading-normal">{feat}</span>
+                </li>
+              ))}
+              {plan.notIncluded &&
+                plan.notIncluded.map((feat) => (
+                  <li key={feat} className="flex items-start gap-3 opacity-50">
                     <X className="w-5 h-5 shrink-0" />
                     <span className="text-sm font-medium leading-normal">{feat}</span>
                   </li>
                 ))}
-              </ul>
+            </ul>
 
-              <a
-                href={isCurrentPlan ? '#' : upgradeUrl}
-                target={isCurrentPlan || !selectedAccount ? '_self' : (tier.planId === 3 ? '_self' : '_blank')}
-                rel={isCurrentPlan || !selectedAccount ? undefined : (tier.planId === 3 ? undefined : 'noopener noreferrer')}
-                className={`w-full py-4 rounded-xl font-bold text-base text-center transition-all ${
-                  isCurrentPlan
-                    ? 'bg-green-600 text-white cursor-default opacity-90 pointer-events-none'
-                    : tier.featured 
-                    ? "bg-white text-primary hover:bg-gray-100" 
-                    : "bg-primary text-primary-foreground hover:opacity-90 shadow-lg"
-                }`}
-              >
-                {isCurrentPlan ? 'Current Plan' : (!selectedAccount ? 'Sign in to Start' : (tier.planId === 3 ? 'Downgrade to Free' : tier.cta))}
-              </a>
-            </div>
-          );
-        })}
+            <a
+              href={
+                plan.name === "Pro" && selectedAccount
+                  ? getPaymentLink(dodoLinks.pro, selectedAccountId)
+                  : plan.name === "Enterprise"
+                  ? "mailto:parasverma7454@gmail.com"
+                  : "/dashboard"
+              }
+              className={`w-full py-3.5 rounded-xl font-bold text-sm text-center transition-all flex items-center justify-center gap-2 ${
+                plan.highlighted
+                  ? "bg-white text-primary hover:bg-gray-100"
+                  : "bg-primary text-primary-foreground hover:opacity-90 shadow-lg"
+              } ${
+                 selectedAccount && selectedAccount.planName === plan.name
+                 ? "opacity-50 cursor-not-allowed pointer-events-none"
+                 : ""
+              }`}
+            >
+              {selectedAccount && selectedAccount.planName === plan.name ? "Current Plan" : (plan.name === "Enterprise" ? "Contact Sales" : plan.cta)}
+            </a>
+          </div>
+        ))}
       </div>
 
-      <div className="flex justify-center items-center gap-2 mb-12 opacity-70">
-        <span className="text-sm font-semibold text-muted-foreground">Secured by</span>
-        <div className="flex items-center gap-1.5 px-3 py-1 bg-white border rounded-full shadow-sm">
-           <img src="/dodo.jpeg" alt="Dodo Payments" className="w-5 h-5 object-contain" />
-           <span className="text-xs font-bold text-zinc-800">Dodo Payments</span>
-        </div>
+      <div className="max-w-3xl mx-auto text-center space-y-3">
+        <p className="text-sm text-muted-foreground">
+          ReviewScope runs on your own OpenAI or Gemini API keys. You pay them directly; we never mark up your AI usage.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Questions about which plan is right for you?{" "}
+          <a
+            href="mailto:parasverma7454@gmail.com"
+            className="text-primary font-semibold hover:underline"
+          >
+            Email us
+          </a>
+          .
+        </p>
       </div>
-
-      {/* FAQ Section */}
-      <section className="bg-accent/30 rounded-3xl p-8 md:p-12 border border-dashed text-center space-y-8">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-background border rounded-full text-sm font-semibold shadow-sm">
-          <HelpCircle className="w-4 h-4 text-primary" />
-          Frequently Asked Questions
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-left max-w-4xl mx-auto">
-          <div className="space-y-3">
-            <h4 className="font-bold text-lg">Why do I need my own API Key?</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              We want you to have 100% ownership of your AI costs and data. By using your own Gemini or OpenAI keys, you only pay for what you use at cost, while using our advanced RAG and integration engine.
-            </p>
-          </div>
-          <div className="space-y-3">
-            <h4 className="font-bold text-lg">How do upgrades work?</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Upgrades are seamless via our secure payment provider. Select the account you want to upgrade above, and the changes will apply immediately after payment.
-            </p>
-          </div>
-          <div className="space-y-3">
-            <h4 className="font-bold text-lg">What happens when my plan expires?</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Your account is automatically downgraded to Free when your plan expires. You'll retain access to your first 3 repositories and all static analysis features. You can re-upgrade anytime.
-            </p>
-          </div>
-          <div className="space-y-3">
-            <h4 className="font-bold text-lg">Does Static Analysis cost anything?</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              No. Our rule-based linting and pattern checks are always free to run on your registered repositories, even if you haven't added an AI key yet.
-            </p>
-          </div>
-          <div className="space-y-3">
-            <h4 className="font-bold text-lg">What are fair-use rate limits?</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              To ensure platform stability, we apply soft limits on the number of PRs reviewed per day. These aren't billing units—they're protection against abuse.
-            </p>
-          </div>
-          <div className="space-y-3">
-            <h4 className="font-bold text-lg">Can I cancel anytime?</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Yes. You can manage your subscription directly from our dashboard. Cancellations take effect at the end of your billing cycle.
-            </p>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

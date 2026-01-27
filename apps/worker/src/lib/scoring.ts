@@ -91,14 +91,14 @@ export function scoreFile(file: DiffFile): number {
   return Math.max(0, score);
 }
 
-export function sortAndLimitFiles<T extends DiffFile>(files: T[], maxFiles = 15): T[] {
+export function sortAndLimitFiles<T extends DiffFile>(files: T[], maxFiles = 1000): T[] {
   // 1. Score files
   const scored = files.map(f => ({ file: f, score: scoreFile(f) }));
 
   // 2. Sort by score (DESC)
   scored.sort((a, b) => b.score - a.score);
 
-  // 3. Take top N
+  // 3. Take top N (Limit removed/increased to 1000)
   const selection = scored.slice(0, maxFiles).map(x => x.file);
   
   if (scored.length > maxFiles) {

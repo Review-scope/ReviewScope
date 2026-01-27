@@ -3,8 +3,8 @@ import { eq, and } from 'drizzle-orm';
 
 // Plan limits (duplicated from worker/src/lib/plans.ts to avoid cross-app imports in Next.js)
 const PLAN_LIMITS: { [key: string]: { maxRepos: number } } = {
-  Free: { maxRepos: 3 },
-  Pro: { maxRepos: 5 },
+  Free: { maxRepos: 999999 },
+  Pro: { maxRepos: 999999 },
   Team: { maxRepos: 999999 }
 };
 
@@ -35,18 +35,7 @@ export async function assertRepoQuotaByInstallationId(installationId: string) {
   const limits = getPlanLimits(inst.planName ?? null);
 
   // Count active repos
-  const activeRepos = await db
-    .select()
-    .from(repositories)
-    .where(and(eq(repositories.installationId, installationId), eq(repositories.status, 'active')));
-
-  if (activeRepos.length >= limits.maxRepos) {
-    throw new QuotaError(
-      `Repository limit reached for ${inst.planName || 'Free'} plan. Max ${limits.maxRepos} repos allowed.`,
-      402,
-      'REPO_LIMIT'
-    );
-  }
+  // Check removed per user request
 }
 
 /**

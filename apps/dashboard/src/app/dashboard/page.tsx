@@ -96,10 +96,6 @@ export default async function DashboardPage({
     );
 
   const totalActiveRepos = userRepos.filter(r => r.isActive).length;
-  const totalCapacity = userInstallations.reduce((sum, inst) => {
-    const limits = getPlanLimits(inst.planId, inst.expiresAt);
-    return sum + limits.maxRepos;
-  }, 0);
   const filteredUserRepos = normalizedQuery
     ? userRepos.filter(r => r.fullName.toLowerCase().includes(normalizedQuery))
     : userRepos;
@@ -108,7 +104,7 @@ export default async function DashboardPage({
   const stats = [
     { 
       label: "Active Repos", 
-      value: `${totalActiveRepos}/${totalCapacity}`, 
+      value: `${totalActiveRepos}`, 
       icon: <Github className="w-5 h-5 text-blue-500" /> 
     },
     { label: "AI Reviews", value: "1.2k", icon: <Sparkles className="w-5 h-5 text-amber-500" /> },
@@ -152,66 +148,6 @@ export default async function DashboardPage({
           ))}
         </div>
       </header>
-
-      {/* Plan Quota Warning Banners */}
-      {userInstallations
-        .map((inst) => {
-          const activeCount = userRepos.filter(r => r.installationId === inst.id && r.isActive).length;
-          const planName = (inst.planName === 'None' || !inst.planName) ? 'Free' : inst.planName;
-          const limits = getPlanLimits(inst.planId, inst.expiresAt);
-          const limit = limits.maxRepos;
-          const isAtLimit = activeCount >= limit;
-          
-          return isAtLimit ? (
-            <div 
-              key={inst.id}
-              className="rounded-2xl border-2 border-orange-200 bg-orange-50 p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm"
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-2.5 bg-orange-100 rounded-lg mt-0.5">
-                  <AlertCircle className="w-5 h-5 text-orange-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-orange-900">Active Repository Limit Reached</h3>
-                  <p className="text-sm text-orange-700 mt-1">
-                    You&apos;ve activated all <span className="font-bold">{limit}</span> repositories allowed on the {planName} plan for @{inst.accountName}. Deactivate one to turn on another, or upgrade.
-                  </p>
-                </div>
-              </div>
-              <Link
-                href={`/pricing?accountId=${inst.githubAccountId}`}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-sm uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer"
-              >
-                <Zap className="w-4 h-4" />
-                Upgrade Plan
-              </Link>
-            </div>
-          ) : activeCount >= limit - 1 ? (
-            <div 
-              key={inst.id}
-              className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm"
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-2.5 bg-amber-100 rounded-lg mt-0.5">
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-amber-900">Approaching Active Limit</h3>
-                  <p className="text-sm text-amber-700 mt-1">
-                    You&apos;re using <span className="font-bold">{activeCount}/{limit}</span> active repositories on the {planName} plan for @{inst.accountName}.
-                  </p>
-                </div>
-              </div>
-              <Link
-                href={`/pricing?accountId=${inst.githubAccountId}`}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-sm uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer"
-              >
-                <Zap className="w-4 h-4" />
-                Upgrade Plan
-              </Link>
-            </div>
-          ) : null;
-        })}
 
       {/* Main Content Area */}
       <main className="space-y-12">
@@ -331,16 +267,6 @@ export default async function DashboardPage({
               ))}
 
               {(() => {
-                const canConnect = userInstallations.some(inst => {
-                  const limits = getPlanLimits(inst.planId, inst.expiresAt);
-                  // Allow connecting more repos than the active limit to enable swapping
-                  // Only block if the plan effectively has 0 allowed repos (e.g. None/Expired)
-                  const limit = limits.maxRepos > 0 ? 100 : 0;
-                  const count = userRepos.filter(r => r.installationId === inst.id).length;
-                  return count < limit;
-                });
-
-                if (canConnect) {
                   return (
                     <a
                       href={`https://github.com/apps/review-scope/installations/new`}
@@ -365,29 +291,6 @@ export default async function DashboardPage({
                       </div>
                     </a>
                   );
-                }
-                return (
-                  <Link
-                    href={`/pricing?accountId=${userInstallations[0]?.githubAccountId}`}
-                    className="px-4 md:px-6 py-5 flex flex-col gap-2 md:grid md:grid-cols-12 md:items-center md:gap-4 bg-amber-50/80 md:bg-amber-50/60 md:hover:bg-amber-100 transition-colors cursor-pointer rounded-b-xl md:rounded-none"
-                  >
-                    <div className="md:col-span-5 flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                        <AlertCircle className="w-6 h-6" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="font-black text-base uppercase tracking-tight italic text-amber-900">Repository Limit Reached</div>
-                        <p className="text-xs text-amber-800 font-medium max-w-xl">Upgrade your plan to add more repositories to ReviewScope.</p>
-                      </div>
-                    </div>
-                    <div className="md:col-span-2 text-sm font-mono text-amber-800/90">Upgrade needed</div>
-                    <div className="md:col-span-2 flex items-center gap-2 text-sm font-semibold text-amber-700">Locked</div>
-                    <div className="md:col-span-2"></div>
-                    <div className="md:col-span-1 flex md:justify-end">
-                      <span className="text-[11px] font-black uppercase tracking-widest text-amber-700">Upgrade</span>
-                    </div>
-                  </Link>
-                );
               })()}
             </div>
           </div>
@@ -430,26 +333,8 @@ export default async function DashboardPage({
                             <span className="font-medium">Repos</span>
                           </div>
                           <span className="font-bold">
-                            {userRepos.filter(r => r.installationId === inst.id && r.isActive).length}/{limits.maxRepos > 1000 ? 'Unlimited' : limits.maxRepos}
+                            {userRepos.filter(r => r.installationId === inst.id && r.isActive).length} Active
                           </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <RefreshCw className="w-3.5 h-3.5 text-green-600" />
-                            <span className="font-medium">Swaps</span>
-                          </div>
-                          <span className="font-bold">
-                            {inst.swapCount}/{limits.maxMonthlyActivations > 1000 ? 'Unlimited' : limits.maxMonthlyActivations}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <Gauge className="w-3.5 h-3.5 text-primary" />
-                            <span className="font-medium">PR Size</span>
-                          </div>
-                          <span className="font-bold">{limits.maxFiles > 1000 ? 'Unlimited' : limits.maxFiles}</span>
                         </div>
 
                         <div className="flex items-center justify-between text-xs">
@@ -458,14 +343,6 @@ export default async function DashboardPage({
                             <span className="font-medium">RAG Depth</span>
                           </div>
                           <span className="font-bold">{limits.ragK}</span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <MessageSquare className="w-3.5 h-3.5 text-amber-500" />
-                            <span className="font-medium">Chat Iter</span>
-                          </div>
-                          <span className="font-bold">{limits.chatPerPRLimit === 'unlimited' ? 'Unlimited' : limits.chatPerPRLimit}</span>
                         </div>
 
                         {limits.tier === PlanTier.TEAM && (

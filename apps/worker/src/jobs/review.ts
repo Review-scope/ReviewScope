@@ -153,19 +153,7 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
     
     dbReviewId = insertedReview.id;
 
-    // COMPLIANCE: Free tier is for Personal accounts only
-    if (limits.tier === PlanTier.FREE && dbInst.accountType === 'Organization') {
-      console.info(`[Worker] Skipping job: Free tier does not support Organization accounts (${data.repositoryFullName})`);
-      await db.update(reviews).set({
-          status: 'completed',
-          result: { 
-            summary: 'Review skipped. The **Free Tier** supports personal accounts only. Please upgrade to Pro or Team to review organization repositories.',
-            comments: [] 
-          },
-          processedAt: new Date(),
-      }).where(eq(reviews.id, dbReviewId));
-      return { success: true, reviewerVersion: '0.0.1', contextHash: '', comments: [], summary: 'Review skipped (Org limit on Free)' };
-    }
+    // COMPLIANCE Check Removed: Free tier now works on Organization accounts
 
     const gh = new GitHubClient();
     const [owner, repo] = data.repositoryFullName.split('/');
@@ -217,9 +205,9 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
         };
     }
 
-    // Phase 2b - Scoring and Limiting (LLM Context Budgeting / Plan Limits)
-    const MAX_FILES = limits.maxFiles;
-    const aiReviewFiles = sortAndLimitFiles(filteredFiles, MAX_FILES);
+    // Phase 2b - Scoring and Limiting (LLM Context Budgeting)
+    // Limits removed, but we still sort by priority (default cap is 1000 in sortAndLimitFiles)
+    const aiReviewFiles = sortAndLimitFiles(filteredFiles);
     // const skippedFilesCount = Math.max(0, filteredFiles.length - aiReviewFiles.length); // Unused
 
     if (filteredFiles.length === 0 || aiReviewFiles.length === 0) {

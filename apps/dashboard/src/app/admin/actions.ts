@@ -264,14 +264,14 @@ export async function updateInstallationPlan(installationId: string, planName: s
   await requireAdmin();
   console.log(`[Admin] Plan update requested for installation: ${installationId} to ${planName}`);
 
-  // Map plan names to GitHub Marketplace IDs
+  // Map plan names to internal IDs
   const PLAN_MAP: Record<string, number> = {
-    'Free': 3,
-    'Pro': 7,
-    'Team': 8
+    'Free': 0,
+    'Pro': 1,
+    'Team': 2
   };
 
-  const planId = PLAN_MAP[planName] || 3;
+  const planId = PLAN_MAP[planName] || 0;
 
   // Set expiration to 30 days from now
   const expiresAt = new Date();

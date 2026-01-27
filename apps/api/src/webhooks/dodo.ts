@@ -9,15 +9,11 @@ export const dodoWebhook = new Hono();
 // Plan Mapping
 // Update these keys to match your actual Dodo Product IDs or partial matches
 const PLAN_MAPPING: Record<string, number> = {
-  'pdt_0NWp5tVJHaqd61DHUM2HH': 7, // Pro Plan
-  'pdt_0NWp62i22DOgcxMDCVElT': 8, // Team Plan
-  'pdt_0NWowQyc1JmRK7w7CIXzX': 7, // Test Mode Pro Plan
-  'pdt_0NWoysN8qwTC7iKq5HKXx': 8, // Test Mode Team Plan
-  'pdt_pro': 7, // Legacy/Dev Pro Plan
-  'pdt_team': 8, // Legacy/Dev Team Plan
+  // 'pdt_0NWp5tVJHaqd61DHUM2HH': 1, // Pro Plan
+  // 'pdt_0NWp62i22DOgcxMDCVElT': 2, // Team Plan
 };
 
-const FREE_PLAN_ID = 3;
+const FREE_PLAN_ID = 0;
 dodoWebhook.get('/', (c) => {
   return c.json({ message: 'Dodo Webhook is up and running' });
 });
@@ -125,15 +121,15 @@ dodoWebhook.post('/', async (c) => {
 
       // Fallback: Check for keywords if exact ID not found
       if (!planId && productId) {
-        if (productId.toLowerCase().includes('pro')) planId = 7;
-        else if (productId.toLowerCase().includes('team')) planId = 8;
+        if (productId.toLowerCase().includes('pro')) planId = 1;
+        else if (productId.toLowerCase().includes('team')) planId = 2;
       }
 
       if (planId) {
         await db.update(installations)
           .set({
             planId: planId,
-            planName: planId === 7 ? 'Pro' : (planId === 8 ? 'Team' : 'Custom'),
+            planName: planId === 1 ? 'Pro' : (planId === 2 ? 'Team' : 'Custom'),
             // Determine billing cycle from data if available, or default
             billingCycle: data.billing_cycle || 'monthly',
             status: 'active',

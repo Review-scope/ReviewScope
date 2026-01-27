@@ -71,35 +71,12 @@ export async function toggleRepoActivation(repoId: string, isActive: boolean) {
 
   // LOGIC: Activation requires checks
   
-  // 0. Org Policy Check: Free plans cannot activate repositories in Organizations
-  if (installation.accountType === 'Organization' && (!installation.planName || installation.planName === 'Free')) {
-    return {
-      success: false,
-      error: 'Organization accounts require a Pro or Team plan to activate repositories.'
-    };
-  }
+  // 0. Org Policy Check: Removed (Free plan allows Orgs)
 
   const limits = getPlanLimits(installation.planId, installation.expiresAt);
   
   // 1. Check Active Repo Limit
-  const activeRepos = await db
-    .select({ count: sql<number>`cast(count(*) as int)` })
-    .from(repositories)
-    .where(
-      and(
-        eq(repositories.installationId, installation.id),
-        eq(repositories.isActive, true)
-      )
-    );
-  
-  const currentActive = activeRepos[0].count;
-
-  if (currentActive >= limits.maxRepos) {
-    return { 
-      success: false, 
-      error: `Plan limit reached. Your ${limits.tier} plan allows ${limits.maxRepos} active repositories.` 
-    };
-  }
+  // Removed per user request
 
   // 2. Check Monthly Swap/Activation Limit
   // Reset logic: If lastSwapReset is more than 30 days ago, reset count
@@ -119,12 +96,7 @@ export async function toggleRepoActivation(repoId: string, isActive: boolean) {
     currentSwapCount = 0;
   }
 
-  if (currentSwapCount >= limits.maxMonthlyActivations) {
-     return { 
-      success: false, 
-      error: `Monthly activation limit reached. Your ${limits.tier} plan allows ${limits.maxMonthlyActivations} activations per month.` 
-    };
-  }
+  // Monthly activation limit check removed per user request
 
   // 3. Activate
   await db.transaction(async (tx) => {

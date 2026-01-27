@@ -143,14 +143,22 @@ export async function runStaticAnalysis(
     const [owner, repo] = data.repositoryFullName.split('/');
 
     // Fetch full file contents for higher-accuracy static analysis
-    const filteredFilesWithContent = await Promise.all(filteredFiles.map(async (file) => {
-        try {
-          const content = await gh.getFileContent(data.installationId, owner, repo, file.path, data.headSha);
-          return { ...file, content: content || undefined };
-        } catch {
-          return file;
-        }
-    }));
+    // Batch fetching to avoid rate limits
+    const BATCH_SIZE = 10;
+    const filteredFilesWithContent = [];
+
+    for (let i = 0; i < filteredFiles.length; i += BATCH_SIZE) {
+        const batch = filteredFiles.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(batch.map(async (file) => {
+            try {
+                const content = await gh.getFileContent(data.installationId, owner, repo, file.path, data.headSha);
+                return { ...file, content: content || undefined };
+            } catch {
+                return file;
+            }
+        }));
+        filteredFilesWithContent.push(...batchResults);
+    }
 
     const duplicateKeyViolations = filteredFiles.flatMap((file) =>
         detectDuplicateKeys(file).map((dup) => ({
