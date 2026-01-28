@@ -10,6 +10,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import { createProvider } from "@reviewscope/llm-core";
 import { getUserOrgIds } from "@/lib/github";
+import { getPlanLimits } from "../../../../../../worker/src/lib/plans";
 
 const configSchema = z.object({
   provider: z.enum(['gemini', 'openai']),
@@ -59,18 +60,18 @@ export async function verifyApiKey(provider: string, model: string, apiKey: stri
       
       try {
         if (provider === 'gemini') {
-          await llm.embed('Verification test', { model: 'text-embedding-004' });
+          await llm.embed('Verification test', { model: model });
         } else {
-          await llm.chat([{ role: 'user', content: 'Hi' }], { model: 'gpt-3.5-turbo', maxTokens: 1 });
+          await llm.chat([{ role: 'user', content: 'Hi' }], { model: model, maxTokens: 1 });
         }
         return { 
           success: false, 
           /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-          error: `API Key is valid, but model "${model}" could not be reached. Error: ${(modelError as any).message}` 
+          error: `API Key is valid, but model "${model}" could not be reached. Please check the Model Name. Error: ${(modelError as any).message}` 
         };
       } catch (keyError: unknown) {
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-        return { success: false, error: `Invalid API Key for ${provider}. Error: ${(keyError as any).message}` };
+        return { success: false, error: `Connection failed. Please check your API Key or Model Name. Error: ${(keyError as any).message}` };
       }
     }
     
@@ -175,7 +176,7 @@ export async function syncRepositories(installationId: string) {
         installationId: installation.id,
         githubRepoId: repo.id,
         fullName: repo.full_name,
-        // isActive: false // Default
+        // isActive: true // Default
       }).onConflictDoUpdate({
         target: repositories.githubRepoId,
         set: {
@@ -262,8 +263,9 @@ export async function updateConfig(installationId: string, formData: FormData) {
     }
 
     // Trigger Indexing if API key was provided/updated
-    const shouldIndex = apiKeyChanged || (!existingConfig?.apiKeyEncrypted && apiKeyEncrypted);
-    console.warn(`[Config] Update successful. apiKeyChanged: ${apiKeyChanged}, newlyAdded: ${!existingConfig?.apiKeyEncrypted && !!apiKeyEncrypted}, shouldIndex: ${shouldIndex}`);
+    const limits = getPlanLimits(installation.planId, installation.expiresAt);
+    const shouldIndex = (apiKeyChanged || (!existingConfig?.apiKeyEncrypted && apiKeyEncrypted)) && limits.allowRAG;
+    console.warn(`[Config] Update successful. apiKeyChanged: ${apiKeyChanged}, newlyAdded: ${!existingConfig?.apiKeyEncrypted && !!apiKeyEncrypted}, allowRAG: ${limits.allowRAG}, shouldIndex: ${shouldIndex}`);
 
     if (shouldIndex) {
       // Trigger indexing for all active repositories in this installation
@@ -273,7 +275,6 @@ export async function updateConfig(installationId: string, formData: FormData) {
           .from(repositories)
           .where(and(
             eq(repositories.installationId, installationId),
-            eq(repositories.isActive, true),
             eq(repositories.status, 'active')
           ));
 

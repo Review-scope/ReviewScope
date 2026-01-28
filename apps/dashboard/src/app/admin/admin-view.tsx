@@ -160,7 +160,9 @@ export function AdminView({
 
       {/* --- Main Installations Table --- */}
       <div className="bg-card border rounded-lg overflow-hidden shadow-sm">
-        <div className="grid grid-cols-[auto_2fr_1fr_1fr_1fr_1.5fr_auto] gap-4 p-4 bg-muted/30 font-medium text-sm border-b">
+        <div className="overflow-x-auto">
+          <div className="min-w-250">
+            <div className="grid grid-cols-[auto_2fr_1fr_1fr_1fr_1.5fr_auto] gap-4 p-4 bg-muted/30 font-medium text-sm border-b">
           <div className="w-6"></div>
           <div>Account</div>
           <div>Status</div>
@@ -335,6 +337,8 @@ export function AdminView({
             )}
           </div>
         ))}
+          </div>
+        </div>
       </div>
 
       {/* --- Pagination --- */}

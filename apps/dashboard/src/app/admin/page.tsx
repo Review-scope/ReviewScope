@@ -190,7 +190,6 @@ export default async function AdminPage({
         fullName: repo.fullName,
         isPrivate: !!repo.isPrivate, // ensure boolean
         status: repo.status || 'active', // default if missing
-        isActive: repo.isActive,
         indexedAt: repo.indexedAt,
         lastReviewAt: null // repo.lastReviewAt is not in schema/query unless we fetch it. AdminView handles null.
       }))

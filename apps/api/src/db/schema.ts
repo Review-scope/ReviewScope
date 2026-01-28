@@ -63,9 +63,6 @@ export const repositories = pgTable('repositories', {
   // Status tracking: active (normal), removed (from app), deleted (repo gone)
   status: text('status', { enum: ['active', 'removed', 'deleted'] }).default('active').notNull(),
   
-  // Manual activation switch
-  isActive: boolean('is_active').default(false).notNull(),
-
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   settings: jsonb('settings').default({}),

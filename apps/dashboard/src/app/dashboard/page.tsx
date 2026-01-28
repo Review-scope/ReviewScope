@@ -5,7 +5,6 @@ import { authOptions } from "../api/auth/[...nextauth]/authOptions";
 import { eq, isNotNull, and, count, desc, inArray, or } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ActivationToggle } from "../repositories/[id]/activation-toggle";
 import { getUserOrgIds } from "@/lib/github";
 import { DashboardSearch } from "./dashboard-search";
 import { getPlanLimits, PlanTier } from "../../../../worker/src/lib/plans";
@@ -82,7 +81,8 @@ export default async function DashboardPage({
       githubAccountId: installations.githubAccountId,
       hasApiKey: isNotNull(configs.apiKeyEncrypted),
       status: repositories.status,
-      isActive: repositories.isActive,
+      planId: installations.planId,
+      expiresAt: installations.expiresAt,
     })
     .from(repositories)
     .innerJoin(installations, eq(repositories.installationId, installations.id))
@@ -95,7 +95,7 @@ export default async function DashboardPage({
       )
     );
 
-  const totalActiveRepos = userRepos.filter(r => r.isActive).length;
+  const totalActiveRepos = userRepos.length;
   const filteredUserRepos = normalizedQuery
     ? userRepos.filter(r => r.fullName.toLowerCase().includes(normalizedQuery))
     : userRepos;
@@ -195,10 +195,9 @@ export default async function DashboardPage({
 
           <div className="border border-border/60 rounded-xl md:rounded-3xl md:border-2 md:overflow-hidden md:bg-card md:shadow-sm">
             <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-[11px] font-black uppercase tracking-widest text-muted-foreground/80 bg-muted/60">
-              <span className="col-span-5">Repository</span>
+              <span className="col-span-7">Repository</span>
               <span className="col-span-2">Owner</span>
               <span className="col-span-2">Status</span>
-              <span className="col-span-2">Activation</span>
               <span className="col-span-1 text-right">Actions</span>
             </div>
 
@@ -208,7 +207,7 @@ export default async function DashboardPage({
                   key={repo.id}
                   className="group px-4 md:px-6 py-4 flex flex-col gap-3 md:grid md:grid-cols-12 md:items-center md:gap-4 md:hover:bg-muted/40 transition-colors"
                 >
-                  <div className="md:col-span-5 flex items-center gap-3">
+                  <div className="md:col-span-7 flex items-center gap-3">
                     <Link
                       href={`/repositories/${repo.id}`}
                       className="p-3 rounded-2xl bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner cursor-pointer"
@@ -233,26 +232,27 @@ export default async function DashboardPage({
                   </div>
 
                   <div className="md:col-span-2 flex items-center gap-2">
-                    {!repo.isActive ? (
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-500 text-[10px] font-black uppercase tracking-widest border border-zinc-200 w-fit">
-                        —
-                      </div>
-                    ) : repo.indexedAt ? (
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-black uppercase tracking-widest border border-green-200 w-fit">
-                        <CheckCircle2 className="w-3 h-3" /> Indexed
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-widest border border-blue-200 animate-pulse w-fit">
-                        <Clock className="w-3 h-3" /> Indexing
-                      </div>
-                    )}
-                  </div>
+                    {(() => {
+                      const limits = getPlanLimits(repo.planId, repo.expiresAt);
+                      
+                      if (!limits.allowRAG) {
+                        return (
+                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-400 text-[10px] font-black uppercase tracking-widest border border-zinc-200 w-fit cursor-help" title="RAG Indexing requires Pro plan">
+                            <Lock className="w-3 h-3" /> N/A
+                          </div>
+                        );
+                      }
 
-                  <div className="md:col-span-2 flex items-center gap-2">
-                    <div className="scale-90 origin-left cursor-pointer">
-                      <ActivationToggle repoId={repo.id} isActive={repo.isActive} />
-                    </div>
-                    <span className="sr-only">Toggle activation</span>
+                      return repo.indexedAt ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-black uppercase tracking-widest border border-green-200 w-fit">
+                          <CheckCircle2 className="w-3 h-3" /> Indexed
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-widest border border-blue-200 animate-pulse w-fit">
+                          <Clock className="w-3 h-3" /> Indexing
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="md:col-span-1 flex md:justify-end">
@@ -274,7 +274,7 @@ export default async function DashboardPage({
                       rel="noopener noreferrer"
                       className="px-4 md:px-6 py-5 flex flex-col gap-2 md:grid md:grid-cols-12 md:items-center md:gap-4 bg-muted/20 md:bg-muted/30 md:hover:bg-primary/10 transition-colors cursor-pointer rounded-b-xl md:rounded-none"
                     >
-                      <div className="md:col-span-5 flex items-center gap-3">
+                      <div className="md:col-span-7 flex items-center gap-3">
                         <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center group-hover:bg-primary/20 text-primary transition-all">
                           <Sparkles className="w-6 h-6" />
                         </div>
@@ -285,7 +285,6 @@ export default async function DashboardPage({
                       </div>
                       <div className="md:col-span-2 text-sm font-mono text-muted-foreground/90">Available slot</div>
                       <div className="md:col-span-2 flex items-center gap-2 text-sm font-semibold text-primary">Ready</div>
-                      <div className="md:col-span-2"></div>
                       <div className="md:col-span-1 flex md:justify-end">
                         <span className="text-[11px] font-black uppercase tracking-widest text-primary">Install</span>
                       </div>
@@ -333,7 +332,7 @@ export default async function DashboardPage({
                             <span className="font-medium">Repos</span>
                           </div>
                           <span className="font-bold">
-                            {userRepos.filter(r => r.installationId === inst.id && r.isActive).length} Active
+                            {userRepos.filter(r => r.installationId === inst.id).length} Active
                           </span>
                         </div>
 

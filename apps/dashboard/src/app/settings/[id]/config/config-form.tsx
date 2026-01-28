@@ -153,7 +153,7 @@ export function ConfigForm({
                   : 'gpt-4o'
               );
             }}
-            className="w-full h-14 rounded-xl bg-muted/40 border px-4"
+            className="w-full h-14 rounded-xl bg-muted/40 border px-4 cursor-pointer"
           >
             <option value="gemini">Google Gemini</option>
             <option value="openai">OpenAI</option>
@@ -187,16 +187,45 @@ export function ConfigForm({
             </button>
           </div>
 
-          <input
-            name="model"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            disabled={smartRouting}
-            className={clsx(
-              'mt-4 w-full h-14 rounded-xl px-4 border bg-muted/40',
-              smartRouting && 'opacity-50 cursor-not-allowed'
-            )}
-          />
+          {provider === 'gemini' ? (
+            <select
+              name="model"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              disabled={smartRouting}
+              className={clsx(
+                'mt-4 w-full h-14 rounded-xl px-4 border bg-muted/40 cursor-pointer',
+                smartRouting && 'opacity-50 disabled:cursor-not-allowed'
+              )}
+            >
+              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Fastest)</option>
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash (Balanced)</option>
+              <option value="gemini-3-flash">Gemini 3 Flash (Smartest)</option>
+            </select>
+          ) : (
+            <select
+              name="model"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              disabled={smartRouting}
+              className={clsx(
+                'mt-4 w-full h-14 rounded-xl px-4 border bg-muted/40',
+                smartRouting && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <optgroup label="Standard Models">
+                <option value="gpt-4o">GPT-4o (Most Capable)</option>
+                <option value="gpt-4o-mini">GPT-4o Mini (Fast & Cheap)</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+              </optgroup>
+              <optgroup label="Preview / Future Models">
+                <option value="gpt-5-nano-2025-08-07">GPT-5 Nano (Preview)</option>
+                <option value="gpt-5-mini-2025-08-07">GPT-5 Mini (Preview)</option>
+                <option value="gpt-5.2-2025-12-11">GPT-5.2 (Preview)</option>
+              </optgroup>
+            </select>
+          )}
           <input type="hidden" name="smartRouting" value={smartRouting ? 'true' : 'false'} />
         </Section>
 
@@ -286,7 +315,7 @@ export function ConfigForm({
           <button
             type="submit"
             disabled={!canSave || isSaving}
-            className="px-10 py-4 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="px-10 cursor-pointer py-4 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSaving ? 'Saving...' : 'Save Changes'}

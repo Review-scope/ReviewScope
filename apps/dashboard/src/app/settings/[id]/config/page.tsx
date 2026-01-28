@@ -6,7 +6,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import Link from "next/link";
 import { ConfigForm } from "./config-form";
-import { RepoList } from "./repo-list";
 import { getUserOrgIds } from "@/lib/github";
 import { getPlanLimits } from "../../../../../../worker/src/lib/plans";
 
@@ -43,7 +42,6 @@ export default async function ConfigPage({ params }: { params: Promise<{ id: str
       id: repositories.id,
       fullName: repositories.fullName,
       status: repositories.status,
-      isActive: repositories.isActive
     })
     .from(repositories)
     .where(eq(repositories.installationId, id));
@@ -151,16 +149,6 @@ export default async function ConfigPage({ params }: { params: Promise<{ id: str
               apiKeyEncrypted: config.apiKeyEncrypted,
               smartRouting: config.smartRouting,
             } : undefined} 
-          />
-
-          <RepoList 
-            installationId={id} 
-            repos={installationRepos.map(r => ({
-              id: r.id,
-              fullName: r.fullName,
-              status: r.status,
-              isActive: r.isActive
-            }))} 
           />
         </div>
 

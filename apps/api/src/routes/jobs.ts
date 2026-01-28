@@ -16,7 +16,6 @@ jobRoutes.post('/index/:repoId', async (c) => {
         githubRepoId: repositories.githubRepoId,
         fullName: repositories.fullName,
         installationId: repositories.installationId,
-        isActive: repositories.isActive,
       })
       .from(repositories)
       .where(eq(repositories.id, repoId))
@@ -24,10 +23,6 @@ jobRoutes.post('/index/:repoId', async (c) => {
 
     if (!repo) {
       return c.json({ error: 'Repository not found' }, 404);
-    }
-
-    if (!repo.isActive) {
-      return c.json({ error: 'Repository is not active' }, 400);
     }
 
     const [inst] = await db

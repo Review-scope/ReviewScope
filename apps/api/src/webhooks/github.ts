@@ -153,8 +153,8 @@ githubWebhook.post('/', async (c) => {
     }).returning();
 
 
-    if (dbRepo.status !== 'active' || !dbRepo.isActive) {
-      console.warn(`[Webhook] Skipping PR #${pr.number}: Repository ${repo.full_name} is ${dbRepo.status} (Active: ${dbRepo.isActive})`);
+    if (dbRepo.status !== 'active') {
+      console.warn(`[Webhook] Skipping PR #${pr.number}: Repository ${repo.full_name} is ${dbRepo.status}`);
       return c.json({ status: 'ignored_inactive_repo' });
     }
 
@@ -257,8 +257,8 @@ githubWebhook.post('/', async (c) => {
       return c.json({ status: 'ignored_inactive_installation' });
     }
     
-    if (!dbRepo || dbRepo.status !== 'active' || !dbRepo.isActive) {
-      console.warn(`[Webhook] Skipping command in PR #${issue.number}: Repository ${repo.full_name} is ${dbRepo?.status || 'not found'} (Active: ${dbRepo?.isActive})`);
+    if (!dbRepo || dbRepo.status !== 'active') {
+      console.warn(`[Webhook] Skipping command in PR #${issue.number}: Repository ${repo.full_name} is ${dbRepo?.status || 'not found'}`);
       return c.json({ status: 'ignored_inactive_repo' });
     }
 
@@ -341,7 +341,7 @@ githubWebhook.post('/', async (c) => {
       )
     );
     
-    if (!dbRepo || dbRepo.status !== 'active' || !dbRepo.isActive) {
+    if (!dbRepo || dbRepo.status !== 'active') {
       return c.json({ status: 'ignored_inactive_repo' });
     }
 
@@ -614,7 +614,7 @@ githubWebhook.post('/', async (c) => {
         )
       );
 
-      if (!dbRepo || dbRepo.status !== 'active' || !dbRepo.isActive) {
+      if (!dbRepo || dbRepo.status !== 'active') {
          return c.json({ status: 'ignored_inactive_repo' });
       }
 

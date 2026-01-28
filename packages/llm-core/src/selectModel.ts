@@ -9,6 +9,8 @@
  * Goal: 30-40% cost reduction with no quality loss
  */
 
+import { getContextBudget } from './modelBudgets.js';
+
 export type Complexity = 'trivial' | 'simple' | 'complex';
 
 export interface ModelRoute {
@@ -51,7 +53,9 @@ export function selectModel(
   // Both available: prefer Gemini for cost savings
   // (Gemini Flash is cheaper than GPT-4o-mini for similar quality)
   if (complexity === 'complex') {
-    return selectOpenAIModel(complexity); // Use powerful OpenAI for complex
+    return availableProviders.hasOpenAI
+      ? selectOpenAIModel(complexity)
+      : selectGeminiModel(complexity);
   }
 
   return selectGeminiModel(complexity); // Use cheaper Gemini for trivial/simple
@@ -65,25 +69,25 @@ function selectGeminiModel(complexity: Complexity): ModelRoute {
     case 'trivial':
       return {
         provider: 'gemini',
-        model: 'gemini-2.5-flash',
-        contextBudget: 4000, // Small budget for simple changes
-        reason: 'Trivial changes: minimal context needed',
+        model: 'gemini-2.5-flash-lite',
+        contextBudget: getContextBudget('gemini-2.5-flash-lite'),
+        reason: 'Trivial changes: using lowest cost Flash-Lite',
       };
 
     case 'simple':
       return {
         provider: 'gemini',
         model: 'gemini-2.5-flash',
-        contextBudget: 6000, // Standard budget
+        contextBudget: getContextBudget('gemini-2.5-flash'),
         reason: 'Simple changes: Gemini Flash sufficient',
       };
 
     case 'complex':
       return {
         provider: 'gemini',
-        model: 'gemini-2.5-pro',
-        contextBudget: 12000, // Full budget for complex
-        reason: 'Complex changes: using Gemini Pro',
+        model: 'gemini-3-flash',
+        contextBudget: getContextBudget('gemini-3-flash'),
+        reason: 'Complex changes: using Gemini 3 Flash for better reasoning',
       };
   }
 }
@@ -96,25 +100,25 @@ function selectOpenAIModel(complexity: Complexity): ModelRoute {
     case 'trivial':
       return {
         provider: 'openai',
-        model: 'gpt-4o-mini',
-        contextBudget: 6000, // GPT-4o-mini for trivial
-        reason: 'Trivial changes: using GPT-4o-mini for cost',
+        model: 'gpt-5-nano-2025-08-07',
+        contextBudget: getContextBudget('gpt-5-nano-2025-08-07'),
+        reason: 'Trivial changes: using gpt-5-nano for cost',
       };
 
     case 'simple':
       return {
         provider: 'openai',
-        model: 'gpt-4o-mini',
-        contextBudget: 9000, // Standard budget
-        reason: 'Simple changes: GPT-4o-mini sufficient',
+        model: 'gpt-5-mini-2025-08-07',
+        contextBudget: getContextBudget('gpt-5-mini-2025-08-07'),
+        reason: 'Simple changes: GPT-5-mini sufficient',
       };
 
     case 'complex':
       return {
         provider: 'openai',
-        model: 'gpt-4o',
-        contextBudget: 20000, // Full budget for complex
-        reason: 'Complex changes: using GPT-4o for depth',
+        model: 'gpt-5.2-2025-12-11',
+        contextBudget: getContextBudget('gpt-5.2-2025-12-11'),
+        reason: 'Complex changes: using GPT-5.2 for depth',
       };
   }
 }
@@ -124,19 +128,9 @@ function selectOpenAIModel(complexity: Complexity): ModelRoute {
  * (Used if caller already selected model, just needs budget)
  */
 export function getContextBudgetForModel(model: string): number {
-  switch (model) {
-    case 'gemini-2.5-flash':
-      return 6000;
-    case 'gemini-2.5-pro':
-      return 12000;
-    case 'gpt-4o-mini':
-      return 9000;
-    case 'gpt-4o':
-      return 20000;
-    default:
-      return 8000; // Conservative default
-  }
+  return getContextBudget(model);
 }
+
 
 /**
  * Cost estimation for different model routes
@@ -148,44 +142,52 @@ export interface CostEstimate {
   estimatedCostPerReview: number; // Rough estimate for typical review
 }
 
-export function estimateCost(model: string, estimatedTokens: number = 8000): CostEstimate {
+export function estimateCost(
+  model: string,
+  estimatedTokens = 8000
+): CostEstimate {
   const tokenCost = estimatedTokens / 1_000_000;
 
-  let costPerMTok: number;
-  let estimatedCostPerReview: number;
+  let costPerMTok = 0;
 
   switch (model) {
+    case 'gemini-2.5-flash-lite':
+      costPerMTok = 0.10; // $0.10 input (estimated)
+      break;
+
     case 'gemini-2.5-flash':
-      costPerMTok = 0.075; // $0.075 per million input tokens
-      estimatedCostPerReview = tokenCost * costPerMTok;
+      costPerMTok = 0.30; // Paid pricing (free tier available)
+      break;
+      
+    case 'gemini-3-flash':
+      costPerMTok = 0.50; // Paid pricing (free tier available)
+      break;
+      
+    case 'gpt-5-nano-2025-08-07':
+      costPerMTok = 0.05;
       break;
 
-    case 'gemini-2.5-pro':
-      costPerMTok = 1.5; // $1.50 per million input tokens
-      estimatedCostPerReview = tokenCost * costPerMTok;
+    case 'gpt-5-mini-2025-08-07':
+      costPerMTok = 0.25;
       break;
 
-    case 'gpt-4o-mini':
-      costPerMTok = 0.15; // $0.15 per million input tokens
-      estimatedCostPerReview = tokenCost * costPerMTok;
-      break;
-
-    case 'gpt-4o':
-      costPerMTok = 5.0; // $5.00 per million input tokens
-      estimatedCostPerReview = tokenCost * costPerMTok;
+    case 'gpt-5.2-2025-12-11':
+      costPerMTok = 5.0;
       break;
 
     default:
-      costPerMTok = 0.1;
-      estimatedCostPerReview = tokenCost * costPerMTok;
+      costPerMTok = 0.2;
   }
 
   return {
     model,
     costPerMTok,
-    estimatedCostPerReview: Math.round(estimatedCostPerReview * 100000) / 100000, // Round to 5 decimals
+    estimatedCostPerReview: Number(
+      (tokenCost * costPerMTok).toFixed(6)
+    ),
   };
 }
+
 
 /**
  * Compare cost of routes for the same PR

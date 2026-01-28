@@ -8,8 +8,6 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { getUserOrgIds } from "@/lib/github";
 
-import { ActivationToggle } from './activation-toggle';
-
 export const dynamic = 'force-dynamic';
 
 export default async function RepositoryPage({ params }: { params: Promise<{ id: string }> }) {
@@ -72,7 +70,6 @@ export default async function RepositoryPage({ params }: { params: Promise<{ id:
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <ActivationToggle repoId={repo.id} isActive={repo.isActive} />
             <a 
               href={`https://github.com/${repo.fullName}`}
               target="_blank"

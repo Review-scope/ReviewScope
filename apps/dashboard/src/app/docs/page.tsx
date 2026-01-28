@@ -78,17 +78,6 @@ export default function DocsPage() {
                     You can grant access to all repositories or select specific ones.
                   </p>
                 </div>
-                
-                <div className="space-y-3">
-                  <h4 className="font-bold text-lg flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs">2</span>
-                    Activation
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    In the Dashboard, toggle the switch next to a repository to <strong>Active</strong>. 
-                    Inactive repositories will not be scanned to save costs.
-                  </p>
-                </div>
               </div>
             </section>
 

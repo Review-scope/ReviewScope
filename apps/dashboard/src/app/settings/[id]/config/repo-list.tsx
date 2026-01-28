@@ -11,7 +11,6 @@ type Repo = {
   id: string;
   fullName: string;
   status: string;
-  isActive: boolean;
 };
 
 export function RepoList({ 
