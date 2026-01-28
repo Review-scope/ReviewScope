@@ -522,7 +522,7 @@ export default async function LandingPage() {
             <p className="text-sm text-muted-foreground max-w-md">
               Interested in sponsoring ReviewScope? 
               <br />
-              <Link href="/support" className="text-primary font-bold hover:underline">
+              <Link href="/sponsors" className="text-primary font-bold hover:underline">
                 Get in touch with us
               </Link>
             </p>
@@ -531,7 +531,7 @@ export default async function LandingPage() {
             <p className="text-sm text-muted-foreground">
               Early supporters who helped shape ReviewScope will be featured here. 
               <br />
-              <Link href="mailto:parasverma7454@gmail.com" className="text-primary font-bold hover:underline">
+              <Link href="/sponsors" className="text-primary font-bold hover:underline">
                 Become a sponsor
               </Link>
             </p>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Mail, Check, X, User, Building2, ChevronDown, CheckCircle2 } from "lucide-react";
+import { Mail, Check, X, User, Building2, ChevronDown, CheckCircle2, CreditCard } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 type Account = {
@@ -312,6 +312,10 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
       </div>
 
       <div className="max-w-3xl mx-auto text-center space-y-3">
+        <div className="inline-flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground bg-accent/50 py-2 px-4 rounded-full mx-auto mb-4">
+          <CreditCard className="w-4 h-4" />
+          <span>We accept both Card and UPI payments via Dodo Payments</span>
+        </div>
         <p className="text-sm text-muted-foreground">
           ReviewScope runs on your own OpenAI or Gemini API keys. You pay them directly; we never mark up your AI usage.
         </p>
