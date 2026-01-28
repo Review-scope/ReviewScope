@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
 import { Providers } from "@/components/providers";
+import { AppShell } from "@/components/shell";
+import NextTopLoader from 'nextjs-toploader';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,12 +59,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col overflow-x-hidden`}
       >
+        <NextTopLoader color="#18181b" showSpinner={false} />
         <Providers>
-          <Navbar />
-          <main className="flex-1">
+          <AppShell>
             {children}
-          </main>
-          <Footer />
+          </AppShell>
         </Providers>
       </body>
     </html>

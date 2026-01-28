@@ -4,11 +4,11 @@ ReviewScope is an intelligent PR review platform that combines **static analysis
 
 ## Overview
 
-ReviewScope analyzes pull requests end-to-end, evaluating code quality, security, performance, and maintainability. It runs directly on your own API keys, so you control costs and data.
+ReviewScope analyzes pull requests end-to-end, evaluating code quality, security, performance, and maintainability. It features **smart model routing** to leverage **Free Gemini models** for speed and cost-efficiency, while reserving capable models for complex logic.
 
 **Key Capabilities:**
 - 🔍 **Static Analysis** – AST-based rule detection (no LLM required, always free)
-- 🧠 **AI-Powered Reviews** – Complexity-aware routing between fast (Gemini) and accurate (GPT-4) models
+- 🧠 **AI-Powered Reviews** – Complexity-aware routing between fast (Gemini Flash) and capable (Gemini 3/GPT-5) models
 - 📚 **Semantic RAG** – Retrieves relevant code context from your repository's history
 - ⚡ **Smart Batching** – Handles large PRs by intelligently chunking files
 - 🎯 **Rule Validation** – LLM classifies static findings (valid/false-positive/contextual)
@@ -18,7 +18,7 @@ ReviewScope analyzes pull requests end-to-end, evaluating code quality, security
 
 **Frontend & Dashboard:**
 - Next.js 16 (Turbopack)
-- TailwindCSS + shadcn/ui
+- TailwindCSS
 - NextAuth (GitHub OAuth)
 
 **Backend & Processing:**
@@ -27,13 +27,13 @@ ReviewScope analyzes pull requests end-to-end, evaluating code quality, security
 - Upstash Redis (caching & rate limiting)
 
 **AI & LLM:**
-- Gemini 2.5 (fast, low-cost reviews)
-- GPT-4 (complex PRs, high accuracy)
+- Gemini 2.5 Flash, 2.5 Flash-Lite, 3 Flash (free tier preferred)
+- GPT-5 Nano, Mini, 5.2 (preview) & GPT-4o
 - Context Engine (RAG + chunking)
 
 **Integration:**
 - GitHub Webhooks (real-time PR events)
-- GitHub Marketplace (billing integration)
+- Dodo Payment Gateway (billing integration)
 - GitHub API (PR data, code retrieval)
 
 ## Project Structure
@@ -63,7 +63,7 @@ ReviewScope/
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL 14+
-- Upstash Redis URL (free tier available)
+- Redis URL (docker-compose)
 - GitHub App (for webhooks)
 - LLM API keys (Gemini & OpenAI)
 
@@ -136,20 +136,21 @@ Dashboard available at `http://localhost:3000`
 
 ## Pricing & Plans
 
-| Feature | Free | Pro | Team |
-|---------|------|-----|------|
-| Price | $0 | $15/mo | $50/mo |
-| Repositories | Up to 3 | Up to 5 | Unlimited |
-| Files per PR | 30 | 100 | Unlimited (Smart Batching) |
-| RAG Context | 2 snippets | 5 snippets | 8 snippets |
+| Feature | Free | Pro | Enterprise |
+|---------|------|-----|------------|
+| Price | $0 | $15/mo | Contact Sales |
+| Repositories | Unlimited | Unlimited | Unlimited |
+| Reviews Limit | 60 / month | Unlimited | Unlimited |
+| RAG Context | ❌ | ✅ (5 snippets) | ✅ (8+ snippets) |
 | Custom Prompts | ❌ | ✅ | ✅ |
-| Org Controls | ❌ | ❌ | ✅ |
-| Support | Community | Email | 24/7 Priority |
+| Org Controls | ✅ | ✅ | ✅ |
+| Support | Community | Email | Priority |
 
 **All tiers include:**
 - Static analysis (always free)
 - AI reviews via your own API keys
-- GitHub Marketplace seamless upgrades
+- Unlimited files per PR
+- DODO payments seamless upgrades
 
 ## Architecture
 
@@ -199,7 +200,7 @@ Post Comment to GitHub PR
 **Worker** (`apps/worker/`)
 - Bull queue for async job processing
 - Executes complexity scorer, rules, RAG, LLM calls
-- Rate limiting per plan (Free=3/day, Pro=15/day, Team=unlimited)
+- Rate limiting per plan (Free=60/month, Pro/Team=Unlimited)
 
 ## Configuration & Customization
 
@@ -214,9 +215,9 @@ Dashboard → Repositories → [Select] → Settings → Custom Prompt
 
 Edit `apps/worker/src/lib/plans.ts`:
 ```typescript
-FREE: { dailyLimit: 3, reposLimit: 3, filesLimit: 30, ragSnippets: 2 },
-PRO:  { dailyLimit: 15, reposLimit: 5, filesLimit: 100, ragSnippets: 5 },
-TEAM: { dailyLimit: Infinity, reposLimit: Infinity, filesLimit: Infinity, ragSnippets: 8 },
+FREE: { monthlyReviewsLimit: 60, ragK: 0, allowCustomPrompts: false },
+PRO:  { monthlyReviewsLimit: Infinity, ragK: 5, allowCustomPrompts: true },
+TEAM: { monthlyReviewsLimit: Infinity, ragK: 8, allowCustomPrompts: true },
 ```
 
 ### LLM Model Selection
@@ -225,71 +226,18 @@ Edit `packages/llm-core/src/selectModel.ts`:
 ```typescript
 // Complexity thresholds for model routing
 if (complexity === "trivial" || complexity === "simple") {
-  return "gemini-2.5-flash"; // Fast, cheap
+  return "gemini-2.5-flash-lite"; // Lowest cost / Free
 } else {
-  return "gpt-4o"; // Accurate, thorough
+  return "gemini-3-flash"; // Better reasoning for complex changes
 }
 ```
 
-## Deployment
-
-### Vercel (Dashboard)
-```bash
-cd apps/dashboard
-vercel deploy
-```
-
-### Railway/Render (API + Worker)
-```bash
-cd apps/api
-# Deploy with DATABASE_URL env var
-
-cd apps/worker
-# Deploy with REDIS_URL, LLM API keys
-```
-
-### GitHub Actions (CI Integration)
-
-Create `.github/workflows/review.yml`:
-```yaml
-name: ReviewScope
-on: [pull_request]
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-node@v3
-      - run: curl -X POST ${{ secrets.REVIEW_WEBHOOK }} \
-          -H "X-GitHub-Event: pull_request" \
-          -H "X-Hub-Signature-256: sha256=..." \
-          -d "${{ toJson(github.event) }}"
-```
-
-## Monitoring & Logging
-
-### Database Queries
-```bash
-cd apps/api
-npm run studio  # Drizzle Studio
-```
-
-### Redis Cache
-```bash
-# Check Upstash console or use redis-cli
-redis-cli GET review:pr:123
-```
-
-### Worker Queue
-```bash
-# Monitor Bull dashboard
-npm run queue:ui  # localhost:3000/admin/queues
-```
 
 ## Support & Contact
 
 📧 **Email:** parasverma7454@gmail.com  
 🐙 **GitHub Issues:** [ReviewScope Issues](https://github.com/Review-scope/ReviewScope/issues)  
-💬 **Discussions:** [GitHub Discussions](https://github.com/Review-scope/ReviewScope/discussions)
+<!-- 💬 **Discussions:** [GitHub Discussions](https://github.com/Review-scope/ReviewScope/discussions) -->
 
 ## Contributing
 
@@ -301,9 +249,9 @@ npm run queue:ui  # localhost:3000/admin/queues
 
 All PRs are reviewed by ReviewScope! 🤖
 
-## License
+<!-- ## License
 
-ReviewScope is proprietary software. See LICENSE file for details.
+ReviewScope is proprietary software. See LICENSE file for details. -->
 
 ---
 

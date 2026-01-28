@@ -1,11 +1,12 @@
 import { db, installations, repositories } from "@/lib/db";
-import { Activity, AlertCircle, ArrowRight, Building2, Github, LayoutGrid, LogIn, Settings, Shield, Sparkles, User } from "lucide-react";
+import { Activity, ArrowRight, Building2, Github, LayoutGrid, LogIn, Settings, Shield, Sparkles, User } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import { eq, and, desc, count, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { getUserOrgIds } from "@/lib/github";
 import { getPlanLimits } from "../../../../worker/src/lib/plans";
+import clsx from "clsx";
 
 export const dynamic = 'force-dynamic';
 
@@ -15,18 +16,18 @@ export default async function SettingsPage() {
   if (!session?.user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
-        <div className="bg-muted/50 p-6 rounded-[2rem] mb-8 backdrop-blur-sm border border-border/50">
-          <Github className="w-16 h-16 text-muted-foreground" />
+        <div className="bg-zinc-50 p-8 rounded-3xl mb-8 border border-zinc-100 shadow-sm">
+          <Github className="w-16 h-16 text-zinc-300" />
         </div>
-        <h1 className="text-4xl font-black tracking-tight mb-4 uppercase italic">Access Denied</h1>
-        <p className="text-xl text-muted-foreground max-w-md mb-10 font-medium">
+        <h1 className="text-3xl font-black tracking-tight mb-4 text-zinc-900">Access Denied</h1>
+        <p className="text-zinc-500 max-w-md mb-10 font-medium">
           Sign in to your account to manage your AI review installations.
         </p>
         <Link 
           href="/signin"
-          className="inline-flex items-center gap-3 px-10 py-4 bg-primary text-primary-foreground rounded-full font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl shadow-primary/20 hover:scale-105"
+          className="inline-flex items-center gap-3 px-8 py-3 bg-zinc-900 text-white rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-zinc-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
         >
-          <LogIn className="w-5 h-5" />
+          <LogIn className="w-4 h-4" />
           Authorize
         </Link>
       </div>
@@ -66,112 +67,113 @@ export default async function SettingsPage() {
   const countsMap = Object.fromEntries(repoCounts.map(c => [c.id, c.count]));
   
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-12">
-      {/* Premium Header */}
-      <header className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            <div className="p-4 rounded-3xl bg-primary text-primary-foreground shadow-xl shadow-primary/20">
-              <LayoutGrid className="w-10 h-10" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black tracking-tighter uppercase italic leading-none">Connected Accounts</h1>
-              <p className="text-xl text-muted-foreground font-medium mt-2">
-                Manage your GitHub installations and configure AI review settings for each workspace.
-              </p>
-            </div>
+    <div className="p-6 md:p-12 max-w-6xl mx-auto space-y-12">
+      {/* Header */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-100 pb-8">
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-100 text-zinc-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-zinc-200">
+            <Settings className="w-3 h-3" />
+            Workspace Settings
           </div>
-          <a 
-            href="https://github.com/Review-scope/ReviewScope"
-            target="_blank"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all shadow-lg text-sm shrink-0"
-          >
-            <Github className="w-4 h-4" />
-            View Repository
-          </a>
+          <div>
+            <h1 className="text-4xl font-black tracking-tight text-zinc-900">Connected Accounts</h1>
+            <p className="text-lg text-zinc-500 font-medium mt-2 max-w-2xl">
+              Manage your GitHub installations and configure AI review settings for each workspace.
+            </p>
+          </div>
         </div>
+        <a 
+          href="/docs"
+          target="_blank"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-zinc-200 text-zinc-700 rounded-xl font-bold text-sm hover:bg-zinc-50 hover:border-zinc-300 transition-all"
+        >
+          <Github className="w-4 h-4" />
+          Documentation
+        </a>
       </header>
 
-      <div className="grid gap-8">
+      <div className="grid md:grid-cols-2 gap-6">
         {userInstallations.map((inst) => (
           <div 
             key={inst.id} 
-            className="group relative bg-card border-2 border-border/50 rounded-[2.5rem] p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-10 transition-all hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/5 shadow-sm overflow-hidden"
+            className="group relative bg-white border border-zinc-200 rounded-3xl p-8 flex flex-col gap-8 transition-all hover:border-zinc-300 hover:shadow-xl hover:shadow-zinc-200/50"
           >
-            {/* Background Accent */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/2 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-primary/5 transition-all"></div>
-
-            <div className="flex items-center gap-8 w-full">
-              <div className="relative shrink-0">
-                <div className="p-1 bg-linear-to-tr from-primary to-orange-400 rounded-4xl shadow-xl">
-                  <div className="w-24 h-24 rounded-[1.8rem] bg-zinc-900 flex items-center justify-center text-white">
-                    <Github className="w-10 h-10" />
-                  </div>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-zinc-900 flex items-center justify-center text-white shadow-lg shadow-zinc-900/10">
+                  <Github className="w-8 h-8" />
                 </div>
-                <div className="absolute -bottom-3 -right-3 p-2.5 bg-white border border-zinc-100 rounded-2xl shadow-2xl group-hover:scale-110 transition-transform">
-                  {inst.accountType === 'User' ? (
-                    <User className="w-5 h-5 text-blue-500" />
-                  ) : (
-                    <Building2 className="w-5 h-5 text-purple-500" />
-                  )}
+                <div>
+                  <h2 className="text-xl font-black text-zinc-900 tracking-tight truncate max-w-[200px]">{inst.accountName}</h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={clsx(
+                      "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border",
+                      inst.accountType === 'User' 
+                        ? "bg-blue-50 text-blue-600 border-blue-100" 
+                        : "bg-purple-50 text-purple-600 border-purple-100"
+                    )}>
+                      {inst.accountType}
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-zinc-100 text-zinc-600 border border-zinc-200">
+                      {inst.planName || 'Free'} Plan
+                    </span>
+                  </div>
                 </div>
               </div>
               
-              <div className="space-y-3 min-w-0">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-3xl font-black tracking-tight truncate">{inst.accountName}</h2>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-inner ${
-                    inst.accountType === 'User' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100'
-                  }`}>
-                    {inst.accountType} Account
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-zinc-900 text-white border-none shadow-lg">
-                    {inst.planName || 'None'} Tier
-                  </span>
+              <Link 
+                href={`/settings/${inst.id}/config`}
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-400 hover:text-zinc-900 hover:bg-white hover:border-zinc-300 transition-all"
+              >
+                <ArrowRight className="w-5 h-5 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100/50">
+                <div className="flex items-center gap-2 text-zinc-400 mb-1">
+                  <Activity className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Repos</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground font-medium">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-4 h-4 opacity-50 text-primary" />
-                    <span className="font-bold text-foreground">{countsMap[inst.id] || 0}</span>
-                    <span className="opacity-60">Repositories</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-green-600">
-                    <Shield className="w-4 h-4" />
-                    <span className="font-bold">Active Engine</span>
-                  </div>
+                <span className="text-2xl font-black text-zinc-900">{countsMap[inst.id] || 0}</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100/50">
+                <div className="flex items-center gap-2 text-zinc-400 mb-1">
+                  <Shield className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Status</span>
                 </div>
+                <span className="text-sm font-bold text-emerald-600 flex items-center gap-1.5 mt-1.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Active
+                </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 w-full md:w-auto relative z-10">
-              <Link 
-                href={`/settings/${inst.id}/config`}
-                className="flex-1 md:flex-initial inline-flex items-center justify-center gap-3 px-10 py-5 bg-zinc-900 text-white rounded-[1.5rem] font-black uppercase tracking-widest text-xs hover:bg-zinc-800 transition-all active:scale-[0.98] shadow-2xl hover:translate-y-[-2px]"
-              >
-                <Settings className="w-4 h-4" />
-                Configure
-              </Link>
-              <a 
-                href="https://github.com/Review-scope/ReviewScope"
-                target="_blank"
-                className="p-5 bg-white text-zinc-600 rounded-3xl hover:bg-zinc-50 transition-all border-2 border-zinc-100 hover:border-zinc-200 shadow-xl group-hover:translate-x-1"
-              >
-                <ArrowRight className="w-6 h-6" />
-              </a>
-            </div>
+            <Link 
+              href={`/settings/${inst.id}/config`}
+              className="mt-auto w-full py-4 bg-zinc-900 text-white rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-zinc-800 transition-all text-center shadow-lg shadow-zinc-900/10 hover:shadow-xl hover:shadow-zinc-900/20 hover:-translate-y-0.5 active:translate-y-0 active:shadow-none"
+            >
+              Configure Settings
+            </Link>
           </div>
         ))}
 
         {userInstallations.length === 0 && (
-          <div className="group flex flex-col items-center justify-center py-20 border-4 border-dashed border-zinc-100 rounded-[3rem] bg-zinc-50/30 hover:bg-white hover:border-primary/30 transition-all space-y-6">
-            <Sparkles className="w-12 h-12 text-zinc-200" />
-            <h3 className="text-xl font-black uppercase italic">No Connections Found</h3>
+          <div className="col-span-full py-24 text-center border-2 border-dashed border-zinc-200 rounded-[3rem] bg-zinc-50/50">
+            <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-zinc-100">
+              <Sparkles className="w-10 h-10 text-zinc-300" />
+            </div>
+            <h3 className="text-2xl font-black text-zinc-900 mb-2">No Connections Found</h3>
+            <p className="text-zinc-500 max-w-sm mx-auto mb-8">
+              Install the ReviewScope GitHub App to see your organizations here.
+            </p>
             <a 
               href="https://github.com/Review-scope/ReviewScope"
               target="_blank"
-              className="px-8 py-3 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold text-sm uppercase tracking-wide hover:bg-zinc-800 transition-all shadow-xl hover:-translate-y-1"
             >
-              View Repository
+              <Github className="w-4 h-4" />
+              Install App
             </a>
           </div>
         )}

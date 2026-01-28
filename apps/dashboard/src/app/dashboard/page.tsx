@@ -1,23 +1,25 @@
 import { db, repositories, installations, configs, reviews } from "@/lib/db";
-import { Github, CheckCircle2, AlertCircle, Clock, ArrowRight, Key, Zap, BarChart3, ShieldCheck, Sparkles, Lock, Gauge, Layers, MessageSquare, Check, Power, RefreshCw, Book, Server } from "lucide-react";
+import { Github, CheckCircle2, AlertCircle, Clock, ArrowRight, Key, Sparkles, Lock, Zap, Activity, MoreHorizontal, Calendar } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/authOptions";
-import { eq, isNotNull, and, count, desc, inArray, or } from "drizzle-orm";
+import { eq, isNotNull, and, inArray, sql, desc } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUserOrgIds } from "@/lib/github";
 import { DashboardSearch } from "./dashboard-search";
 import { getPlanLimits, PlanTier } from "../../../../worker/src/lib/plans";
+import { formatDistanceToNow } from "date-fns";
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; account?: string }>;
 }) {
   const params = await searchParams;
   const query = params.q || '';
+  const accountFilter = params.account;
   const normalizedQuery = query.trim().toLowerCase();
   const session = await getServerSession(authOptions);
 
@@ -46,12 +48,10 @@ export default async function DashboardPage({
     );
 
   // SELF-HEALING: Re-associate repositories with the latest active installation
-  // This fixes orphaned repos from uninstalls/reinstalls
   for (const inst of userInstallations) {
     const accountId = inst.githubAccountId;
     if (!accountId) continue;
 
-    // Get all installation IDs for this account
     const allInstIdsForAccount = await db
       .select({ id: installations.id })
       .from(installations)
@@ -60,7 +60,6 @@ export default async function DashboardPage({
     const ids = allInstIdsForAccount.map(i => i.id);
     
     if (ids.length > 1) {
-      // If there are multiple installations (old ones), move all active repos to the current active one
       await db.update(repositories)
         .set({ installationId: inst.id })
         .where(
@@ -95,276 +94,362 @@ export default async function DashboardPage({
       )
     );
 
-  const totalActiveRepos = userRepos.length;
+  // Fetch latest review timestamp for each repo
+  let reviewMap = new Map<string, Date>();
+  
+  if (userRepos.length > 0) {
+    const latestReviews = await db
+      .select({
+        repositoryId: reviews.repositoryId,
+        lastReviewAt: sql<string>`max(${reviews.createdAt})`,
+      })
+      .from(reviews)
+      .where(inArray(reviews.repositoryId, userRepos.map(r => r.id)))
+      .groupBy(reviews.repositoryId);
+      
+    latestReviews.forEach(r => {
+      if (r.lastReviewAt) {
+        reviewMap.set(r.repositoryId, new Date(r.lastReviewAt));
+      }
+    });
+  }
+
+  // Merge and sort by latest activity
+  const reposWithActivity = userRepos.map(repo => ({
+    ...repo,
+    lastReviewAt: reviewMap.get(repo.id) || null
+  }));
+
+  const sortedRepos = reposWithActivity.sort((a, b) => {
+    // Sort by lastReviewAt desc (latest first), then by id
+    const dateA = a.lastReviewAt?.getTime() || 0;
+    const dateB = b.lastReviewAt?.getTime() || 0;
+    return dateB - dateA;
+  });
+
   const filteredUserRepos = normalizedQuery
-    ? userRepos.filter(r => r.fullName.toLowerCase().includes(normalizedQuery))
-    : userRepos;
-  const reposMissingConfig = filteredUserRepos.filter(r => !r.hasApiKey);
-  const configuredRepos = filteredUserRepos.filter(r => r.hasApiKey);
+    ? sortedRepos.filter(r => r.fullName.toLowerCase().includes(normalizedQuery))
+    : sortedRepos;
+
+  const finalFilteredRepos = accountFilter
+    ? filteredUserRepos.filter(r => r.installationId === accountFilter)
+    : filteredUserRepos;
+
+  const reposForStats = accountFilter
+    ? sortedRepos.filter(r => r.installationId === accountFilter)
+    : sortedRepos;
+
+  const totalActiveRepos = reposForStats.length;
+    
+  const reposMissingConfig = finalFilteredRepos.filter(r => !r.hasApiKey);
+  const configuredRepos = finalFilteredRepos.filter(r => r.hasApiKey);
+  
+  // Dummy stats for now - in a real app these would be aggregated from DB
   const stats = [
     { 
-      label: "Active Repos", 
+      label: "Active Repositories", 
       value: `${totalActiveRepos}`, 
-      icon: <Github className="w-5 h-5 text-blue-500" /> 
+      icon: <Github className="w-5 h-5 text-zinc-900" />,
+      change: "+2 this week"
     },
-    { label: "AI Reviews", value: "1.2k", icon: <Sparkles className="w-5 h-5 text-amber-500" /> },
-    { label: "Issues Caught", value: 342, icon: <AlertCircle className="w-5 h-5 text-red-500" /> },
-    { label: "Time Saved", value: "84h", icon: <Clock className="w-5 h-5 text-green-500" /> },
+    { 
+      label: "Code Reviews", 
+      value: "1.2k", 
+      icon: <Activity className="w-5 h-5 text-blue-600" />,
+      change: "+12% vs last month"
+    },
+    { 
+      label: "Issues Detected", 
+      value: "342", 
+      icon: <AlertCircle className="w-5 h-5 text-amber-600" />,
+      change: "8 critical fixed"
+    },
+    { 
+      label: "Time Saved", 
+      value: "84h", 
+      icon: <Zap className="w-5 h-5 text-purple-600" />,
+      change: "Est. manual time"
+    },
   ];
   
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-12">
-      {/* Premium Header */}
-      <header className="relative overflow-hidden rounded-[2.5rem] bg-card text-card-foreground border border-border p-8 md:p-12 shadow-xl">
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-linear-to-l from-primary/10 to-transparent"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="space-y-4 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <ShieldCheck className="w-3 h-3" />
-              Verified Developer
-            </div>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight">
-              Developer <span className="text-primary">Control Center</span>
-            </h1>
-            <p className="text-lg text-muted-foreground font-medium max-w-xl">
-              Monitor <span className="text-foreground font-bold">your personal</span> AI code review infrastructure and project health across <span className="text-foreground font-bold">@{session.user.name}</span>&apos;s ecosystem.
-            </p>
-          </div>
-          <div className="flex flex-col items-center gap-4">
-             <img src="/logo1.png" alt="ReviewScope logo" className="w-32 h-32 object-contain drop-shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
-          </div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black tracking-tight text-zinc-900">Dashboard</h1>
+          <p className="text-zinc-500 font-medium">
+            Welcome back, <span className="text-zinc-900 font-bold">{session.user.name}</span>. Here's what's happening.
+          </p>
         </div>
+        <div className="flex items-center gap-2">
+           {/* Future Actions */}
+        </div>
+      </div>
 
-        {/* Floating Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
-          {stats.map((stat) => (
-            <div key={stat.label} className="bg-muted/50 backdrop-blur-md border border-border/50 rounded-2xl p-4 md:p-6 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</span>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <div key={stat.label} className="group p-5 bg-white border border-zinc-200/60 rounded-2xl shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
+            <div className="flex items-start justify-between mb-4">
+              <div className="p-2.5 bg-zinc-50 rounded-xl border border-zinc-100 group-hover:bg-zinc-100 transition-colors">
                 {stat.icon}
               </div>
-              <div className="text-2xl md:text-3xl font-black tracking-tight">{stat.value}</div>
+              {stat.change && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 bg-zinc-50 px-2 py-1 rounded-full border border-zinc-100">
+                  {stat.change}
+                </span>
+              )}
             </div>
-          ))}
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="space-y-12">
-        {/* Urgent Attention if Missing Config */}
-        {reposMissingConfig.length > 0 && (
-          <section className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-2 text-orange-500">
-                <AlertCircle className="w-5 h-5" />
-                Action Required ({reposMissingConfig.length})
-              </h3>
+            <div className="space-y-1">
+              <div className="text-3xl font-black tracking-tight text-zinc-900">{stat.value}</div>
+              <div className="text-sm font-semibold text-zinc-500">{stat.label}</div>
             </div>
-            <div className="grid gap-6 md:grid-cols-2">
-              {reposMissingConfig.map((repo) => (
-                <div key={repo.id} className="relative group overflow-hidden bg-orange-50/50 border-2 border-orange-200/50 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 transition-all hover:bg-orange-50 hover:border-orange-300">
-                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-orange-100 text-orange-600 rounded-2xl border border-orange-200 group-hover:scale-110 transition-transform">
-                      <Key className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-orange-900">{repo.fullName.split('/')[1]}</h4>
-                      <p className="text-xs text-orange-700/70 font-medium italic">Missing AI configuration Layer</p>
-                    </div>
-                  </div>
-                  <Link 
-                    href={`/settings/${repo.installationId}/config`}
-                    className="w-full md:w-auto px-6 py-2.5 bg-orange-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-orange-200 hover:bg-orange-700 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-                  >
-                    Setup Key
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-
-
-        {/* Repositories Grid */}
-        <section className="space-y-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <h3 className="text-2xl font-black uppercase tracking-tighter italic">Repositories</h3>
-            <DashboardSearch />
           </div>
+        ))}
+      </div>
 
-          <div className="border border-border/60 rounded-xl md:rounded-3xl md:border-2 md:overflow-hidden md:bg-card md:shadow-sm">
-            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-[11px] font-black uppercase tracking-widest text-muted-foreground/80 bg-muted/60">
-              <span className="col-span-7">Repository</span>
-              <span className="col-span-2">Owner</span>
-              <span className="col-span-2">Status</span>
-              <span className="col-span-1 text-right">Actions</span>
+      {/* Main Content Split */}
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Left Column: Repositories (2/3 width) */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Action Required Banner */}
+          {reposMissingConfig.length > 0 && (
+            <div className="bg-amber-50/50 border border-amber-200/60 rounded-2xl p-6 space-y-4">
+              <div className="flex items-center gap-3 text-amber-900">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <h3 className="font-bold text-lg">Configuration Required</h3>
+              </div>
+              <p className="text-sm text-amber-800/80 font-medium leading-relaxed">
+                The following repositories need an API key to enable AI reviews. 
+                Without this, ReviewScope cannot analyze your pull requests.
+              </p>
+              <div className="grid gap-3">
+                {reposMissingConfig.map((repo) => (
+                  <div key={repo.id} className="flex items-center justify-between p-4 bg-white border border-amber-100 rounded-xl shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-100 text-amber-700 rounded-lg">
+                        <Key className="w-4 h-4" />
+                      </div>
+                      <span className="font-bold text-amber-950">{repo.fullName}</span>
+                    </div>
+                    <Link 
+                      href={`/settings/${repo.installationId}/config`}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-colors"
+                    >
+                      Setup Key
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Repositories List */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h2 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+                <Github className="w-5 h-5" />
+                Repositories
+              </h2>
+              <DashboardSearch 
+                installations={userInstallations.map(inst => ({
+                  id: inst.id,
+                  accountName: inst.accountName
+                }))}
+              />
             </div>
 
-            <div className="divide-y divide-border/70">
-              {configuredRepos.map((repo) => (
-                <div
-                  key={repo.id}
-                  className="group px-4 md:px-6 py-4 flex flex-col gap-3 md:grid md:grid-cols-12 md:items-center md:gap-4 md:hover:bg-muted/40 transition-colors"
-                >
-                  <div className="md:col-span-7 flex items-center gap-3">
-                    <Link
-                      href={`/repositories/${repo.id}`}
-                      className="p-3 rounded-2xl bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner cursor-pointer"
-                    >
-                      <Github className="w-5 h-5" />
-                    </Link>
-                    <div className="space-y-1">
-                      <Link
-                        href={`/repositories/${repo.id}`}
-                        className="font-black text-lg tracking-tight truncate group-hover:text-primary transition-colors cursor-pointer"
-                      >
-                        {repo.fullName.split('/')[1]}
-                      </Link>
-                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
-                        {repo.fullName.split('/')[0]}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="md:col-span-2 text-sm font-mono text-muted-foreground/90">
-                    @{repo.fullName.split('/')[0]}
-                  </div>
-
-                  <div className="md:col-span-2 flex items-center gap-2">
-                    {(() => {
-                      const limits = getPlanLimits(repo.planId, repo.expiresAt);
-                      
-                      if (!limits.allowRAG) {
-                        return (
-                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-400 text-[10px] font-black uppercase tracking-widest border border-zinc-200 w-fit cursor-help" title="RAG Indexing requires Pro plan">
-                            <Lock className="w-3 h-3" /> N/A
-                          </div>
-                        );
-                      }
-
-                      return repo.indexedAt ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-black uppercase tracking-widest border border-green-200 w-fit">
-                          <CheckCircle2 className="w-3 h-3" /> Indexed
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-widest border border-blue-200 animate-pulse w-fit">
-                          <Clock className="w-3 h-3" /> Indexing
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  <div className="md:col-span-1 flex md:justify-end">
-                    <Link
-                      href={`/repositories/${repo.id}`}
-                      className="flex items-center gap-1 text-[11px] font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors cursor-pointer"
-                    >
-                      Explore <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </div>
-                </div>
-              ))}
-
-              {(() => {
-                  return (
-                    <a
-                      href={`https://github.com/apps/review-scope/installations/new`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 md:px-6 py-5 flex flex-col gap-2 md:grid md:grid-cols-12 md:items-center md:gap-4 bg-muted/20 md:bg-muted/30 md:hover:bg-primary/10 transition-colors cursor-pointer rounded-b-xl md:rounded-none"
-                    >
-                      <div className="md:col-span-7 flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center group-hover:bg-primary/20 text-primary transition-all">
-                          <Sparkles className="w-6 h-6" />
+            <div className="bg-white border border-zinc-200/60 rounded-2xl shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-100 text-[10px] font-bold uppercase tracking-wider text-zinc-500 bg-zinc-50/50">
+                    <th className="px-6 py-4 font-black text-zinc-400">Repository</th>
+                    <th className="px-6 py-4 font-black text-zinc-400">AI Status</th>
+                    <th className="px-6 py-4 font-black text-zinc-400 hidden sm:table-cell">Last Review</th>
+                    <th className="px-6 py-4 font-black text-zinc-400 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {configuredRepos.length === 0 && reposMissingConfig.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-12 text-center space-y-4">
+                        <div className="w-16 h-16 mx-auto bg-zinc-50 rounded-full flex items-center justify-center border border-zinc-100">
+                          <Github className="w-8 h-8 text-zinc-300" />
                         </div>
                         <div className="space-y-1">
-                          <div className="font-black text-base uppercase tracking-tight italic">Connect New Repository</div>
-                          <p className="text-xs text-muted-foreground font-medium max-w-xl">Expand your AI coverage by installing the GitHub App.</p>
+                          <h3 className="text-lg font-bold text-zinc-900">No repositories found</h3>
+                          <p className="text-zinc-500">Connect a GitHub repository to get started.</p>
                         </div>
-                      </div>
-                      <div className="md:col-span-2 text-sm font-mono text-muted-foreground/90">Available slot</div>
-                      <div className="md:col-span-2 flex items-center gap-2 text-sm font-semibold text-primary">Ready</div>
-                      <div className="md:col-span-1 flex md:justify-end">
-                        <span className="text-[11px] font-black uppercase tracking-widest text-primary">Install</span>
-                      </div>
-                    </a>
-                  );
-              })()}
+                      </td>
+                    </tr>
+                  ) : (
+                    configuredRepos.map((repo) => {
+                      const limits = getPlanLimits(repo.planId, repo.expiresAt);
+                      
+                      return (
+                        <tr key={repo.id} className="group hover:bg-zinc-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-600 border border-zinc-200/50 group-hover:scale-105 transition-transform">
+                                <Github className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <Link
+                                  href={`/repositories/${repo.id}`}
+                                  className="block font-bold text-zinc-900 hover:text-primary transition-colors text-sm"
+                                >
+                                  {repo.fullName.split('/')[1]}
+                                </Link>
+                                <span className="text-xs font-medium text-zinc-400">
+                                  {repo.fullName.split('/')[0]}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                             {(() => {
+                              if (!limits.allowRAG) {
+                                return (
+                                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-500 border border-zinc-200 text-[10px] font-bold uppercase tracking-wider">
+                                    <Lock className="w-3 h-3" /> Basic
+                                  </div>
+                                );
+                              }
+                              return repo.indexedAt ? (
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-50 text-green-700 border border-green-200/50 text-[10px] font-bold uppercase tracking-wider">
+                                  <CheckCircle2 className="w-3 h-3" /> Indexed
+                                </div>
+                              ) : (
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200/50 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                                  <Clock className="w-3 h-3" /> Indexing
+                                </div>
+                              );
+                            })()}
+                          </td>
+                          <td className="px-6 py-4 hidden sm:table-cell">
+                            {repo.lastReviewAt ? (
+                              <div className="flex items-center gap-2 text-xs font-medium text-zinc-600">
+                                <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+                                {formatDistanceToNow(repo.lastReviewAt, { addSuffix: true })}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-zinc-400 italic">No reviews yet</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                             <Link
+                              href={`/repositories/${repo.id}`}
+                              className="inline-flex items-center gap-1 text-xs font-bold text-zinc-400 hover:text-primary transition-colors"
+                            >
+                              Details <ArrowRight className="w-3 h-3" />
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+                
+              {/* Install New Repo CTA */}
+              <a
+                href={`https://github.com/apps/review-scope/installations/new`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block p-4 bg-zinc-50/50 hover:bg-primary/5 transition-colors text-center border-t border-zinc-100 group"
+              >
+                <span className="inline-flex items-center gap-2 text-sm font-bold text-zinc-600 group-hover:text-primary transition-colors">
+                  <Sparkles className="w-4 h-4" />
+                  Connect another repository
+                </span>
+              </a>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* Engine Intel Summary */}
-        <section className="space-y-6">
+        {/* Right Column: Engine Intel (1/3 width) */}
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-black uppercase tracking-tighter italic">Engine Intel</h3>
-            <Link 
-              href="/settings"
-              className="text-xs font-bold uppercase tracking-wide text-primary hover:text-primary/80 transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              View All <ArrowRight className="w-3 h-3" />
+            <h2 className="text-xl font-bold text-zinc-900">Installations</h2>
+            <Link href="/settings" className="text-xs font-bold text-zinc-500 hover:text-zinc-900 transition-colors">
+              Manage
             </Link>
           </div>
-          
-          {userInstallations.length > 0 && (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {userInstallations
+
+          <div className="space-y-4">
+            {userInstallations.length > 0 ? (
+              userInstallations
                 .filter(inst => inst.status === 'active')
                 .map((inst) => {
                   const plan = (inst.planName === 'None' || !inst.planName) ? 'Free' : inst.planName;
                   const limits = getPlanLimits(inst.planId, inst.expiresAt);
+                  const activeRepos = userRepos.filter(r => r.installationId === inst.id).length;
+
+                  const planStyles = {
+                    [PlanTier.FREE]: "bg-zinc-100 text-zinc-600 border border-zinc-200",
+                    [PlanTier.PRO]: "bg-blue-50 text-blue-700 border border-blue-200",
+                    [PlanTier.TEAM]: "bg-violet-50 text-violet-700 border border-violet-200",
+                  };
 
                   return (
-                    <div key={inst.id} className="bg-card border-2 border-border/50 rounded-2xl p-6 space-y-4">
-                      <div className="space-y-2">
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest">
-                          <Sparkles className="w-3 h-3" />
-                          {plan} Plan
+                    <div key={inst.id} className="bg-white border border-zinc-200/60 rounded-2xl p-5 shadow-sm space-y-4 hover:border-zinc-300 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-bold text-zinc-900 text-sm">{inst.accountName}</h4>
+                          <span className="text-xs font-medium text-zinc-400">GitHub Account</span>
                         </div>
-                        <h4 className="font-bold text-sm">{inst.accountName}</h4>
+                        <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${planStyles[limits.tier]}`}>
+                          {plan}
+                        </div>
                       </div>
 
-                      <div className="space-y-3">
+                      <div className="space-y-2 pt-2 border-t border-zinc-100">
                         <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <Github className="w-3.5 h-3.5 text-purple-500" />
-                            <span className="font-medium">Repos</span>
-                          </div>
-                          <span className="font-bold">
-                            {userRepos.filter(r => r.installationId === inst.id).length} Active
-                          </span>
+                          <span className="text-zinc-500 font-medium">Repositories</span>
+                          <span className="font-bold text-zinc-900">{activeRepos} Active</span>
                         </div>
-
                         <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <Layers className="w-3.5 h-3.5 text-blue-500" />
-                            <span className="font-medium">RAG Depth</span>
-                          </div>
-                          <span className="font-bold">{limits.ragK}</span>
+                          <span className="text-zinc-500 font-medium">Context Window</span>
+                          <span className="font-bold text-zinc-900">{limits.ragK}</span>
                         </div>
-
                         {limits.tier === PlanTier.TEAM && (
-                          <div className="flex items-center gap-2 p-2 bg-primary/5 rounded-lg text-xs">
-                            <Check className="w-3 h-3 text-primary" />
-                            <span className="font-bold text-primary">Batching</span>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-zinc-500 font-medium">Features</span>
+                            <span className="font-bold text-primary flex items-center gap-1">
+                              <Zap className="w-3 h-3" /> Priority
+                            </span>
                           </div>
                         )}
                       </div>
 
                       <Link
                         href={`/settings/${inst.id}/config`}
-                        className="w-full mt-2 py-2 px-2 text-center text-xs font-bold uppercase tracking-wide bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors cursor-pointer"
+                        className="block w-full py-2 text-center text-xs font-bold text-zinc-600 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-200/50 transition-colors"
                       >
-                        Configure
+                        Configure Settings
                       </Link>
                     </div>
                   );
-                })}
-            </div>
-          )}
-        </section>
-      </main>
+                })
+            ) : (
+              <div className="p-6 bg-white border border-zinc-200/60 rounded-2xl text-center space-y-3">
+                <p className="text-sm text-zinc-500">No active installations found.</p>
+                <a
+                  href={`https://github.com/apps/review-scope/installations/new`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white text-xs font-bold rounded-xl hover:bg-zinc-800 transition-colors"
+                >
+                  <Github className="w-3 h-3" />
+                  Install App
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

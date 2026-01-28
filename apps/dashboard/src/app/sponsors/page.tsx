@@ -1,5 +1,5 @@
-import { BMCButton } from "@/components/bmc-button";
-import { Heart } from "lucide-react";
+import { SponsorCards } from "./sponsor-cards";
+import { Heart, Server, Code2, Users } from "lucide-react";
 
 export const metadata = {
   title: "Sponsors - ReviewScope",
@@ -8,44 +8,53 @@ export const metadata = {
 
 export default function SponsorsPage() {
   return (
-    <div className="container mx-auto px-4 py-16 md:py-24 max-w-4xl">
-      <div className="flex flex-col items-center text-center space-y-8">
-        <div className="bg-primary/10 p-4 rounded-2xl">
-          <Heart className="w-12 h-12 text-primary fill-primary/20" />
+    <div className="container mx-auto px-4 py-16 md:py-24 max-w-5xl">
+      <div className="flex flex-col items-center text-center space-y-8 mb-16">
+        <div className="bg-primary/5 p-4 rounded-3xl">
+          <Heart className="w-12 h-12 text-primary fill-primary/10" />
         </div>
         
-        <h1 className="text-4xl md:text-5xl font-black tracking-tighter">
-          Support <span className="text-primary italic">ReviewScope</span>
-        </h1>
-        
-        <p className="text-xl text-muted-foreground max-w-2xl leading-relaxed">
-          ReviewScope is an open-source project dedicated to improving code quality for everyone.
-          Your support helps us maintain servers, develop new features, and keep the project alive.
-        </p>
-
-        <div className="pt-8">
-          <BMCButton className="flex justify-center" />
+        <div className="space-y-4 max-w-2xl">
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-zinc-900">
+            Support <span className="text-primary italic">ReviewScope</span>
+          </h1>
+          
+          <p className="text-xl text-zinc-500 font-medium leading-relaxed">
+            ReviewScope is an open-source project dedicated to improving code quality for everyone.
+            Your support helps us maintain servers and develop new features.
+          </p>
         </div>
+      </div>
 
-        <div className="pt-16 grid gap-8 md:grid-cols-3 w-full text-left">
-          <div className="bg-card border p-6 rounded-2xl shadow-sm">
-            <h3 className="font-bold text-lg mb-2">Server Costs</h3>
-            <p className="text-sm text-muted-foreground">
-              Running AI models and background workers requires significant infrastructure.
-            </p>
+      <SponsorCards />
+
+      <div className="mt-24 grid gap-8 md:grid-cols-3 w-full max-w-5xl mx-auto">
+        <div className="bg-zinc-50 border border-zinc-100 p-8 rounded-3xl">
+          <div className="w-10 h-10 rounded-xl bg-white border border-zinc-200 flex items-center justify-center mb-4 shadow-sm">
+            <Server className="w-5 h-5 text-zinc-700" />
           </div>
-          <div className="bg-card border p-6 rounded-2xl shadow-sm">
-            <h3 className="font-bold text-lg mb-2">Development</h3>
-            <p className="text-sm text-muted-foreground">
-              We're constantly adding new language support and improving our analysis engine.
-            </p>
+          <h3 className="font-bold text-lg mb-2 text-zinc-900">Server Costs</h3>
+          <p className="text-sm text-zinc-500 font-medium leading-relaxed">
+            Running AI models and background workers requires significant infrastructure resources and GPU compute.
+          </p>
+        </div>
+        <div className="bg-zinc-50 border border-zinc-100 p-8 rounded-3xl">
+          <div className="w-10 h-10 rounded-xl bg-white border border-zinc-200 flex items-center justify-center mb-4 shadow-sm">
+            <Code2 className="w-5 h-5 text-zinc-700" />
           </div>
-          <div className="bg-card border p-6 rounded-2xl shadow-sm">
-            <h3 className="font-bold text-lg mb-2">Community</h3>
-            <p className="text-sm text-muted-foreground">
-              Keeping ReviewScope free for open-source projects is our priority.
-            </p>
+          <h3 className="font-bold text-lg mb-2 text-zinc-900">Development</h3>
+          <p className="text-sm text-zinc-500 font-medium leading-relaxed">
+            We're constantly adding new language support, improving our analysis engine, and building new features.
+          </p>
+        </div>
+        <div className="bg-zinc-50 border border-zinc-100 p-8 rounded-3xl">
+          <div className="w-10 h-10 rounded-xl bg-white border border-zinc-200 flex items-center justify-center mb-4 shadow-sm">
+            <Users className="w-5 h-5 text-zinc-700" />
           </div>
+          <h3 className="font-bold text-lg mb-2 text-zinc-900">Community</h3>
+          <p className="text-sm text-zinc-500 font-medium leading-relaxed">
+            Keeping ReviewScope free for open-source projects is our priority. Your support makes this possible.
+          </p>
         </div>
       </div>
     </div>
