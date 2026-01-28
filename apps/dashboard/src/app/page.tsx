@@ -96,7 +96,7 @@ export default async function LandingPage() {
         {/* Visual Mockup Section */}
         <div className="mt-24 w-full max-w-5xl relative animate-in fade-in zoom-in duration-1000 delay-500">
           <div className="absolute -inset-4 bg-primary/20 blur-3xl opacity-20 rounded-[3rem] -z-10"></div>
-          <div className="bg-card border-8 border-background rounded-[2.5rem] shadow-2xl overflow-hidden aspect-video md:aspect-21/9 flex flex-col">
+          <div className="bg-card border-8 border-background rounded-[2.5rem] shadow-2xl overflow-hidden min-h-[400px] md:min-h-0 md:aspect-21/9 flex flex-col">
             <div className="bg-muted/50 border-b p-4 flex items-center gap-2">
               <div className="flex gap-1.5 leading-none">
                 <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/30"></div>
@@ -105,13 +105,13 @@ export default async function LandingPage() {
               </div>
               <div className="ml-4 h-6 w-48 bg-muted rounded-md animate-pulse"></div>
             </div>
-            <div className="flex-1 p-8 text-left space-y-6 overflow-hidden">
+            <div className="flex-1 p-4 md:p-8 text-left space-y-6 overflow-hidden">
                <div className="space-y-3">
                  <div className="h-4 w-[80%] bg-muted rounded animate-pulse"></div>
                  <div className="h-4 w-[60%] bg-muted rounded animate-pulse"></div>
                </div>
                
-               <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6 relative">
+               <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 md:p-6 relative">
                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                    <div className="flex items-center gap-3">
                      <div className="w-8 h-8 rounded-full bg-primary/8 flex items-center justify-center text-primary-foreground overflow-hidden">
@@ -211,7 +211,7 @@ export default async function LandingPage() {
                 key={feat.title} 
                 className="group relative p-8 rounded-3xl bg-card border hover:border-primary/40 transition-all duration-500 hover:shadow-[0_0_40px_-10px_rgba(var(--primary),0.1)]"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+                <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
                 
                 <div className="relative z-10">
                   <div className="mb-6 inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-500">
@@ -312,7 +312,7 @@ export default async function LandingPage() {
                   "Priority support"
                 ],
                 limits: [
-                  "30 PR reviews / month",
+                  "60 PR reviews / month",
                   "No persistent storage",
                   "No background indexing"
                 ],
@@ -442,7 +442,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Use Cases Section */}
-      <section className="w-full py-24 px-8">
+      {/* <section className="w-full py-24 px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 space-y-4">
             <h2 className="text-3xl font-bold tracking-tight">Built for Your Team</h2>
@@ -483,7 +483,7 @@ export default async function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="w-full bg-primary/5 border-t py-20 px-8">

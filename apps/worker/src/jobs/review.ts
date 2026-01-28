@@ -79,7 +79,7 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
 
     // RATE LIMIT CHECK
     try {
-        await checkRateLimits(dbInst.id, dbRepo.id, data.prNumber, limits);
+        await checkRateLimits(dbInst.id, dbRepo.id, data.prNumber, data.headSha, limits);
     } catch (e) {
         if (e instanceof RateLimitError) {
              console.warn(`[Limit] ${e.message}`);
@@ -126,6 +126,21 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
                     updatedAt: new Date(), 
                 },
              }).returning();
+
+             // Notify user on GitHub
+             try {
+                const ghClient = new GitHubClient();
+                const [owner, repo] = data.repositoryFullName.split('/');
+                await ghClient.postComment(
+                    data.installationId,
+                    owner,
+                    repo,
+                    data.prNumber,
+                    `## ${summaryPrefix}\n\n${userMessage}`
+                );
+             } catch (notifyErr) {
+                 console.error('[Worker] Failed to post limit comment:', notifyErr);
+             }
              
              return { success: false, reviewerVersion: '0.0.1', contextHash: '', comments: [], summary: userMessage };
         }
@@ -310,7 +325,7 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
     );
     
     // Update usage stats
-    await logReviewUsage(dbInst.id, dbRepo.id, data.prNumber);
+    await logReviewUsage(dbInst.id, dbRepo.id, data.prNumber, data.headSha);
 
     // Post to GitHub (Modular)
     await postToGitHub(gh, data, aiSummary, finalComments, config);
@@ -327,6 +342,25 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
             processedAt: new Date(),
         }).where(eq(reviews.id, dbReviewId));
     }
+
+    // Notify user on final failure
+    try {
+        const currentAttempt = _job?.attemptsMade || 0;
+        const maxAttempts = _job?.opts.attempts || 3;
+
+        // If this is the last attempt (or if job info is missing, assume it's critical)
+        if (currentAttempt >= maxAttempts - 1) {
+            const gh = new GitHubClient();
+            const [owner, repo] = data.repositoryFullName.split('/');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const failureBody = `## ❌ Review Failed\n\nReviewScope encountered an error while processing this PR:\n\n> ${errorMessage}\n\nWe have logged this issue and will investigate. Please try again later or contact support.`;
+            
+            await gh.postComment(data.installationId, owner, repo, data.prNumber, failureBody);
+        }
+    } catch (notifyError) {
+        console.error('[Worker] Failed to notify user of failure:', notifyError);
+    }
+
     throw error;
   }
 }

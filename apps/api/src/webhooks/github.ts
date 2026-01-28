@@ -166,10 +166,25 @@ githubWebhook.post('/', async (c) => {
 
     // Check monthly limit
     try {
-      await checkRateLimits(dbInst.id, dbRepo.id, pr.number, limits);
+      await checkRateLimits(dbInst.id, dbRepo.id, pr.number, pr.head.sha, limits);
     } catch (error) {
       if (error instanceof RateLimitError) {
         console.warn(`[Webhook] Rate limit exceeded for PR #${pr.number}: ${error.message}`);
+        
+        // Notify user via comment
+        try {
+          const [owner, repoName] = repo.full_name.split('/');
+          await gh.postComment(
+            installation.id,
+            owner,
+            repoName,
+            pr.number,
+            `## ⚠️ Review Skipped\n\n${error.message}\n\n[Upgrade Plan](https://reviewscope.com/settings)`
+          );
+        } catch (notifyErr) {
+          console.error('[Webhook] Failed to post rate limit comment:', notifyErr);
+        }
+
         return c.json({ status: 'ignored_rate_limit', message: error.message });
       }
       throw error;
@@ -190,8 +205,23 @@ githubWebhook.post('/', async (c) => {
       });
       console.warn(`[Webhook] Successfully enqueued review job for PR #${pr.number}`);
     } catch (err: unknown) {
-      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-      console.error(`[Webhook] Failed to enqueue review job: ${(err as any).message}`);
+      const errorMessage = (err as any).message;
+      console.error(`[Webhook] Failed to enqueue review job: ${errorMessage}`);
+      
+      // Notify user of system error
+      try {
+        const [owner, repoName] = repo.full_name.split('/');
+        await gh.postComment(
+          installation.id,
+          owner,
+          repoName,
+          pr.number,
+          `## ❌ System Error\n\nReviewScope failed to start the review job. The team has been notified.\n\nError: ${errorMessage}`
+        );
+      } catch (notifyErr) {
+        console.error('[Webhook] Failed to post system error comment:', notifyErr);
+      }
+
       return c.json({ error: 'Failed to enqueue review job' }, 500);
     }
 
@@ -236,11 +266,12 @@ githubWebhook.post('/', async (c) => {
 
     try {
       if (body.includes('re-review')) {
-        // Check monthly limit before re-review
-        await checkRateLimits(dbInst.id, dbRepo.id, issue.number, limits);
-
+        // Get PR details first to get the HEAD SHA
         const [owner, name] = repo.full_name.split('/');
         const pr = await gh.getPullRequest(installation.id, owner, name, issue.number);
+
+        // Check monthly limit before re-review
+        await checkRateLimits(dbInst.id, dbRepo.id, issue.number, pr.head.sha, limits);
         
         await enqueueReviewJob({
           jobVersion: 1,

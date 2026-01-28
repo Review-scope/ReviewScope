@@ -273,6 +273,22 @@ export class GitHubClient {
     return data;
   }
 
+  async postComment(
+    installationId: number,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    body: string
+  ): Promise<void> {
+    const octokit = await this.getInstallationClient(installationId);
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: issueNumber,
+      body,
+    });
+  }
+
   async postReview(
     installationId: number,
     owner: string,
