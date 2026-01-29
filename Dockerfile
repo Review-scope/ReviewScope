@@ -1,7 +1,7 @@
 # --- Base Stage ---
 FROM node:20-alpine AS base
 WORKDIR /app
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat dumb-init
 # Ensure .env files exist so scripts using --env-file flag don't crash when the file is missing
 RUN mkdir -p apps/api apps/worker apps/dashboard && \
     touch apps/api/.env apps/worker/.env apps/dashboard/.env
@@ -35,14 +35,25 @@ RUN npm run build -w @reviewscope/api
 
 FROM base AS api
 ENV NODE_ENV=production
-COPY --from=api-builder /app/package.json /app/package-lock.json ./
-COPY --from=api-builder /app/node_modules ./node_modules
+# Copy all package.json files first to leverage Docker cache for npm ci
+COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/worker/package.json ./apps/worker/
+COPY --from=builder /app/apps/dashboard/package.json ./apps/dashboard/
+COPY --from=builder /app/packages/context-engine/package.json ./packages/context-engine/
+COPY --from=builder /app/packages/llm-core/package.json ./packages/llm-core/
+COPY --from=builder /app/packages/rules-engine/package.json ./packages/rules-engine/
+COPY --from=builder /app/packages/security/package.json ./packages/security/
+
+# Install production dependencies (cached unless package.json changes)
+RUN npm ci --omit=dev --ignore-scripts
+
+# Copy built app and packages (invalidates cache, but deps are already installed)
 COPY --from=api-builder /app/apps/api ./apps/api
 COPY --from=api-builder /app/packages ./packages
 
 EXPOSE 3000
-# CMD ["sh", "-c", "npm run db:push -w @reviewscope/api && node apps/api/dist/apps/api/src/index.js"]
-# CMD ["sh", "-c", "node apps/api/dist/apps/api/src/index.js"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "apps/api/dist/apps/api/src/index.js"]
 
 # --- Worker Stage ---
@@ -51,11 +62,24 @@ RUN npm run build -w @reviewscope/worker
 
 FROM base AS worker
 ENV NODE_ENV=production
-COPY --from=worker-builder /app/package.json /app/package-lock.json ./
-COPY --from=worker-builder /app/node_modules ./node_modules
+# Copy all package.json files first to leverage Docker cache for npm ci
+COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/worker/package.json ./apps/worker/
+COPY --from=builder /app/apps/dashboard/package.json ./apps/dashboard/
+COPY --from=builder /app/packages/context-engine/package.json ./packages/context-engine/
+COPY --from=builder /app/packages/llm-core/package.json ./packages/llm-core/
+COPY --from=builder /app/packages/rules-engine/package.json ./packages/rules-engine/
+COPY --from=builder /app/packages/security/package.json ./packages/security/
+
+# Install production dependencies (cached unless package.json changes)
+RUN npm ci --omit=dev --ignore-scripts
+
+# Copy built app and packages
 COPY --from=worker-builder /app/apps/worker ./apps/worker
 COPY --from=worker-builder /app/packages ./packages
 
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "apps/worker/dist/apps/worker/src/index.js"]
 
 # --- Dashboard Stage ---
@@ -73,4 +97,5 @@ COPY --from=dashboard-builder /app/apps/dashboard/public ./apps/dashboard/public
 COPY --from=dashboard-builder /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
 
 EXPOSE 3000
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "apps/dashboard/server.js"]

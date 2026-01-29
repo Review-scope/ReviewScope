@@ -1,5 +1,5 @@
 import { SponsorCards } from "./sponsor-cards";
-import { Heart, Server, Code2, Users } from "lucide-react";
+import { Heart } from "lucide-react";
 
 export const metadata = {
   title: "Sponsors - ReviewScope",
@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function SponsorsPage() {
   return (
-    <div className="container mx-auto px-4 py-16 md:py-24 max-w-5xl">
+    <div className="container mx-auto px-4 md:py-10 max-w-5xl">
       <div className="flex flex-col items-center text-center space-y-8 mb-16">
         <div className="bg-primary/5 p-4 rounded-3xl">
           <Heart className="w-12 h-12 text-primary fill-primary/10" />
@@ -28,7 +28,7 @@ export default function SponsorsPage() {
 
       <SponsorCards />
 
-      <div className="mt-24 grid gap-8 md:grid-cols-3 w-full max-w-5xl mx-auto">
+      {/* <div className="mt-24 grid gap-8 md:grid-cols-3 w-full max-w-5xl mx-auto">
         <div className="bg-zinc-50 border border-zinc-100 p-8 rounded-3xl">
           <div className="w-10 h-10 rounded-xl bg-white border border-zinc-200 flex items-center justify-center mb-4 shadow-sm">
             <Server className="w-5 h-5 text-zinc-700" />
@@ -56,7 +56,7 @@ export default function SponsorsPage() {
             Keeping ReviewScope free for open-source projects is our priority. Your support makes this possible.
           </p>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

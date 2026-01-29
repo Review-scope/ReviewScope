@@ -131,7 +131,7 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
   ];
 
   return (
-    <div className="py-20 px-4 md:px-8 max-w-7xl mx-auto space-y-16">
+    <div className="py-10 px-4 md:px-8 max-w-7xl mx-auto space-y-16">
       <div className="max-w-3xl mx-auto text-center space-y-6">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
           Simple, Transparent <span className="text-primary">Pricing.</span>

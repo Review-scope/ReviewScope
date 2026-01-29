@@ -45,7 +45,7 @@ function getRedisClient() {
   });
   
   redis.on('error', (err) => {
-    console.error('[Admin] Redis Client Error:', err.message);
+    console.error('[Admin] Redis Client Error:');
   });
   
   return redis;

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUserOrgIds } from "@/lib/github";
 import { DashboardSearch } from "./dashboard-search";
+import { RepoRow } from "./repo-row";
 import { getPlanLimits, PlanTier } from "../../../../worker/src/lib/plans";
 import { formatDistanceToNow } from "date-fns";
 
@@ -227,16 +228,16 @@ export default async function DashboardPage({
               </p>
               <div className="grid gap-3">
                 {reposMissingConfig.map((repo) => (
-                  <div key={repo.id} className="flex items-center justify-between p-4 bg-white border border-amber-100 rounded-xl shadow-sm">
+                  <div key={repo.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white border border-amber-100 rounded-xl shadow-sm">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-amber-100 text-amber-700 rounded-lg">
+                      <div className="p-2 bg-amber-100 text-amber-700 rounded-lg shrink-0">
                         <Key className="w-4 h-4" />
                       </div>
-                      <span className="font-bold text-amber-950">{repo.fullName}</span>
+                      <span className="font-bold text-amber-950 truncate">{repo.fullName}</span>
                     </div>
                     <Link 
                       href={`/settings/${repo.installationId}/config`}
-                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-colors"
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-colors text-center sm:text-left whitespace-nowrap"
                     >
                       Setup Key
                     </Link>
@@ -261,20 +262,20 @@ export default async function DashboardPage({
               />
             </div>
 
-            <div className="bg-white border border-zinc-200/60 rounded-2xl shadow-sm overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-zinc-100 text-[10px] font-bold uppercase tracking-wider text-zinc-500 bg-zinc-50/50">
-                    <th className="px-6 py-4 font-black text-zinc-400">Repository</th>
-                    <th className="px-6 py-4 font-black text-zinc-400">AI Status</th>
-                    <th className="px-6 py-4 font-black text-zinc-400 hidden sm:table-cell">Last Review</th>
-                    <th className="px-6 py-4 font-black text-zinc-400 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100">
+            <div className="bg-white border border-zinc-200/60 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[450px] sm:h-[600px]">
+              <div className="flex-1 overflow-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 z-10 bg-zinc-50 shadow-sm">
+                    <tr className="border-b border-zinc-100 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                      <th className="px-3 sm:px-6 py-4 font-black text-zinc-400">Repository</th>
+                      <th className="px-3 sm:px-6 py-4 font-black text-zinc-400 w-[100px] sm:w-auto">AI Status</th>
+                      <th className="px-6 py-4 font-black text-zinc-400 hidden md:table-cell">Last Review</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
                   {configuredRepos.length === 0 && reposMissingConfig.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="p-12 text-center space-y-4">
+                      <td colSpan={3} className="p-12 text-center space-y-4">
                         <div className="w-16 h-16 mx-auto bg-zinc-50 rounded-full flex items-center justify-center border border-zinc-100">
                           <Github className="w-8 h-8 text-zinc-300" />
                         </div>
@@ -289,76 +290,24 @@ export default async function DashboardPage({
                       const limits = getPlanLimits(repo.planId, repo.expiresAt);
                       
                       return (
-                        <tr key={repo.id} className="group hover:bg-zinc-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-600 border border-zinc-200/50 group-hover:scale-105 transition-transform">
-                                <Github className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <Link
-                                  href={`/repositories/${repo.id}`}
-                                  className="block font-bold text-zinc-900 hover:text-primary transition-colors text-sm"
-                                >
-                                  {repo.fullName.split('/')[1]}
-                                </Link>
-                                <span className="text-xs font-medium text-zinc-400">
-                                  {repo.fullName.split('/')[0]}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                             {(() => {
-                              if (!limits.allowRAG) {
-                                return (
-                                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-500 border border-zinc-200 text-[10px] font-bold uppercase tracking-wider">
-                                    <Lock className="w-3 h-3" /> Basic
-                                  </div>
-                                );
-                              }
-                              return repo.indexedAt ? (
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-50 text-green-700 border border-green-200/50 text-[10px] font-bold uppercase tracking-wider">
-                                  <CheckCircle2 className="w-3 h-3" /> Indexed
-                                </div>
-                              ) : (
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200/50 text-[10px] font-bold uppercase tracking-wider animate-pulse">
-                                  <Clock className="w-3 h-3" /> Indexing
-                                </div>
-                              );
-                            })()}
-                          </td>
-                          <td className="px-6 py-4 hidden sm:table-cell">
-                            {repo.lastReviewAt ? (
-                              <div className="flex items-center gap-2 text-xs font-medium text-zinc-600">
-                                <Calendar className="w-3.5 h-3.5 text-zinc-400" />
-                                {formatDistanceToNow(repo.lastReviewAt, { addSuffix: true })}
-                              </div>
-                            ) : (
-                              <span className="text-xs text-zinc-400 italic">No reviews yet</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                             <Link
-                              href={`/repositories/${repo.id}`}
-                              className="inline-flex items-center gap-1 text-xs font-bold text-zinc-400 hover:text-primary transition-colors"
-                            >
-                              Details <ArrowRight className="w-3 h-3" />
-                            </Link>
-                          </td>
-                        </tr>
+                        <RepoRow 
+                          key={repo.id}
+                          repo={repo}
+                          limits={limits}
+                        />
                       );
                     })
                   )}
                 </tbody>
               </table>
+              </div>
                 
               {/* Install New Repo CTA */}
               <a
                 href={`https://github.com/apps/review-scope/installations/new`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block p-4 bg-zinc-50/50 hover:bg-primary/5 transition-colors text-center border-t border-zinc-100 group"
+                className="block p-4 bg-zinc-50/50 hover:bg-primary/5 transition-colors text-center border-t border-zinc-100 group shrink-0"
               >
                 <span className="inline-flex items-center gap-2 text-sm font-bold text-zinc-600 group-hover:text-primary transition-colors">
                   <Sparkles className="w-4 h-4" />

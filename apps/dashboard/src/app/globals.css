@@ -98,13 +98,23 @@
     max-width: 100vw;
     overflow-x: hidden;
   }
-  h1 {
-    @apply text-2xl;
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
-  h2 {
-    @apply text-xl;
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
   }
-  h3 {
-    @apply text-lg;
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-zinc-300 dark:bg-zinc-700 rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-400 dark:bg-zinc-600;
   }
 }

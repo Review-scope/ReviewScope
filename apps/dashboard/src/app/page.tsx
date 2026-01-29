@@ -109,7 +109,7 @@ export default async function LandingPage() {
               </div>
 
               {/* Code Area */}
-              <div className="p-6 pb-24 md:p-8 md:pb-28 font-mono text-[10px] sm:text-xs md:text-sm leading-relaxed text-left relative bg-gradient-to-b from-[#0d1117] to-[#0d1117]/95 overflow-x-auto">
+              <div className="p-6 pb-24 md:p-8 md:pb-28 font-mono text-[10px] sm:text-xs md:text-sm leading-relaxed text-left relative bg-linear-to-b from-[#0d1117] to-[#0d1117]/95 overflow-x-auto">
                 
                 <div className="flex gap-4 opacity-40 min-w-max">
                    <div className="text-muted-foreground select-none text-right w-6">1</div>
@@ -197,6 +197,7 @@ export default async function LandingPage() {
             </div>
 
             {/* OpenAI */}
+            {/* OpenAI */}
             <div className="flex flex-col items-center gap-4 group cursor-default transition-all duration-500 hover:scale-110 hover:opacity-100">
               <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-green-500/50 group-hover:shadow-[0_0_30px_-10px_rgba(34,197,94,0.5)] transition-all duration-500">
                  <img src="/openai.svg" alt="OpenAI" className="w-10 h-10 invert dark:invert-0 grayscale group-hover:grayscale-0 transition-all duration-500" />
@@ -206,10 +207,10 @@ export default async function LandingPage() {
 
             {/* GitHub */}
             <div className="flex flex-col items-center gap-4 group cursor-default transition-all duration-500 hover:scale-110 hover:opacity-100">
-              <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-white/50 group-hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.3)] transition-all duration-500">
+              <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-gray-500/50 group-hover:shadow-[0_0_30px_-10px_rgba(107,114,128,0.5)] transition-all duration-500">
                  <Github className="w-10 h-10 text-foreground grayscale group-hover:grayscale-0 transition-all duration-500" />
               </div>
-              <span className="text-sm font-bold tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">GITHUB</span>
+              <span className="text-sm font-bold tracking-widest text-muted-foreground group-hover:text-gray-500 transition-colors">GITHUB</span>
             </div>
 
             {/* Vercel (Simulated with text/icon since no svg) or generic "Cloud" */}
