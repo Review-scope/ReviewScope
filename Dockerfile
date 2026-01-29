@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG NODE_VERSION=20.11.0
+ARG NODE_VERSION=20.19.0
 ARG ALPINE_VERSION=3.19
 
 # -----------------------------------------------------------------------------
@@ -9,6 +9,9 @@ ARG ALPINE_VERSION=3.19
 FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS base
 WORKDIR /app
 RUN apk add --no-cache libc6-compat dumb-init
+# Set npm cache directory
+ENV NPM_CONFIG_CACHE=/app/.npm
+
 # Create directory structure to ensure permissions can be set correctly later
 RUN mkdir -p apps/api apps/worker apps/dashboard packages/context-engine packages/llm-core packages/rules-engine packages/security
 
@@ -24,7 +27,7 @@ COPY apps/*/package.json ./apps/
 COPY packages/*/package.json ./packages/
 
 # Install dependencies using cache mount
-RUN --mount=type=cache,target=/root/.npm \
+RUN --mount=type=cache,target=/app/.npm \
     npm ci
 
 # -----------------------------------------------------------------------------
@@ -68,7 +71,7 @@ COPY apps/*/package.json ./apps/
 COPY packages/*/package.json ./packages/
 
 # Install production dependencies only using cache mount
-RUN --mount=type=cache,target=/root/.npm \
+RUN --mount=type=cache,target=/app/.npm \
     npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # -----------------------------------------------------------------------------
