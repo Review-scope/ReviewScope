@@ -11,11 +11,6 @@ services:
     restart: always
     volumes:
       - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
     # Internal port 6379 is available to other services on the 'app-network'
 
   api:
@@ -43,8 +38,7 @@ services:
       - DASHBOARD_URL=${DASHBOARD_URL}
       - DODO_WEBHOOK_SECRET=${DODO_WEBHOOK_SECRET}
     depends_on:
-      redis:
-        condition: service_healthy
+      - redis
 
   worker:
     build:
@@ -65,8 +59,7 @@ services:
       - QDRANT_API_KEY=${QDRANT_API_KEY}
       - DASHBOARD_URL=${DASHBOARD_URL}
     depends_on:
-      redis:
-        condition: service_healthy
+      - redis
 
   dashboard:
     build:
@@ -96,10 +89,8 @@ services:
       - NEXT_PUBLIC_DODO_PAYMENT_LINK_PRO=${NEXT_PUBLIC_DODO_PAYMENT_LINK_PRO}
       - NEXT_PUBLIC_DODO_PAYMENT_LINK_TEAM=${NEXT_PUBLIC_DODO_PAYMENT_LINK_TEAM}
     depends_on:
-      redis:
-        condition: service_healthy
-      api:
-        condition: service_started
+      - redis
+      - api
 
 volumes:
   redis_data:

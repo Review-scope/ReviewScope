@@ -1,132 +1,100 @@
-# syntax=docker/dockerfile:1
-
-ARG NODE_VERSION=20.19.0
-ARG ALPINE_VERSION=3.19
-
-# -----------------------------------------------------------------------------
-# Base Stage
-# -----------------------------------------------------------------------------
-FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS base
+# --- Base Stage ---
+FROM node:20-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache libc6-compat dumb-init
-# Set npm cache directory
-ENV NPM_CONFIG_CACHE=/app/.npm
+# Ensure .env files exist so scripts using --env-file flag don't crash when the file is missing
+RUN mkdir -p apps/api apps/worker apps/dashboard && \
+    touch apps/api/.env apps/worker/.env apps/dashboard/.env
 
-# Create directory structure to ensure permissions can be set correctly later
-RUN mkdir -p apps/api apps/worker apps/dashboard packages/context-engine packages/llm-core packages/rules-engine packages/security
-
-# -----------------------------------------------------------------------------
-# Dependencies Stage (for caching)
-# -----------------------------------------------------------------------------
-FROM base AS deps
-# Copy root package files
+# --- Builder Stage ---
+FROM base AS builder
+# Copy workspace configuration
 COPY package.json package-lock.json ./
 
-# Copy workspace package.json files
-COPY apps/*/package.json ./apps/
-COPY packages/*/package.json ./packages/
+# Copy all package.json files for better caching
+COPY apps/api/package.json ./apps/api/
+COPY apps/worker/package.json ./apps/worker/
+COPY apps/dashboard/package.json ./apps/dashboard/
+COPY packages/context-engine/package.json ./packages/context-engine/
+COPY packages/llm-core/package.json ./packages/llm-core/
+COPY packages/rules-engine/package.json ./packages/rules-engine/
+COPY packages/security/package.json ./packages/security/
 
-# Install dependencies using cache mount
-RUN --mount=type=cache,target=/app/.npm \
-    npm ci
+# Install all dependencies
+RUN npm ci
 
-# -----------------------------------------------------------------------------
-# Builder Stage
-# -----------------------------------------------------------------------------
-FROM base AS builder
-# Copy source code (this will include package.json files again, but it's okay)
+# Copy source code
 COPY . .
-
-# Copy node_modules from deps
-COPY --from=deps /app/node_modules ./node_modules
 
 # Build shared packages
 RUN npm run build:packages
 
-# -----------------------------------------------------------------------------
-# Service Builders (Parallelizable)
-# -----------------------------------------------------------------------------
+# --- API Stage ---
 FROM builder AS api-builder
 RUN npm run build -w @reviewscope/api
 
-FROM builder AS worker-builder
-RUN npm run build -w @reviewscope/worker
-
-FROM builder AS dashboard-builder
-ENV NEXT_TELEMETRY_DISABLED=1
-# Use cache mount for Next.js build cache
-RUN --mount=type=cache,target=/app/apps/dashboard/.next/cache \
-    npm run build -w @reviewscope/dashboard
-
-# -----------------------------------------------------------------------------
-# Production Runner Base
-# -----------------------------------------------------------------------------
-FROM base AS runner-base
+FROM base AS api
 ENV NODE_ENV=production
+# Copy all package.json files first to leverage Docker cache for npm ci
+COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/worker/package.json ./apps/worker/
+COPY --from=builder /app/apps/dashboard/package.json ./apps/dashboard/
+COPY --from=builder /app/packages/context-engine/package.json ./packages/context-engine/
+COPY --from=builder /app/packages/llm-core/package.json ./packages/llm-core/
+COPY --from=builder /app/packages/rules-engine/package.json ./packages/rules-engine/
+COPY --from=builder /app/packages/security/package.json ./packages/security/
 
-# Copy root package files
-COPY package.json package-lock.json ./
-# Copy workspace package.json files
-COPY apps/*/package.json ./apps/
-COPY packages/*/package.json ./packages/
+# Install production dependencies (cached unless package.json changes)
+RUN npm ci --omit=dev --ignore-scripts
 
-# Install production dependencies only using cache mount
-RUN --mount=type=cache,target=/app/.npm \
-    npm ci --omit=dev --ignore-scripts && npm cache clean --force
-
-# -----------------------------------------------------------------------------
-# API Runner
-# -----------------------------------------------------------------------------
-FROM runner-base AS api
-# Use non-root user for security
-USER node
-
-# Copy built packages (dist) from builder
-COPY --from=builder --chown=node:node /app/packages ./packages
-
-# Copy built application
-COPY --from=api-builder --chown=node:node /app/apps/api ./apps/api
+# Copy built app and packages (invalidates cache, but deps are already installed)
+COPY --from=api-builder /app/apps/api ./apps/api
+COPY --from=api-builder /app/packages ./packages
 
 EXPOSE 3000
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "apps/api/dist/apps/api/src/index.js"]
 
-# -----------------------------------------------------------------------------
-# Worker Runner
-# -----------------------------------------------------------------------------
-FROM runner-base AS worker
-USER node
+# --- Worker Stage ---
+FROM builder AS worker-builder
+RUN npm run build -w @reviewscope/worker
 
-# Copy built packages (dist) from builder
-COPY --from=builder --chown=node:node /app/packages ./packages
+FROM base AS worker
+ENV NODE_ENV=production
+# Copy all package.json files first to leverage Docker cache for npm ci
+COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/worker/package.json ./apps/worker/
+COPY --from=builder /app/apps/dashboard/package.json ./apps/dashboard/
+COPY --from=builder /app/packages/context-engine/package.json ./packages/context-engine/
+COPY --from=builder /app/packages/llm-core/package.json ./packages/llm-core/
+COPY --from=builder /app/packages/rules-engine/package.json ./packages/rules-engine/
+COPY --from=builder /app/packages/security/package.json ./packages/security/
 
-# Copy built application
-COPY --from=worker-builder --chown=node:node /app/apps/worker ./apps/worker
+# Install production dependencies (cached unless package.json changes)
+RUN npm ci --omit=dev --ignore-scripts
+
+# Copy built app and packages
+COPY --from=worker-builder /app/apps/worker ./apps/worker
+COPY --from=worker-builder /app/packages ./packages
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "apps/worker/dist/apps/worker/src/index.js"]
 
-# -----------------------------------------------------------------------------
-# Dashboard Runner
-# -----------------------------------------------------------------------------
+# --- Dashboard Stage ---
+FROM builder AS dashboard-builder
+RUN npm run build -w @reviewscope/dashboard
+
 FROM base AS dashboard
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-WORKDIR /app
-
-# Set up user for Next.js
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Copy standalone build assets
-COPY --from=dashboard-builder --chown=nextjs:nodejs /app/apps/dashboard/public ./apps/dashboard/public
-COPY --from=dashboard-builder --chown=nextjs:nodejs /app/apps/dashboard/.next/standalone ./
-COPY --from=dashboard-builder --chown=nextjs:nodejs /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
-
-USER nextjs
+# Copy standalone build
+COPY --from=dashboard-builder /app/apps/dashboard/.next/standalone ./
+COPY --from=dashboard-builder /app/apps/dashboard/public ./apps/dashboard/public
+COPY --from=dashboard-builder /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
 
 EXPOSE 3000
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
