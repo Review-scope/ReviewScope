@@ -1,0 +1,12 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /_next/
+
+# Host
+Host: https://reviewscope.luffytaro.me
+
+# Sitemaps
+Sitemap: https://reviewscope.luffytaro.me/sitemap.xml
