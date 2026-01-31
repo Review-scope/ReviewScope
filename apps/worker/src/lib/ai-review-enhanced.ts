@@ -79,6 +79,7 @@ interface AIReviewInput {
   prNumber: number;
   prTitle: string;
   prBody: string;
+  author: string;
   diff: string;
   issueContext?: string;
   relatedContext?: string;
@@ -124,6 +125,7 @@ async function generatePRSummary(
   const summaryPrompt = buildPRSummaryPrompt({
     prTitle: input.prTitle,
     prBody: input.prBody,
+    author: input.author,
     diff: input.diff,
     issueContext: input.issueContext,
   });

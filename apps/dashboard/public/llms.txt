@@ -1,0 +1,59 @@
+# ReviewScope: Senior AI Code Reviewer
+
+ReviewScope is an enterprise-grade, AI-powered code review platform that integrates directly into GitHub workflows. It acts as a senior engineer on the team, providing context-aware PR summaries, identifying complex bugs, and enforcing best practices through smart batching and RAG-enhanced analysis.
+
+## Core Capabilities
+- **Concise PR Summaries**: Automatically generates high-impact overviews including a "Summary of Changes" and "Highlights" section.
+- **Smart Batching**: Handles large PRs by splitting changes into logical batches for deep analysis without losing context.
+- **RAG-Enhanced Context**: Utilizes a vector-based context engine to retrieve relevant code snippets from the entire repository to understand cross-file dependencies.
+- **Complexity-Based Routing**: Dynamically selects LLM models (e.g., Gemini Flash for simple tasks, Pro/Sonnet for complex logic) to optimize for speed and cost.
+- **Static & AI Hybrid Analysis**: Combines traditional static analysis rules with LLM-powered reasoning to catch issues like race conditions, security flaws, and architectural debt.
+
+## System Architecture
+
+### Applications (`/apps`)
+- **API (`/apps/api`)**: Hono-based backend managing webhooks, user subscriptions, and repository settings. Uses Drizzle ORM with PostgreSQL.
+- **Worker (`/apps/worker`)**: BullMQ-powered job processor that executes the multi-stage review lifecycle.
+- **Dashboard (`/apps/dashboard`)**: Next.js 15 application providing the user interface.
+
+### Dashboard Routes (`/apps/dashboard/src/app`)
+- `/dashboard`: Main overview for users to see their connected repositories and active reviews.
+- `/repositories`: Interface for managing specific repository settings, enabling/disabling AI review, and manual indexing.
+- `/reviews`: Detailed view of PR review history, including AI assessments, risk analysis, and static analysis findings.
+- `/settings`: User profile management, including display name, notification preferences, and API key management for custom LLM routing.
+- `/pricing`: Subscription management and plan selection. Features dynamic INR/USD pricing detection and plan comparison.
+- `/docs`: Comprehensive documentation for users and developers on setting up and optimizing ReviewScope.
+- `/sponsors`: Page dedicated to acknowledging project contributors and sponsors.
+- `/support`: Contact and help center for users.
+- `/signin`: Authentication entry point using GitHub OAuth.
+- `/privacy` & `/terms`: Legal documentation and privacy policy.
+
+### Core Packages (`/packages`)
+- **Context Engine (`/packages/context-engine`)**: The "brain" that assembles context layers (Issue Intent, PR Diff, RAG, Repo Metadata) into a prompt.
+- **LLM Core (`/packages/llm-core`)**: Provider-agnostic interface for OpenAI, Gemini, and Anthropic. Manages system prompts and response parsing.
+- **Rules Engine (`/packages/rules-engine`)**: Pluggable system for defining and running static analysis rules.
+- **Security (`/packages/security`)**: Handles encryption of user API keys and sensitive data masking.
+
+## Technical Stack
+- **Languages**: TypeScript (Strict mode)
+- **Frameworks**: Next.js 15, Hono, BullMQ
+- **Database**: PostgreSQL (Supabase/Neon), Redis (Upstash)
+- **ORM**: Drizzle ORM
+- **AI Models**: Gemini 2.0/1.5, GPT-4o, Claude 3.5 Sonnet
+- **Vector DB**: Pinecone/Vector context via RAG
+
+## Developer Resources
+- **Project Structure**: Monorepo managed with Bun/NPM workspaces.
+- **Configuration**: Uses `.reviewscope.yaml` for repository-level overrides (AI model, temperature, guidelines).
+- **Ignored Files**: Respects `.reviewscopeignore` for skipping specific paths during review.
+
+## Review Lifecycle
+1. **Validation**: Check installation status and rate limits.
+2. **Parsing**: Extract and score file diffs.
+3. **Context Assembly**: Fetch RAG results and issue references.
+4. **Static Analysis**: Run pre-defined rules.
+5. **AI Review**: Execute LLM analysis (batched if necessary).
+6. **Persistence**: Store results and post-processed comments back to GitHub.
+
+---
+_Generated for AI consumption. For human-readable guides, see README.md and docs/._

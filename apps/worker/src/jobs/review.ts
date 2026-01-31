@@ -244,6 +244,9 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
     // ---------------------------------------------------------
     // 4. Context Fetching (Modular)
     // ---------------------------------------------------------
+    const prDetails = await gh.getPullRequest(data.installationId, owner, repo, data.prNumber);
+    const author = prDetails.user?.login || 'author';
+    
     const issueContext = await getIssueContext(gh, data);
     const ragContext = await fetchRAGContext(data, dbRepo, dbInst, limits, aiReviewFiles);
     // const relatedContext = ''; // Placeholder
@@ -283,7 +286,8 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
                 aiReviewFiles,
                 issueContext,
                 ragContext,
-                ruleViolations
+                ruleViolations,
+                author
             );
             aiComments = aiResult.comments;
             aiSummary = aiResult.summary;

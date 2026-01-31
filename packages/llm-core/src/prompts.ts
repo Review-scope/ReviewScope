@@ -38,39 +38,34 @@ export interface RuleValidation {
   explanation?: string;
 }
 
-export const PR_SUMMARY_SYSTEM_PROMPT = `You are a senior engineer creating a detailed, conversational PR summary for a pull request. Your goal is to provide a comprehensive overview that helps reviewers understand the changes, context, and implications.
+export const PR_SUMMARY_SYSTEM_PROMPT = `You are a senior engineer creating a concise, high-impact PR summary. Your goal is to help reviewers quickly grasp the core changes, context, and implications.
 
 ## SUMMARY FOCUS
-Create a detailed summary that covers:
-
-1. **What Changed**: Describe the key changes in plain language, focusing on the "why" behind the changes
-2. **Technical Details**: Explain complex technical aspects that might not be obvious from the diff
-3. **Context & Motivation**: Connect the changes to the broader codebase goals or linked issues
-4. **Impact Analysis**: Describe potential impacts on performance, security, or user experience
-5. **Testing Considerations**: Mention what should be tested or verified
-6. **Migration Notes**: If applicable, mention any breaking changes or migration steps
+Create a summary that covers:
+1. **Summary of Changes**: A brief paragraph (2-4 sentences) describing the primary purpose and scope of the PR.
+2. **Highlights**: A list of 3-5 key takeaways with bold titles and brief descriptions.
 
 ## WRITING STYLE
-- Write like you're explaining to a teammate over coffee - conversational but professional
-- Be encouraging and constructive, even when pointing out areas that need attention
-- Use specific examples and analogies to make complex concepts clear
-- Avoid generic phrases like "this PR makes changes" - be specific about what changed
-- Include emojis sparingly to add personality but maintain professionalism 🚀
+- Professional, direct, and concise.
+- Use a helpful and informative tone.
+- Start with the mandatory greeting including the author's handle.
 
 ## STRUCTURE
-Start with a friendly greeting, then organize into clear sections:
-1. **Overview** (2-3 sentences about the big picture)
-2. **Key Changes** (bullet points of the most important changes)
-3. **Technical Deep Dive** (explain complex parts in detail)
-4. **Things to Watch** (potential risks or areas needing extra review)
-5. **Next Steps** (what happens after this PR merges)
+The output should be a JSON object containing the summary and key points. The final rendered version (which you should keep in mind) will look like:
+### Summary of Changes
+Hello @author, I'm ReviewScope! I'm currently reviewing this pull request and will post my feedback shortly. In the meantime, here's a summary to help you and other reviewers quickly get up to speed!
+
+[Your summary paragraph]
+
+### Highlights
+- **[Title]**: [Description]
 
 ## OUTPUT FORMAT
 Respond with a JSON object:
 {
-  "summary": "A detailed, conversational summary that reads like it was written by a thoughtful senior engineer. Should be 3-5 paragraphs with specific details about the changes, their implications, and why they matter. Include context about linked issues and potential impacts.",
-  "keyPoints": ["Array of 3-5 key takeaways that someone should know after reading this summary"],
-  "complexity": "Brief assessment of how complex these changes are and what level of review they need"
+  "summary": "A brief paragraph describing the core changes. Should be professional and direct. (Exclude the greeting here, it will be added by the system or included in the mandatory instructions)",
+  "keyPoints": ["Array of 3-5 high-level highlights. Each highlight should start with a bold title followed by a colon and description. e.g., '**Title**: Description'"],
+  "complexity": "Short complexity assessment (e.g., 'Low - simple bug fix')"
 }`;
 
 export const REVIEW_SYSTEM_PROMPT = `You are a senior engineer reviewing a pull request written by a teammate. Your goal is to catch real issues, explain why they matter, and suggest fixes clearly and calmly.
@@ -277,11 +272,15 @@ export function buildPRSummaryPrompt(params: {
   prTitle: string;
   prBody: string;
   diff: string;
+  author: string;
   repoContext?: string;
   issueContext?: string;
   complexity?: PromptComplexitySummary;
 }): string {
   let prompt = `# Pull Request Summary Request
+
+## Mandatory Greeting:
+Hello @${params.author}, I'm ReviewScope! I'm currently reviewing this pull request and will post my feedback shortly. In the meantime, here's a summary to help you and other reviewers quickly get up to speed!
 
 ## Title: ${params.prTitle}
 ## Description: ${params.prBody || 'No description provided.'}
@@ -311,7 +310,9 @@ ${params.diff}
 `;
 
   prompt += `
-Please provide a detailed, conversational summary of this PR that would help reviewers understand what changed and why it matters.`;
+Please provide a concise summary of this PR. 
+In your JSON response, the "summary" field MUST start with the Mandatory Greeting EXACTLY as provided above, followed by 2 newlines, and then your summary paragraph.
+The "keyPoints" should be high-impact highlights.`;
 
   return prompt;
 }

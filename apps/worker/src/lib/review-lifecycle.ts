@@ -230,7 +230,8 @@ export async function runAIReview(
   aiReviewFiles: ParsedFile[],
   issueContext: string,
   ragContext: string,
-  ruleViolations: any[]
+  ruleViolations: any[],
+  author: string
 ): Promise<{ comments: ReviewComment[], summary: string, assessment: any, riskAnalysis?: string }> {
     let aiComments: ReviewComment[] = [];
     let aiSummary = '';
@@ -273,6 +274,7 @@ export async function runAIReview(
               prNumber: data.prNumber,
               prTitle: data.prTitle,
               prBody: data.prBody,
+              author: author,
               diff: batchDiff,
               issueContext: issueContext,
               relatedContext: relatedContext,
@@ -305,7 +307,7 @@ export async function runAIReview(
 
           // Use detailed PR summary if available, otherwise use standard summary
           if (finalPrSummary) {
-            aiSummary = `### 📋 Detailed PR Summary\n${finalPrSummary.summary}\n\n**Key Points:**\n${finalPrSummary.keyPoints.map(point => `• ${point}`).join('\n')}\n\n**Complexity:** ${finalPrSummary.complexity}\n\n---\n\n### 🤝 Team Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
+            aiSummary = `### Summary of Changes\n${finalPrSummary.summary}\n\n### Highlights\n${finalPrSummary.keyPoints.map(point => `- ${point}`).join('\n')}\n\n**Complexity:** ${finalPrSummary.complexity}\n\n---\n\n### 🤝 Team Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
           } else {
             aiSummary = `### 🤝 Team Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
           }
@@ -322,6 +324,7 @@ export async function runAIReview(
             prNumber: data.prNumber,
             prTitle: data.prTitle,
             prBody: data.prBody,
+            author: author,
             diff: fullDiff,
             issueContext: issueContext,
             relatedContext: relatedContext,
@@ -339,7 +342,7 @@ export async function runAIReview(
           
           // Use detailed PR summary if available, otherwise use standard summary
           if (aiResult.prSummary) {
-            aiSummary = `### 📋 Detailed PR Summary\n${aiResult.prSummary.summary}\n\n**Key Points:**\n${aiResult.prSummary.keyPoints.map(point => `• ${point}`).join('\n')}\n\n**Complexity:** ${aiResult.prSummary.complexity}\n\n---\n\n### 🔍 Code Review\n${aiResult.summary}`;
+            aiSummary = `### Summary of Changes\n${aiResult.prSummary.summary}\n\n### Highlights\n${aiResult.prSummary.keyPoints.map(point => `- ${point}`).join('\n')}\n\n**Complexity:** ${aiResult.prSummary.complexity}\n\n---\n\n### 🔍 Code Review\n${aiResult.summary}`;
           } else {
             aiSummary = aiResult.summary;
           }
