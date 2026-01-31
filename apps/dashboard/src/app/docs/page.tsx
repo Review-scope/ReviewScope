@@ -362,7 +362,7 @@ export default function DocsPage() {
                   {[
                     { q: "Why didn't I get a review?", a: "Check if the repo is Active in the dashboard, if you have a valid API Key, and if the files are supported." },
                     { q: "'Verification Failed' error", a: "Your API Key is likely invalid or expired. Generate a new key from your provider and update Settings." },
-                    { q: "Review is taking too long", a: "Large PRs (>50 files) may take up to 2 minutes. Check status.reviewscope.com for system outages." }
+                    { q: "Review is taking too long", a: "Large PRs (>50 files) may take up to 2 minutes. Feel free to contact support if it persists." }
                   ].map((item, i) => (
                     <details key={i} className="group bg-white border border-zinc-200 rounded-xl px-6 py-4 [&_summary::-webkit-details-marker]:hidden open:ring-2 open:ring-zinc-900/5 hover:border-zinc-300 transition-all cursor-pointer">
                       <summary className="flex items-center justify-between font-bold text-zinc-900">

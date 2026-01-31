@@ -179,7 +179,7 @@ githubWebhook.post('/', async (c) => {
             owner,
             repoName,
             pr.number,
-            `## ⚠️ Review Skipped\n\n${error.message}\n\n[Upgrade Plan](https://dashboard.luffytaro.me/pricing)`
+            `## ⚠️ Review Skipped\n\n${error.message}\n\n[Upgrade Plan](https://reviewscope.luffytaro.me/pricing)`
           );
         } catch (notifyErr) {
           console.error('[Webhook] Failed to post rate limit comment:', notifyErr);
