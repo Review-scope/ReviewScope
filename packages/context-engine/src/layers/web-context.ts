@@ -140,7 +140,8 @@ class WebContextProvider {
       if (pkg.vulnerabilities && pkg.vulnerabilities.length > 0) {
         context += `- ⚠️ ${pkg.vulnerabilities.length} known vulnerabilities:\n`;
         for (const vuln of pkg.vulnerabilities) {
-          context += `  - [${vuln.severity.toUpperCase()}] ${vuln.description} (ID: ${vuln.id})\n`;
+          const severity = (vuln.severity || 'UNKNOWN').toUpperCase();
+          context += `  - [${severity}] ${vuln.description} (ID: ${vuln.id})\n`;
         }
       } else {
         context += '- No known vulnerabilities\n';

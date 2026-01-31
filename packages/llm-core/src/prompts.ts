@@ -507,7 +507,7 @@ export function prioritizeComments(
   const optional: ReviewComment[] = [];
 
   for (const comment of comments) {
-    const severity = comment.severity.toUpperCase();
+    const severity = (comment.severity || 'MINOR').toUpperCase();
     if (MUST_INCLUDE_SEVERITIES.has(severity)) {
       mustInclude.push(comment);
     } else {
@@ -517,15 +517,15 @@ export function prioritizeComments(
 
   // Sort must-include by severity (BLOCKER before CRITICAL)
   mustInclude.sort((a, b) => {
-    const priorityA = SEVERITY_PRIORITY[a.severity.toUpperCase()] ?? 99;
-    const priorityB = SEVERITY_PRIORITY[b.severity.toUpperCase()] ?? 99;
+    const priorityA = SEVERITY_PRIORITY[(a.severity || 'MINOR').toUpperCase()] ?? 99;
+    const priorityB = SEVERITY_PRIORITY[(b.severity || 'MINOR').toUpperCase()] ?? 99;
     return priorityA - priorityB;
   });
 
   // Sort optional by severity (MAJOR before MINOR before NIT)
   optional.sort((a, b) => {
-    const priorityA = SEVERITY_PRIORITY[a.severity.toUpperCase()] ?? 99;
-    const priorityB = SEVERITY_PRIORITY[b.severity.toUpperCase()] ?? 99;
+    const priorityA = SEVERITY_PRIORITY[(a.severity || 'MINOR').toUpperCase()] ?? 99;
+    const priorityB = SEVERITY_PRIORITY[(b.severity || 'MINOR').toUpperCase()] ?? 99;
     return priorityA - priorityB;
   });
 

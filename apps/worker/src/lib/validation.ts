@@ -84,8 +84,8 @@ export function validateReviewComments(
   
   // Create a copy to sort
   const sortedComments = [...comments].sort((a, b) => {
-    const sA = a.severity.toUpperCase();
-    const sB = b.severity.toUpperCase();
+    const sA = (a.severity || 'MINOR').toUpperCase();
+    const sB = (b.severity || 'MINOR').toUpperCase();
     return (severityOrder[sA] ?? 99) - (severityOrder[sB] ?? 99);
   });
 
@@ -155,7 +155,7 @@ export function validateReviewComments(
 
     // 7. Severity Adjustment
     if (isTestOrConfigFile(comment.file)) {
-      const severity = comment.severity.toUpperCase();
+      const severity = (comment.severity || 'MINOR').toUpperCase();
       if (severity === 'CRITICAL' || severity === 'MAJOR') {
         comment.severity = 'MINOR';
       }
