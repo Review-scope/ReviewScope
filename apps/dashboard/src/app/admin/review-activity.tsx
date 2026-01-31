@@ -106,18 +106,24 @@ export function ReviewActivity({
             <p className="text-sm text-muted-foreground">No reviews yet</p>
           ) : (
             recentReviews.map((review) => (
-              <div key={review.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+              <a 
+                key={review.id} 
+                href={`https://github.com/${review.repoName}/pull/${review.prNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+              >
                 <div className="flex items-center gap-3">
                   {getStatusIcon(review.status)}
                   <div>
-                    <div className="text-sm font-mono">{review.repoName}</div>
+                    <div className="text-sm font-mono group-hover:text-primary transition-colors">{review.repoName}</div>
                     <div className="text-xs text-muted-foreground">PR #{review.prNumber}</div>
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {new Date(review.createdAt).toLocaleTimeString()}
                 </div>
-              </div>
+              </a>
             ))
           )}
         </div>

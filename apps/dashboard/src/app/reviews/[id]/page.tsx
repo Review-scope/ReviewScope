@@ -175,7 +175,7 @@ export default async function ReviewDetailsPage({ params }: { params: Promise<{ 
 
                 <div className="grid gap-6">
                   {fileComments.map((comment, idx) => (
-                    <div key={idx} className="relative bg-card border-2 border-border/50 rounded-[2rem] p-8 shadow-sm hover:shadow-xl transition-all hover:border-primary/20 overflow-hidden group/card">
+                    <div key={idx} className="relative bg-card border-2 border-border/50 rounded-4xl p-8 shadow-sm hover:shadow-xl transition-all hover:border-primary/20 overflow-hidden group/card">
                        {/* Priority Indicator */}
                        <div className={clsx(
                          "absolute top-0 left-0 w-1.5 h-full",
