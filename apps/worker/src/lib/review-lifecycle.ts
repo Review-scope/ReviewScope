@@ -6,7 +6,8 @@ import type { ReviewScopeConfig } from '@reviewscope/rules-engine';
 import { calculateComplexity } from './complexity.js';
 import { runRules } from '@reviewscope/rules-engine';
 import { RAGRetriever, RAGIndexer } from '@reviewscope/context-engine';
-import { createConfiguredProvider, runAIReview as runAIReviewCore } from './ai-review.js';
+import { createConfiguredProvider } from './ai-review.js';
+import { runEnhancedAIReview, AIReviewResult } from './ai-review-enhanced.js';
 import { db, reviews, repositories, installations, configs } from '../../../api/src/db/index.js';
 import { eq, and } from 'drizzle-orm';
 import picomatch from 'picomatch';
@@ -253,6 +254,8 @@ export async function runAIReview(
           const combinedComments: ReviewComment[] = [];
           let combinedSummary = '';
 
+          let lastBatchResult: AIReviewResult | undefined;
+
           for (let i = 0; i < batches.length; i++) {
             const batchFiles = batches[i];
             const batchDiff = batchFiles.map(f => {
@@ -260,7 +263,7 @@ export async function runAIReview(
               return `File: ${f.path}\n${chunks}`;
             }).join('\n\n');
 
-            const batchResult = await runAIReviewCore({
+            const batchResult = await runEnhancedAIReview({
               installationId: dbInst.id,
               repositoryFullName: data.repositoryFullName,
               prNumber: data.prNumber,
@@ -273,10 +276,13 @@ export async function runAIReview(
               ruleViolations: ruleViolations.filter(v => batchFiles.some(f => f.path === v.file)), // Filter violations for this batch
               complexity: complexity.tier,
             }, {
-              model: config?.ai?.model,
-              temperature: config?.ai?.temperature,
-              userGuidelines: limits.allowCustomPrompts ? config?.ai?.guidelines : undefined,
-            });
+            model: config?.ai?.model,
+            temperature: config?.ai?.temperature,
+            userGuidelines: limits.allowCustomPrompts ? config?.ai?.guidelines : undefined,
+            generateDetailedSummary: true, // Enable detailed PR summary generation
+          });
+
+            lastBatchResult = batchResult;
 
             combinedComments.push(...batchResult.comments);
             combinedSummary += `\n\n### Batch ${i + 1} Review\n${batchResult.summary}`;
@@ -290,7 +296,15 @@ export async function runAIReview(
           }
 
           aiComments = combinedComments;
-          aiSummary = `### 🤝 Team Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
+          
+          const finalPrSummary = lastBatchResult?.prSummary;
+
+          // Use detailed PR summary if available, otherwise use standard summary
+          if (finalPrSummary) {
+            aiSummary = `### 📋 Detailed PR Summary\n${finalPrSummary.summary}\n\n**Key Points:**\n${finalPrSummary.keyPoints.map(point => `• ${point}`).join('\n')}\n\n**Complexity:** ${finalPrSummary.complexity}\n\n---\n\n### 🤝 Team Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
+          } else {
+            aiSummary = `### 🤝 Team Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
+          }
         } else {
           // Standard Review (Free/Pro or Single-Batch Team)
           const fullDiff = aiReviewFiles.map(f => {
@@ -298,7 +312,7 @@ export async function runAIReview(
             return `File: ${f.path}\n${chunks}`;
           }).join('\n\n');
 
-          const aiResult = await runAIReviewCore({
+          const aiResult = await runEnhancedAIReview({
             installationId: dbInst.id,
             repositoryFullName: data.repositoryFullName,
             prNumber: data.prNumber,
@@ -314,10 +328,18 @@ export async function runAIReview(
             model: config?.ai?.model,
             temperature: config?.ai?.temperature,
             userGuidelines: limits.allowCustomPrompts ? config?.ai?.guidelines : undefined,
+            generateDetailedSummary: true, // Enable detailed PR summary generation
           });
 
           aiComments = aiResult.comments;
-          aiSummary = aiResult.summary;
+          
+          // Use detailed PR summary if available, otherwise use standard summary
+          if (aiResult.prSummary) {
+            aiSummary = `### 📋 Detailed PR Summary\n${aiResult.prSummary.summary}\n\n**Key Points:**\n${aiResult.prSummary.keyPoints.map(point => `• ${point}`).join('\n')}\n\n**Complexity:** ${aiResult.prSummary.complexity}\n\n---\n\n### 🔍 Code Review\n${aiResult.summary}`;
+          } else {
+            aiSummary = aiResult.summary;
+          }
+          
           assessment = aiResult.assessment;
           riskAnalysis = aiResult.riskAnalysis;
           

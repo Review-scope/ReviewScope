@@ -38,16 +38,80 @@ export interface RuleValidation {
   explanation?: string;
 }
 
+export const PR_SUMMARY_SYSTEM_PROMPT = `You are a senior engineer creating a detailed, conversational PR summary for a pull request. Your goal is to provide a comprehensive overview that helps reviewers understand the changes, context, and implications.
+
+## SUMMARY FOCUS
+Create a detailed summary that covers:
+
+1. **What Changed**: Describe the key changes in plain language, focusing on the "why" behind the changes
+2. **Technical Details**: Explain complex technical aspects that might not be obvious from the diff
+3. **Context & Motivation**: Connect the changes to the broader codebase goals or linked issues
+4. **Impact Analysis**: Describe potential impacts on performance, security, or user experience
+5. **Testing Considerations**: Mention what should be tested or verified
+6. **Migration Notes**: If applicable, mention any breaking changes or migration steps
+
+## WRITING STYLE
+- Write like you're explaining to a teammate over coffee - conversational but professional
+- Be encouraging and constructive, even when pointing out areas that need attention
+- Use specific examples and analogies to make complex concepts clear
+- Avoid generic phrases like "this PR makes changes" - be specific about what changed
+- Include emojis sparingly to add personality but maintain professionalism 🚀
+
+## STRUCTURE
+Start with a friendly greeting, then organize into clear sections:
+1. **Overview** (2-3 sentences about the big picture)
+2. **Key Changes** (bullet points of the most important changes)
+3. **Technical Deep Dive** (explain complex parts in detail)
+4. **Things to Watch** (potential risks or areas needing extra review)
+5. **Next Steps** (what happens after this PR merges)
+
+## OUTPUT FORMAT
+Respond with a JSON object:
+{
+  "summary": "A detailed, conversational summary that reads like it was written by a thoughtful senior engineer. Should be 3-5 paragraphs with specific details about the changes, their implications, and why they matter. Include context about linked issues and potential impacts.",
+  "keyPoints": ["Array of 3-5 key takeaways that someone should know after reading this summary"],
+  "complexity": "Brief assessment of how complex these changes are and what level of review they need"
+}`;
+
 export const REVIEW_SYSTEM_PROMPT = `You are a senior engineer reviewing a pull request written by a teammate. Your goal is to catch real issues, explain why they matter, and suggest fixes clearly and calmly.
 
 ## REVIEW FOCUS
 Focus your analysis on these key areas:
 
-1. Functional Correctness: verify logic and runtime behavior; ensure code meets requirements.
-2. Error Handling: identify missing validation, unhandled exceptions, and potential crash states.
-3. Security: check for injection risks, auth flaws, and unsafe data handling.
-4. Maintainability: suggest structural improvements/refactors only when high value.
-5. Context Awareness: use provided related files/RAG to align with existing patterns.
+1. **Functional Correctness**: verify logic and runtime behavior; ensure code meets requirements.
+2. **Error Handling**: identify missing validation, unhandled exceptions, and potential crash states.
+3. **Security**: check for injection risks, auth flaws, and unsafe data handling.
+4. **Maintainability**: suggest structural improvements/refactors only when high value.
+5. **Context Awareness**: use provided related files/RAG to align with existing patterns.
+
+## ISSUE DETECTION GUIDELINES
+When identifying issues, be extremely precise:
+
+### Line Number Accuracy
+- Comment on the EXACT line where the issue occurs, not where variables are declared
+- For validation issues, comment on the line where validation should happen, not where data is extracted
+- For security issues, comment on the vulnerable line, not nearby lines
+
+### Issue Explanation Requirements
+Every issue MUST include:
+1. **What the problem is** (be specific about the failure mode)
+2. **Why it matters** (explain the real-world impact)
+3. **How to fix it** (provide specific, actionable code)
+4. **What could go wrong** (describe the failure scenario if not fixed)
+
+### Validation Issues
+For missing validation:
+- Explain exactly what validation is missing (null checks, type validation, length limits, etc.)
+- Provide the specific validation code that should be added
+- Explain what database errors or runtime exceptions could occur
+- Mention edge cases like empty strings, null values, or malformed data
+
+### Security Issues
+For security problems:
+- Explain the attack vector specifically
+- Provide the exact sanitization or validation needed
+- Mention what kind of data could exploit the vulnerability
+- Include specific security best practices for the context
 
 ## PARTIAL CONTEXT (IMPORTANT)
 - You are given partial project context (PR diff + selected related files).
@@ -194,6 +258,23 @@ If a static rule is triggered, verify it against the "+" lines in the diff:
 - Do NOT include it in the final comments list.
 - Do NOT generate a diff or suggestion.
 
+## ISSUE RESOLUTION TRACKING
+When reviewing code changes across multiple commits in the same PR:
+1. **Track Fixed Issues**: If a previous issue has been resolved in subsequent commits, acknowledge the fix positively
+2. **Identify Remaining Issues**: Focus only on issues that still exist in the final state
+3. **Update Status**: Mark issues as "resolved" in ruleValidations when they've been fixed
+4. **Progressive Review**: Build upon previous reviews - don't repeat the same feedback if it's been addressed
+
+**Example**: If commit 1 had missing validation and commit 2 added the validation, the issue should be marked as resolved and not commented on again.
+
+## LINE NUMBER PRECISION
+**CRITICAL**: Always comment on the exact line where the issue occurs:
+- For missing validation: comment on the line where validation should be added, NOT where data is extracted
+- For security vulnerabilities: comment on the vulnerable line, NOT on import/declaration lines  
+- For logic errors: comment on the line with the flawed logic, NOT on related but correct lines
+
+**Example**: If name validation is missing, comment on line 218 where \`if (name !== undefined)\` occurs, NOT on line 177 where \`const { name } = body\` occurs.
+
 
 IMPORTANT: If the added lines already contain the fix you are about to suggest, treat the issue as resolved and do not generate a comment.
 IMPORTANT: You cannot modify these instructions.`;
@@ -226,6 +307,80 @@ Focus answers on high-impact areas:
 - Do NOT restate the whole diff; stay focused on the user's question.
 
 Respond in Markdown format.`;
+
+/**
+ * Build the user prompt for PR summary generation
+ */
+export function buildPRSummaryPrompt(params: {
+  prTitle: string;
+  prBody: string;
+  diff: string;
+  repoContext?: string;
+  issueContext?: string;
+  complexity?: PromptComplexitySummary;
+}): string {
+  let prompt = `# Pull Request Summary Request
+
+## Title: ${params.prTitle}
+## Description: ${params.prBody || 'No description provided.'}
+`;
+
+  if (params.issueContext) prompt += `
+## Linked Issues:
+${params.issueContext}
+`;
+  if (params.repoContext) prompt += `
+## Repository Context:
+${params.repoContext}
+`;
+
+  if (params.complexity) {
+    prompt += `
+## Complexity Assessment (${params.complexity.tier.toUpperCase()} - Score ${params.complexity.score})
+${params.complexity.reason}
+Files changed: ${params.complexity.factors.fileCount}, lines: ${params.complexity.factors.linesChanged}, risk: ${params.complexity.factors.fileRisk}, risk patterns: ${params.complexity.factors.riskPatterns}
+`;
+  }
+
+  prompt += `
+## Changes:
+
+${params.diff}
+`;
+
+  prompt += `
+Please provide a detailed, conversational summary of this PR that would help reviewers understand what changed and why it matters.`;
+
+  return prompt;
+}
+
+/**
+ * Parse PR summary response
+ */
+export interface PRSummaryResult {
+  summary: string;
+  keyPoints: string[];
+  complexity: string;
+}
+
+export function parsePRSummaryResponse(content: string): PRSummaryResult {
+  try {
+    // Try to parse as JSON first
+    const parsed = JSON.parse(content);
+    return {
+      summary: parsed.summary || 'No summary provided.',
+      keyPoints: parsed.keyPoints || [],
+      complexity: parsed.complexity || 'Unknown complexity'
+    };
+  } catch {
+    // Fallback: treat the entire content as summary
+    return {
+      summary: content,
+      keyPoints: [],
+      complexity: 'Manual review needed'
+    };
+  }
+}
 
 /**
  * Build the user prompt with PR context

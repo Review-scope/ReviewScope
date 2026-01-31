@@ -9,13 +9,17 @@ export type { Complexity } from './selectModel.js';
 // Prompts (shared across all providers)
 export {
   REVIEW_SYSTEM_PROMPT,
+  PR_SUMMARY_SYSTEM_PROMPT,
   CHAT_SYSTEM_PROMPT,
   buildReviewPrompt,
+  buildPRSummaryPrompt,
   parseReviewResponse,
+  parsePRSummaryResponse,
   prioritizeComments,
   DEFAULT_MAX_COMMENTS,
   type ReviewComment,
   type ReviewResult,
+  type PRSummaryResult,
 } from './prompts.js';
 
 // Providers

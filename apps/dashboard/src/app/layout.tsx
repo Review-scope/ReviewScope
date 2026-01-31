@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_NEXTAUTH_URL || "http://localhost:3000"),
   title: "ReviewScope",
   description:
     "Engineering-quality code on autopilot. Professional AI reviews for GitHub pull requests that combine static analysis with Gemini/OpenAI models, powered by your own API keys.",

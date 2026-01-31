@@ -101,10 +101,10 @@ export default async function LandingPage() {
                   <div className="w-3 h-3 rounded-full bg-yellow-500/50"></div>
                   <div className="w-3 h-3 rounded-full bg-green-500/50"></div>
                 </div>
-                <div className="text-xs font-mono text-muted-foreground/50">review_scope_demo.tsx</div>
+                <div className="text-xs font-mono text-gray-400">review_scope_demo.tsx</div>
                 <div className="flex items-center gap-2">
-                   <div className="w-2 h-2 rounded-full bg-primary/50 animate-pulse"></div>
-                   <span className="text-[10px] text-primary/70 font-mono uppercase">Live Analysis</span>
+                   <div className="w-2 h-2 rounded-full bg-sky-500 animate-pulse shadow-[0_0_8px_rgba(14,165,233,0.6)]"></div>
+                   <span className="text-[10px] text-sky-400 font-bold font-mono uppercase tracking-wider">Live Analysis</span>
                 </div>
               </div>
 
