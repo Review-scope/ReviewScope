@@ -29,9 +29,42 @@ export async function processChatJob(data: ChatJobData): Promise<void> {
 
     // Enforce Chat limits for Free plan: REMOVED
 
-    const diff = await gh.getPullRequestDiff(data.installationId, owner, repo, data.prNumber);
+    // 2. Fetch specific context if it's a review comment (Focused Reply)
+    let specificContext = '';
+    let fullDiff = ''; // Only fetch if needed
 
-    
+    if (data.commentType === 'review') {
+        try {
+            // We assume data.commentId is the USER's comment ID (the reply)
+            const userComment = await gh.getReviewComment(data.installationId, owner, repo, data.commentId);
+            
+            if (userComment.in_reply_to_id) {
+                const parentComment = await gh.getReviewComment(data.installationId, owner, repo, userComment.in_reply_to_id);
+                
+                specificContext = `
+## Focused File Context
+File: ${parentComment.path}
+Line: ${parentComment.line || parentComment.original_line}
+
+\`\`\`diff
+${parentComment.diff_hunk}
+\`\`\`
+
+## Previous Comment (Context)
+${parentComment.body}
+`;
+            }
+        } catch (e) {
+            console.warn('[Chat] Failed to fetch specific review comment context, falling back to full diff', e);
+        }
+    }
+
+    // Only fetch full diff if we don't have specific context
+    if (!specificContext) {
+        fullDiff = await gh.getPullRequestDiff(data.installationId, owner, repo, data.prNumber);
+    }
+
+    // 3. RAG Retrieval
     let ragContext = '';
     if (dbRepo?.indexedAt) {
       const { provider } = await createConfiguredProvider(dbInst.id);
@@ -45,20 +78,39 @@ export async function processChatJob(data: ChatJobData): Promise<void> {
       ragContext = results.map(r => `File: ${r.file}\nSnippet: ${r.content}`).join('\n\n');
     }
 
-    // 2. Call LLM
-    const { provider: llmProvider } = await createConfiguredProvider(dbInst.id);
-    const messages = [
-      { role: 'system' as const, content: CHAT_SYSTEM_PROMPT },
-      { role: 'user' as const, content: `
+    // 4. Construct Prompt
+    let promptContent = '';
+    
+    if (specificContext) {
+        // Focused Prompt
+        promptContent = `
+${specificContext}
+
+## RAG Context (Reference)
+${ragContext}
+
+## User Question
+${data.userQuestion}
+`;
+    } else {
+        // General Prompt (Full PR Context)
+        promptContent = `
 ## PR Diff
-${diff}
+${fullDiff}
 
 ## RAG Context
 ${ragContext}
 
 ## User Question
 ${data.userQuestion}
-` } 
+`;
+    }
+
+    // 5. Call LLM
+    const { provider: llmProvider } = await createConfiguredProvider(dbInst.id);
+    const messages = [
+      { role: 'system' as const, content: CHAT_SYSTEM_PROMPT },
+      { role: 'user' as const, content: promptContent } 
     ];
 
     const response = await llmProvider.chat(messages, {
@@ -66,7 +118,7 @@ ${data.userQuestion}
       temperature: 0.1,
     });
 
-    // 3. Post Reply to GitHub
+    // 6. Post Reply to GitHub
     const octokit = await gh.getInstallationClient(data.installationId);
     
     if (data.commentType === 'review') {

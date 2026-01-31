@@ -273,6 +273,21 @@ export class GitHubClient {
     return data;
   }
 
+  async getReviewComment(
+    installationId: number,
+    owner: string,
+    repo: string,
+    commentId: number
+  ) {
+    const octokit = await this.getInstallationClient(installationId);
+    const { data } = await octokit.rest.pulls.getReviewComment({
+      owner,
+      repo,
+      comment_id: commentId,
+    });
+    return data;
+  }
+
   async postComment(
     installationId: number,
     owner: string,

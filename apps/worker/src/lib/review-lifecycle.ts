@@ -399,11 +399,27 @@ export async function postToGitHub(
             data.prNumber,
             data.headSha,
             summary,
-            uniqueNewComments.map(c => ({
-                path: c.file,
-                line: c.line,
-                body: c.message
-            }))
+            uniqueNewComments.map(c => {
+                const severityLabel = c.severity.toLowerCase();
+                
+                let body = `**${severityLabel}**\n${c.why || c.message}\n\n`;
+                
+                if (c.suggestion || c.diff) {
+                    body += `**Suggested change**\n`;
+                    if (c.suggestion) {
+                        body += `\`\`\`suggestion\n${c.suggestion}\n\`\`\`\n\n`;
+                    } else if (c.diff) {
+                        body += `\`\`\`diff\n${c.diff}\n\`\`\`\n\n`;
+                    }
+                }
+
+                return {
+                    path: c.file,
+                    line: c.endLine || c.line,
+                    start_line: c.endLine ? c.line : undefined,
+                    body: body.trim()
+                };
+            })
         );
     } catch (err) {
         // eslint-disable-next-line no-console
