@@ -40,19 +40,21 @@ export const metadata: Metadata = {
       "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
     images: [
       {
-        url: "/hero.png",
+        url: `${baseUrl}/hero.png`,
         width: 1200,
         height: 630,
+        type: "image/png",
         alt: "ReviewScope hero showing code reviews on autopilot",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
+    site: "@reviewscope",
     title: "Review Scope – Code Reviews on Autopilot",
     description:
       "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
-    images: ["/hero.png"],
+    images: [`${baseUrl}/hero.png`],
   },
 };
 
