@@ -1,10 +1,13 @@
-# ReviewScope – AI-Powered Code Review Automation
+# Review Scope – AI-Powered Code Review Automation
 
-ReviewScope is an intelligent PR review platform that combines **static analysis**, **semantic context**, and **AI reasoning** to provide comprehensive, fast code reviews on GitHub.
+Review Scope is an intelligent PR review platform that combines **static analysis**, **semantic context**, and **AI reasoning** to provide comprehensive, fast code reviews on GitHub.
+
+<img width="1200" height="676" alt="856_1x_shots_so" src="https://github.com/user-attachments/assets/baaa7a26-18b4-438b-b764-eed7abc4e7ba" />
+
 
 ## Overview
 
-ReviewScope analyzes pull requests end-to-end, evaluating code quality, security, performance, and maintainability. It features **smart model routing** to leverage **Free Gemini models** for speed and cost-efficiency, while reserving capable models for complex logic.
+Review Scope analyzes pull requests end-to-end, evaluating code quality, security, performance, and maintainability. It features **smart model routing** to leverage **Free Gemini models** for speed and cost-efficiency, while reserving capable models for complex logic.
 
 **Key Capabilities:**
 - 🔍 **Static Analysis** – AST-based rule detection (no LLM required, always free)
@@ -24,7 +27,7 @@ ReviewScope analyzes pull requests end-to-end, evaluating code quality, security
 **Backend & Processing:**
 - Node.js Worker (background review jobs)
 - Drizzle ORM + PostgreSQL
-- Upstash Redis (caching & rate limiting)
+- Redis (caching & rate limiting)
 
 **AI & LLM:**
 - Gemini 2.5 Flash, 2.5 Flash-Lite, 3 Flash (free tier preferred)
