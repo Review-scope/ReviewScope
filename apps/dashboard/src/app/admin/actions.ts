@@ -44,7 +44,7 @@ function getRedisClient() {
     connectTimeout: 5000,
   });
   
-  redis.on('error', (err) => {
+  redis.on('error', (_err) => {
     console.error('[Admin] Redis Client Error:');
   });
   
