@@ -304,6 +304,61 @@ export class GitHubClient {
     });
   }
 
+  async resolveReviewThread(
+    installationId: number,
+    threadId: string
+  ): Promise<void> {
+    const octokit = await this.getInstallationClient(installationId);
+    // GraphQL is required to resolve threads
+    const query = `
+      mutation ResolveThread($threadId: ID!) {
+        resolveReviewThread(input: { threadId: $threadId }) {
+          thread {
+            isResolved
+          }
+        }
+      }
+    `;
+    await octokit.graphql(query, { threadId });
+  }
+
+  async getOpenReviewThreads(
+    installationId: number,
+    owner: string,
+    repo: string,
+    pullNumber: number
+  ) {
+    const octokit = await this.getInstallationClient(installationId);
+    const query = `
+      query GetThreads($owner: String!, $repo: String!, $pullNumber: Int!) {
+        repository(owner: $owner, name: $repo) {
+          pullRequest(number: $pullNumber) {
+            reviewThreads(first: 100) {
+              nodes {
+                id
+                isResolved
+                comments(first: 1) {
+                  nodes {
+                    author {
+                      login
+                    }
+                    path
+                    line
+                    body
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+    
+    const response: any = await octokit.graphql(query, { owner, repo, pullNumber });
+    return response.repository.pullRequest.reviewThreads.nodes
+      .filter((t: any) => !t.isResolved);
+  }
+
   async postReview(
     installationId: number,
     owner: string,

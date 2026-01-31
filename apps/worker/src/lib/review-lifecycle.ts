@@ -370,15 +370,40 @@ export async function postToGitHub(
     const [owner, repo] = data.repositoryFullName.split('/');
     const botName = 'review-scope[bot]'; 
 
-    // Fetch existing comments to avoid duplicates on GitHub side
-    const existingComments = await gh.getReviewComments(data.installationId, owner, repo, data.prNumber);
-    const existingBotComments = existingComments.filter(c => c.user?.login === botName);
+    // 1. Fetch open threads to see what we can resolve
+    const openThreads = await gh.getOpenReviewThreads(data.installationId, owner, repo, data.prNumber);
+    const botThreads = openThreads.filter((t: any) => 
+        t.comments.nodes[0]?.author?.login === botName
+    );
+
+    // 2. Determine which threads are now resolved
+    // Logic: If a thread exists for a file/line, but our current run didn't find any issue there
+    for (const thread of botThreads) {
+        const firstComment = thread.comments.nodes[0];
+        const isStillIssue = comments.some(c => 
+            c.file === firstComment.path && 
+            (c.line === firstComment.line || c.endLine === firstComment.line)
+        );
+
+        if (!isStillIssue) {
+            try {
+                await gh.resolveReviewThread(data.installationId, thread.id);
+                console.warn(`[GitHub] Resolved fixed thread ${thread.id} at ${firstComment.path}:${firstComment.line}`);
+            } catch (err) {
+                console.error(`[GitHub] Failed to resolve thread ${thread.id}`, err);
+            }
+        }
+    }
+
+    // 3. Filter comments that have already been posted to avoid noise
+    // We look at all comments (even resolved ones) to see if we've already said this
+    const allExistingComments = await gh.getReviewComments(data.installationId, owner, repo, data.prNumber);
+    const existingBotComments = allExistingComments.filter(c => c.user?.login === botName);
     
-    // Filter comments that have already been posted
     const newComments = comments.filter(comment => {
         return !existingBotComments.some(ec => 
             ec.path === comment.file && 
-            ec.line === comment.line && 
+            (ec.line === comment.line || ec.line === comment.endLine) && 
             ec.body.includes(comment.message) // Loose match
         );
     });
