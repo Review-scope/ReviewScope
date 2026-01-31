@@ -25,6 +25,7 @@ import {
 import { db, configs } from '../../../api/src/db/index.js';
 import { eq } from 'drizzle-orm';
 import { decrypt } from '@reviewscope/security';
+import { ComplexityScore } from './complexity.js';
 
 // Instantiate dependencies once if possible, or per job if config varies
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -83,7 +84,7 @@ interface AIReviewInput {
   relatedContext?: string;
   ragContext?: string;
   ruleViolations?: unknown[];
-  complexity?: 'trivial' | 'simple' | 'complex';
+  complexity?: ComplexityScore;
 }
 
 export interface AIReviewResult {
@@ -153,15 +154,16 @@ export async function runEnhancedAIReview(
   
   // Determine model based on complexity
   let modelName = options.model || 'gemini-2.5-flash';
+  const complexityTier = input.complexity?.tier;
   
-  if (input.complexity && (smartRouting || !options.model)) {
+  if (complexityTier && (smartRouting || !options.model)) {
     const hasGemini = !!(GEMINI_API_KEY || (options.model?.includes('gemini')));
     const hasOpenAI = !!(OPENAI_API_KEY || (options.model?.includes('gpt')));
     
-    const route = selectModel({ hasGemini, hasOpenAI }, input.complexity);
+    const route = selectModel({ hasGemini, hasOpenAI }, complexityTier);
     if (route.model !== 'none') {
       modelName = route.model;
-      console.warn(`[Enhanced Model Routing] Complexity: ${input.complexity} → ${route.model} (${route.reason})`);
+      console.warn(`[Enhanced Model Routing] Complexity: ${complexityTier} → ${route.model} (${route.reason})`);
     }
   }
   
@@ -200,7 +202,7 @@ export async function runEnhancedAIReview(
     ragContext: input.ragContext,
     userPrompt: options.userGuidelines,
     ruleViolations: input.ruleViolations,
-  }, modelName, input.complexity);
+  }, modelName, complexityTier);
 
   console.warn(`[Enhanced LLM] Context assembled: ${assembled.usedTokens} tokens (Budget: ${assembled.budgetTokens})`);
 
@@ -233,14 +235,14 @@ export async function runEnhancedAIReview(
   // Calculate confidence score
   let confidence: 'high' | 'medium' | 'low' = 'high';
   
-  if (input.complexity === 'complex' && modelName.includes('flash')) {
+  if (complexityTier === 'complex' && modelName.includes('flash')) {
     confidence = 'medium';
   }
 
   const hasExtraContext = (input.ragContext && input.ragContext.length > 0) || 
                           (input.relatedContext && input.relatedContext.length > 0);
 
-  if (!hasExtraContext && input.complexity !== 'trivial') {
+  if (!hasExtraContext && complexityTier !== 'trivial') {
     confidence = confidence === 'high' ? 'medium' : 'low'; 
   }
 

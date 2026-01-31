@@ -274,7 +274,7 @@ export async function runAIReview(
               relatedContext: relatedContext,
               ragContext: ragContext, // Note: RAG might be global, passed to all batches
               ruleViolations: ruleViolations.filter(v => batchFiles.some(f => f.path === v.file)), // Filter violations for this batch
-              complexity: complexity.tier,
+              complexity: complexity,
             }, {
             model: config?.ai?.model,
             temperature: config?.ai?.temperature,
@@ -323,7 +323,7 @@ export async function runAIReview(
             relatedContext: relatedContext,
             ragContext: ragContext,
             ruleViolations: ruleViolations,
-            complexity: complexity.tier,
+            complexity: complexity,
           }, {
             model: config?.ai?.model,
             temperature: config?.ai?.temperature,
