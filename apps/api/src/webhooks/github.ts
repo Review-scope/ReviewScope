@@ -179,7 +179,7 @@ githubWebhook.post('/', async (c) => {
             owner,
             repoName,
             pr.number,
-            `## ⚠️ Review Skipped\n\n${error.message}\n\n[Upgrade Plan](https://reviewscope.com/settings)`
+            `## ⚠️ Review Skipped\n\n${error.message}\n\n[Upgrade Plan](https://dashboard.luffytaro.me/pricing)`
           );
         } catch (notifyErr) {
           console.error('[Webhook] Failed to post rate limit comment:', notifyErr);
@@ -321,11 +321,28 @@ githubWebhook.post('/', async (c) => {
     }
 
     const body = comment.body.toLowerCase();
-    if (!body.includes('@review-scope')) {
-      return c.json({ status: 'ignored', reason: 'no_mention' });
+    const hasMention = body.includes('@review-scope');
+    let isReplyToBot = false;
+
+    // Smart Reply Detection: If no mention, check if replying to bot thread
+    if (!hasMention && comment.in_reply_to_id) {
+        try {
+            const [owner, repoName] = repo.full_name.split('/');
+            const parentComment = await gh.getReviewComment(installation.id, owner, repoName, comment.in_reply_to_id);
+            if (parentComment.user.type === 'Bot' && parentComment.user.login.includes('review-scope')) {
+                isReplyToBot = true;
+                console.warn(`[Webhook] Auto-reply detected for bot thread in PR #${pr.number}`);
+            }
+        } catch (e) {
+            console.warn('[Webhook] Failed to check parent comment for auto-reply', e);
+        }
     }
 
-    console.warn(`[Webhook] Review comment command received in PR #${pr.number}: ${body}`);
+    if (!hasMention && !isReplyToBot) {
+      return c.json({ status: 'ignored', reason: 'no_mention_and_not_bot_reply' });
+    }
+
+    console.warn(`[Webhook] Review comment command received in PR #${pr.number}`);
 
     // Check DB status
     const [dbInst] = await db.select().from(installations).where(eq(installations.githubInstallationId, installation.id));
