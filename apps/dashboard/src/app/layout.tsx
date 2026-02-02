@@ -16,12 +16,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                process.env.NEXTAUTH_URL || 
-                "https://reviewscope.luffytaro.me";
+
 
 export const metadata: Metadata = {
-  metadataBase: new URL(baseUrl),
   title: "Review Scope – Automated Code Reviews on Autopilot",
   description:
     "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
@@ -33,16 +30,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: baseUrl,
+    url: "https://reviewscope.luffytaro.me",
     siteName: "Review Scope",
     title: "Review Scope – Code Reviews on Autopilot",
     description:
       "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
     images: [
       {
-        url: `${baseUrl}/hero.png`,
-        width: 1200,
-        height: 630,
+        url: "https://reviewscope.luffytaro.me/hero.png",
         type: "image/png",
         alt: "ReviewScope hero showing code reviews on autopilot",
       },
@@ -54,7 +49,12 @@ export const metadata: Metadata = {
     title: "Review Scope – Code Reviews on Autopilot",
     description:
       "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
-    images: [`${baseUrl}/hero.png`],
+    images: [
+      {
+        url: "https://reviewscope.luffytaro.me/hero.png",
+        alt: "ReviewScope hero showing code reviews on autopilot",
+      },
+    ],
   },
 };
 
