@@ -28,35 +28,39 @@ export const metadata: Metadata = {
     apple: "/logo2.jpeg",
   },
   openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "https://reviewscope.luffytaro.me",
-    siteName: "Review Scope",
-    title: "Review Scope – Code Reviews on Autopilot",
-    description:
-      "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
-    images: [
-      {
-        url: "https://reviewscope.luffytaro.me/hero.png",
-        type: "image/png",
-        alt: "ReviewScope hero showing code reviews on autopilot",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    site: "@reviewscope",
-    title: "Review Scope – Code Reviews on Autopilot",
-    description:
-      "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
-    images: [
-      {
-        url: "https://reviewscope.luffytaro.me/hero.png",
-        alt: "ReviewScope hero showing code reviews on autopilot",
-      },
-    ],
-  },
-};
+  type: "website",
+  locale: "en_US",
+  url: "https://reviewscope.luffytaro.me",
+  siteName: "Review Scope",
+  title: "Review Scope – Code Reviews on Autopilot",
+  description:
+    "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
+  images: [
+    {
+      url: "https://reviewscope.luffytaro.me/hero.png",
+      width: 1200,
+      height: 630,
+      type: "image/png",
+      alt: "ReviewScope hero showing code reviews on autopilot",
+    },
+  ],
+},
+twitter: {
+  card: "summary_large_image",
+  site: "@reviewscope",
+  title: "Review Scope – Code Reviews on Autopilot",
+  description:
+    "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
+  images: [
+    {
+      url: "https://reviewscope.luffytaro.me/hero.png",
+      width: 1200,
+      height: 630,
+      alt: "ReviewScope hero showing code reviews on autopilot",
+    },
+  ],
+},
+}
 
 export default function RootLayout({
   children,
