@@ -19,7 +19,10 @@ export class RAGRetriever {
     if (!exists.exists) return [];
 
     // Embed query
-    const [vector] = await this.embedder.embedBatch([query], { model: 'text-embedding-004' });
+    const [vector] = await this.embedder.embedBatch([query], { 
+      model: this.embedder.defaultModel,
+      dimensions: this.embedder.defaultSize
+    });
 
     // Search
     const results = await client.search(COLLECTION_NAME, {

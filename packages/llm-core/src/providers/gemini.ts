@@ -3,6 +3,8 @@ import type { LLMProvider, Message, ChatOptions, ChatResponse, EmbeddingProvider
 
 export class GeminiProvider implements LLMProvider, EmbeddingProvider {
   name = 'gemini';
+  defaultModel = 'text-embedding-004';
+  defaultSize = 768;
   supportsStreaming = false as const;
 
   private client: GoogleGenerativeAI;

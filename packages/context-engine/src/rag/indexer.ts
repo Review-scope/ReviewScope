@@ -13,8 +13,8 @@ export class RAGIndexer {
   private embeddingModel: string;
 
   constructor(private embedder: EmbeddingProvider, options: RAGIndexerOptions = {}) {
-    this.vectorSize = options.vectorSize || 768; // Default to Gemini text-embedding-004 size
-    this.embeddingModel = options.embeddingModel || 'text-embedding-004';
+    this.vectorSize = options.vectorSize || embedder.defaultSize;
+    this.embeddingModel = options.embeddingModel || embedder.defaultModel;
   }
 
   async ensureCollection() {
@@ -30,8 +30,6 @@ export class RAGIndexer {
       console.warn(`[Qdrant] Created collection ${COLLECTION_NAME}`);
     }
 
-    // Ensure payload index for repoId exists (Safe to call even if exists in some Qdrant versions, but better to check)
-    // Most efficient is to just try creating it with wait: true, Qdrant will ignore if exists or update
     try {
       await client.createPayloadIndex(COLLECTION_NAME, {
         field_name: 'repoId',
@@ -74,7 +72,10 @@ export class RAGIndexer {
       const batch = allChunks.slice(i, i + BATCH_SIZE);
       const texts = batch.map(c => `File: ${c.file}\nContent:\n${c.content}`);
       
-      const embeddings = await this.embedder.embedBatch(texts, { model: this.embeddingModel });
+      const embeddings = await this.embedder.embedBatch(texts, { 
+        model: this.embeddingModel,
+        dimensions: this.vectorSize
+      });
 
       batch.forEach((chunk, idx) => {
         points.push({

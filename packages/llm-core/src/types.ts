@@ -42,6 +42,8 @@ export interface EmbeddingOptions {
 
 export interface EmbeddingProvider {
   name: string;
+  defaultModel: string;
+  defaultSize: number;
   embed(text: string, options: EmbeddingOptions): Promise<number[]>;
   embedBatch(texts: string[], options: EmbeddingOptions): Promise<number[][]>;
 }

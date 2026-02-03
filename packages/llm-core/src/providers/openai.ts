@@ -4,6 +4,8 @@ import type { LLMProvider, Message, ChatOptions, ChatResponse, EmbeddingProvider
 
 export class OpenAIProvider implements LLMProvider, EmbeddingProvider {
   name = 'openai';
+  defaultModel = 'text-embedding-3-small';
+  defaultSize = 768; // Match Gemini for shared collection compatibility
   supportsStreaming = false as const;
   
   private client: OpenAI;
