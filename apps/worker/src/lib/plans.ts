@@ -1,7 +1,6 @@
 export enum PlanTier {
   FREE = 'FREE',
   PRO = 'PRO',
-  TEAM = 'TEAM',
 }
 
 export interface PlanLimits {
@@ -19,7 +18,6 @@ export interface PlanLimits {
 const PLAN_ID_MAP: Record<number, PlanTier> = {
   0: PlanTier.FREE,
   1: PlanTier.PRO,
-  2: PlanTier.TEAM,
 };
 
 export function getTier(planId: number | null): PlanTier {
@@ -35,7 +33,7 @@ export function getPlanLimits(planId: number | null, expiresAt?: Date | null): P
   if (expiresAt && expiresAt < new Date()) return getPlanLimits(null, null);
 
   switch (tier) {
-    case PlanTier.TEAM:
+    case PlanTier.PRO:
       return {
         tier,
         allowAI: true,
@@ -44,17 +42,6 @@ export function getPlanLimits(planId: number | null, expiresAt?: Date | null): P
         allowCustomPrompts: true,
         allowOrg: true,
         cooldownMinutes: 1,
-        monthlyReviewsLimit: Infinity,
-      };
-    case PlanTier.PRO:
-      return {
-        tier,
-        allowAI: true,
-        allowRAG: true,
-        ragK: 5,
-        allowCustomPrompts: true,
-        allowOrg: true,
-        cooldownMinutes: 5,
         monthlyReviewsLimit: Infinity,
       };
     case PlanTier.FREE:

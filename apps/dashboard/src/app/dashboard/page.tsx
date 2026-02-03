@@ -339,7 +339,6 @@ export default async function DashboardPage({
                   const planStyles = {
                     [PlanTier.FREE]: "bg-zinc-100 text-zinc-600 border border-zinc-200",
                     [PlanTier.PRO]: "bg-blue-50 text-blue-700 border border-blue-200",
-                    [PlanTier.TEAM]: "bg-violet-50 text-violet-700 border border-violet-200",
                   };
 
                   return (
@@ -363,11 +362,11 @@ export default async function DashboardPage({
                           <span className="text-zinc-500 font-medium">Context Window</span>
                           <span className="font-bold text-zinc-900">{limits.ragK}</span>
                         </div>
-                        {limits.tier === PlanTier.TEAM && (
+                        {limits.tier === PlanTier.PRO && (
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-zinc-500 font-medium">Features</span>
                             <span className="font-bold text-primary flex items-center gap-1">
-                              <Zap className="w-3 h-3" /> Priority
+                              <Zap className="w-3 h-3" /> Advanced
                             </span>
                           </div>
                         )}

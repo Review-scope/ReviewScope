@@ -18,7 +18,6 @@ type PricingClientProps = {
   dodoLinks: {
     free: string | undefined;
     pro: string | undefined;
-    team: string | undefined;
   };
 };
 
@@ -94,11 +93,11 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
       features: [
         "Everything in Free, plus:",
         "Unlimited PR reviews",
-        "Smart model selection",
-        "Custom prompts",
-        "Advanced AST analysis",
-        "Better context awareness",
-        "Faster processing",
+        "Smart multi-file batching",
+        "High-precision RAG (8 results)",
+        "Advanced model routing",
+        "Custom review guidelines",
+        "1-minute priority cooldown",
         "Optional vector memory",
         "Priority feature updates",
       ],

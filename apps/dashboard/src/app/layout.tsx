@@ -19,9 +19,9 @@ const geistMono = Geist_Mono({
 
 
 export const metadata: Metadata = {
-  title: "Review Scope – Automated Code Reviews on Autopilot",
+  title: "ReviewScope – Open-Source AI PR Reviewer for GitHub | Automated Code Reviews",
   description:
-    "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
+    "ReviewScope is an open-source AI PR reviewer for GitHub that goes beyond the diff. Uses AST-based analysis and issue validation to deliver low-noise, actionable code reviews. Bring your own API key.",
   icons: {
     icon: "/logo2.jpeg",
     shortcut: "/logo2.jpeg",
@@ -32,9 +32,9 @@ export const metadata: Metadata = {
   locale: "en_US",
   url: "https://reviewscope.luffytaro.me",
   siteName: "Review Scope",
-  title: "Review Scope – Code Reviews on Autopilot",
+  title: "ReviewScope – Open-Source AI PR Reviewer for GitHub | Automated Code Reviews",
   description:
-    "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
+    "ReviewScope is an open-source AI PR reviewer for GitHub that goes beyond the diff. Uses AST-based analysis and issue validation to deliver low-noise, actionable code reviews. Bring your own API key.",
   images: [
     {
       url: "https://reviewscope.luffytaro.me/hero.png",
@@ -48,9 +48,9 @@ export const metadata: Metadata = {
 twitter: {
   card: "summary_large_image",
   site: "@reviewscope",
-  title: "Review Scope – Code Reviews on Autopilot",
+  title: "ReviewScope – Open-Source AI PR Reviewer for GitHub | Automated Code Reviews",
   description:
-    "Automated code reviews that go beyond the diff. Catch bugs and enforce standards with an AI that understands your entire repository context.",
+    "ReviewScope is an open-source AI PR reviewer for GitHub that goes beyond the diff. Uses AST-based analysis and issue validation to deliver low-noise, actionable code reviews. Bring your own API key.",
   images: [
     {
       url: "https://reviewscope.luffytaro.me/hero.png",

@@ -248,8 +248,8 @@ export async function runAIReview(
     const relatedContext = ''; // Placeholder for future expansion
 
     if (limits.allowAI) {
-        // Team Tier Batching Logic
-        if (limits.tier === PlanTier.TEAM && aiReviewFiles.length > 10) {
+        // Pro Tier Batching Logic
+        if (limits.tier === PlanTier.PRO && aiReviewFiles.length > 10) {
           const BATCH_SIZE = 10;
           const batches = [];
           for (let i = 0; i < aiReviewFiles.length; i += BATCH_SIZE) {
@@ -307,9 +307,9 @@ export async function runAIReview(
 
           // Use detailed PR summary if available, otherwise use standard summary
           if (finalPrSummary) {
-            aiSummary = `### Summary of Changes\n${finalPrSummary.summary}\n\n### Highlights\n${finalPrSummary.keyPoints.map(point => `- ${point}`).join('\n')}\n\n**Complexity:** ${finalPrSummary.complexity}\n\n---\n\n### 🤝 Team Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
+            aiSummary = `### Summary of Changes\n${finalPrSummary.summary}\n\n### Highlights\n${finalPrSummary.keyPoints.map(point => `- ${point}`).join('\n')}\n\n**Complexity:** ${finalPrSummary.complexity}\n\n---\n\n### 🚀 Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
           } else {
-            aiSummary = `### 🤝 Team Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
+            aiSummary = `### 🚀 Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
           }
         } else {
           // Standard Review (Free/Pro or Single-Batch Team)
