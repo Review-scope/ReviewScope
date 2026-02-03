@@ -1,4 +1,4 @@
-# Review Scope – AI-Powered Code Review Automation
+# ReviewScope – AI-Powered Code Review Automation
 
 Review Scope is an intelligent PR review platform that combines **static analysis**, **semantic context**, and **AI reasoning** to provide comprehensive, fast code reviews on GitHub.
 
@@ -30,8 +30,8 @@ Review Scope analyzes pull requests end-to-end, evaluating code quality, securit
 - Redis (caching & rate limiting)
 
 **AI & LLM:**
-- Gemini 2.5 Flash, 2.5 Flash-Lite, 3 Flash (free tier preferred)
-- GPT-5 Nano, Mini, 5.2 (preview) & GPT-4o
+- OpenAI GPT-4 class models (for complex reasoning)
+- Gemini Flash models (fast, low-cost reviews)
 - Context Engine (RAG + chunking)
 
 **Integration:**
@@ -146,7 +146,6 @@ Dashboard available at `http://localhost:3000`
 | Reviews Limit | 60 / month | Unlimited | Unlimited |
 | RAG Context | ❌ | ✅ (5 snippets) | ✅ (8+ snippets) |
 | Custom Prompts | ❌ | ✅ | ✅ |
-| Org Controls | ✅ | ✅ | ✅ |
 | Support | Community | Email | Priority |
 
 **All tiers include:**
@@ -219,8 +218,7 @@ Dashboard → Repositories → [Select] → Settings → Custom Prompt
 Edit `apps/worker/src/lib/plans.ts`:
 ```typescript
 FREE: { monthlyReviewsLimit: 60, ragK: 0, allowCustomPrompts: false },
-PRO:  { monthlyReviewsLimit: Infinity, ragK: 5, allowCustomPrompts: true },
-TEAM: { monthlyReviewsLimit: Infinity, ragK: 8, allowCustomPrompts: true },
+PRO:  { monthlyReviewsLimit: Infinity, ragK: 8, allowCustomPrompts: true },
 ```
 
 ### LLM Model Selection
@@ -252,7 +250,7 @@ if (complexity === "trivial" || complexity === "simple") {
 
 All PRs are reviewed by ReviewScope! 🤖
 
-<!-- ## License
+
 
 ReviewScope is proprietary software. See LICENSE file for details. -->
 
