@@ -62,6 +62,23 @@ export async function processIndexingJob(data: IndexingJobData): Promise<void> {
 
     console.warn(`[Index] Found DB installation: ${dbInst.id} for GitHub installation: ${data.installationId}`);
 
+    // Check if repo is a fork
+    try {
+      const repoDetails = await gh.getRepositoryDetails(data.installationId, owner, repo);
+      if (repoDetails.fork) {
+        console.warn(`[Index] Skipping: Repository ${data.repositoryFullName} is a fork.`);
+        return;
+      }
+    } catch (e) {
+      console.error(`[Index] Failed to fetch repo details for ${data.repositoryFullName}:`, e);
+      // If we can't check, should we proceed? Safest is to proceed or fail. 
+      // Given we want to block forks, if we can't verify, we might want to continue but log error, 
+      // or assume it's okay. GitHub API failure usually means we can't do anything else anyway.
+      // But getRepositoryFiles will likely fail too if API is down.
+      // Let's rethrow or let the next call fail.
+      throw e;
+    }
+
     // 1. Fetch all relevant files from repository
     const files = await gh.getRepositoryFiles(data.installationId, owner, repo);
     

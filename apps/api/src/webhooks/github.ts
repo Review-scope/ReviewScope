@@ -616,6 +616,11 @@ githubWebhook.post('/', async (c) => {
     const defaultBranchRef = `refs/heads/${repo.default_branch}`;
 
     if (ref === defaultBranchRef) {
+      if (repo.fork) {
+        console.warn(`[Webhook] Ignoring push for forked repo ${repo.full_name}`);
+        return c.json({ status: 'ignored_fork' });
+      }
+
       console.warn(`[Webhook] Push to default branch (${repo.default_branch}) detected for ${repo.full_name}`);
 
       // Check if repo is active in DB

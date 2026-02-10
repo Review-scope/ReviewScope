@@ -118,6 +118,23 @@ export class GitHubClient {
     }
   }
 
+  async getRepositoryDetails(
+    installationId: number,
+    owner: string,
+    repo: string
+  ): Promise<{ fork: boolean; default_branch: string; private: boolean }> {
+    const octokit = await this.getInstallationClient(installationId);
+    const { data } = await octokit.rest.repos.get({
+      owner,
+      repo,
+    });
+    return {
+      fork: data.fork,
+      default_branch: data.default_branch,
+      private: data.private,
+    };
+  }
+
   async getRepositoryFiles(
     installationId: number,
     owner: string,
