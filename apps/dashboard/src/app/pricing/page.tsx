@@ -62,6 +62,7 @@ export default async function PricingPage() {
       dodoLinks={{
         free: process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK_FREE,
         pro: process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK_PRO,
+        portal: process.env.NEXT_PUBLIC_DODO_CUSTOMER_PORTAL,
       }} 
     />
   );

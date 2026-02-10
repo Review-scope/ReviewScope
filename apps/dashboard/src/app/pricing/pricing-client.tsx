@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Mail, Check, X, User, Building2, ChevronDown, CheckCircle2, CreditCard } from "lucide-react";
+import { Mail, Check, X, User, Building2, ChevronDown, CheckCircle2, CreditCard, ExternalLink } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 type Account = {
@@ -18,6 +18,7 @@ type PricingClientProps = {
   dodoLinks: {
     free: string | undefined;
     pro: string | undefined;
+    portal: string | undefined;
   };
 };
 
@@ -288,23 +289,27 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
 
             <a
               href={
-                plan.name === "Pro" && selectedAccount
-                  ? getPaymentLink(dodoLinks.pro, selectedAccountId)
-                  : plan.name === "Enterprise"
-                  ? "mailto:parasverma7454@gmail.com"
-                  : "/dashboard"
+                plan.name === "Free"
+                  ? (selectedAccount && selectedAccount.planName === "Free" ? "#" : getPaymentLink(dodoLinks.free, selectedAccountId))
+                  : plan.name === "Pro"
+                  ? (selectedAccount && selectedAccount.planName === "Pro" ? (dodoLinks.portal || "#") : getPaymentLink(dodoLinks.pro, selectedAccountId))
+                  : "mailto:parasverma7454@gmail.com"
               }
-              className={`w-full py-3.5 rounded-xl font-bold text-sm text-center transition-all flex items-center justify-center gap-2 ${
+              target={plan.name === "Pro" ? "_blank" : undefined}
+              rel={plan.name === "Pro" ? "noopener noreferrer" : undefined}
+              className={`block w-full py-3 px-6 text-center rounded-xl font-bold transition-all shadow-sm ${
                 plan.highlighted
-                  ? "bg-white text-primary hover:bg-gray-100"
-                  : "bg-primary text-primary-foreground hover:opacity-90 shadow-lg"
+                  ? "bg-background text-primary hover:bg-background/90 shadow-md"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
               } ${
-                 selectedAccount && selectedAccount.planName === plan.name
-                 ? "opacity-50 cursor-not-allowed pointer-events-none"
-                 : ""
+                selectedAccount && selectedAccount.planName === plan.name && plan.name === "Free"
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
               }`}
             >
-              {selectedAccount && selectedAccount.planName === plan.name ? "Current Plan" : (plan.name === "Enterprise" ? "Contact Sales" : plan.cta)}
+              {selectedAccount && selectedAccount.planName === plan.name 
+                ? (plan.name === "Free" ? "Current Plan" : <span className="flex items-center justify-center gap-2">Manage Subscription <ExternalLink className="w-4 h-4"/></span>) 
+                : (plan.name === "Enterprise" ? "Contact Sales" : plan.cta)}
             </a>
           </div>
         ))}
