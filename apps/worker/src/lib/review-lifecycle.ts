@@ -7,6 +7,7 @@ import { calculateComplexity } from './complexity.js';
 import { runRules } from '@reviewscope/rules-engine';
 import { RAGRetriever, RAGIndexer } from '@reviewscope/context-engine';
 import { createConfiguredProvider } from './ai-review.js';
+import { resolveEmbeddingModel } from './embedding-model.js';
 import { runEnhancedAIReview, AIReviewResult } from './ai-review-enhanced.js';
 import { db, reviews, repositories, installations, configs } from '../../../api/src/db/index.js';
 import { eq, and } from 'drizzle-orm';
@@ -119,10 +120,12 @@ export async function fetchRAGContext(
 
   try {
     const { provider } = await createConfiguredProvider(dbInst.id);
-    const indexer = new RAGIndexer(provider);
+    const embeddingModel = resolveEmbeddingModel(provider);
+    console.warn(`[Review] RAG embedding model: ${provider.name}/${embeddingModel}`);
+    const indexer = new RAGIndexer(provider, { embeddingModel });
     await indexer.ensureCollection();
 
-    const retriever = new RAGRetriever(provider);
+    const retriever = new RAGRetriever(provider, { embeddingModel });
     const query = `PR: ${data.prTitle}\nFiles: ${filteredFiles.map(f => f.path).join(', ')}`;
     
     const results = await retriever.retrieve(data.repositoryId.toString(), query, limits.ragK);

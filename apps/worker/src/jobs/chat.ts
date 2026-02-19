@@ -1,6 +1,7 @@
 import { GitHubClient } from '../lib/github.js';
 import { RAGRetriever, RAGIndexer } from '@reviewscope/context-engine';
 import { createConfiguredProvider } from '../lib/ai-review.js';
+import { resolveEmbeddingModel } from '../lib/embedding-model.js';
 import { CHAT_SYSTEM_PROMPT } from '@reviewscope/llm-core';
 import { db, repositories, installations, configs } from '../../../api/src/db/index.js';
 import { eq, and } from 'drizzle-orm';
@@ -70,12 +71,14 @@ ${parentComment.body}
     let ragContext = '';
     if (dbRepo?.indexedAt) {
       const { provider } = await createConfiguredProvider(dbInst.id);
+      const embeddingModel = resolveEmbeddingModel(provider);
+      console.warn(`[Chat] RAG embedding model: ${provider.name}/${embeddingModel}`);
       
       // Ensure index exists (fixes the 400 error)
-      const indexer = new RAGIndexer(provider);
+      const indexer = new RAGIndexer(provider, { embeddingModel });
       await indexer.ensureCollection();
 
-      const retriever = new RAGRetriever(provider);
+      const retriever = new RAGRetriever(provider, { embeddingModel });
       const results = await retriever.retrieve(data.repositoryId.toString(), data.userQuestion, 3);
       ragContext = results.map(r => `File: ${r.file}\nSnippet: ${r.content}`).join('\n\n');
     }

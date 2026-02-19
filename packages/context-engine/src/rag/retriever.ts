@@ -7,9 +7,16 @@ export interface RetrievedContext {
   score: number;
 }
 
+export interface RAGRetrieverOptions {
+  embeddingModel?: string;
+}
+
 export class RAGRetriever {
-  constructor(private embedder: EmbeddingProvider
-  ) {}
+  private embeddingModel: string;
+
+  constructor(private embedder: EmbeddingProvider, options: RAGRetrieverOptions = {}) {
+    this.embeddingModel = options.embeddingModel || embedder.defaultModel;
+  }
 
   async retrieve(repoId: string, query: string, limit: number = 5): Promise<RetrievedContext[]> {
     const client = getQdrantClient();
@@ -20,7 +27,7 @@ export class RAGRetriever {
 
     // Embed query
     const [vector] = await this.embedder.embedBatch([query], { 
-      model: this.embedder.defaultModel,
+      model: this.embeddingModel,
       dimensions: this.embedder.defaultSize
     });
 
