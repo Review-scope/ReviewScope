@@ -20,6 +20,7 @@ type PricingClientProps = {
     pro: string | undefined;
     portal: string | undefined;
   };
+  freePlanDefaultModel?: string;
 };
 
 function getPaymentLink(baseUrl: string | undefined, accountId: number) {
@@ -28,7 +29,7 @@ function getPaymentLink(baseUrl: string | undefined, accountId: number) {
   return `${baseUrl}${separator}metadata_client_reference_id=${accountId}&client_reference_id=${accountId}`;
 }
 
-export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
+export function PricingClient({ accounts, dodoLinks, freePlanDefaultModel = "Sarvam-M" }: PricingClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -67,7 +68,7 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
         "AST-based analysis",
         "Issue-to-PR validation",
         "Suggested fixes",
-        "Bring your own API key",
+        `${freePlanDefaultModel} included (server-managed)`,
         "Basic noise control",
         "Works with public & private repos",
       ],
@@ -93,6 +94,7 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
       description: "For serious developers & small teams. Everything you need for high-quality PR reviews.",
       features: [
         "Everything in Free, plus:",
+        "Bring your own Gemini/OpenAI API key",
         "Unlimited PR reviews",
         "Smart multi-file batching",
         "High-precision RAG (8 results)",
@@ -321,7 +323,7 @@ export function PricingClient({ accounts, dodoLinks }: PricingClientProps) {
           <span>We accept both Card and UPI payments via Dodo Payments</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          ReviewScope runs on your own OpenAI or Gemini API keys. You pay them directly; we never mark up your AI usage.
+          Free uses {freePlanDefaultModel}. Pro runs on your own OpenAI or Gemini API keys. You pay providers directly; we never mark up AI usage.
         </p>
         <p className="text-xs text-muted-foreground">
           Questions about which plan is right for you?{" "}

@@ -3,6 +3,9 @@
  * Prevents silent truncation
  */
 export const MODEL_CONTEXT_BUDGET: Record<string, number> = {
+  // Sarvam model
+  'sarvam-m': 8192,
+
   // Gemini models (Free tier preferred)
   'gemini-2.5-flash-lite': 1000000,
   'gemini-2.5-flash': 1000000,

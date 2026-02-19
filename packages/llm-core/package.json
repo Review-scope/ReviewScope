@@ -18,6 +18,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "js-tiktoken": "^1.0.21",
-    "openai": "^4.28.0"
+    "openai": "^4.28.0",
+    "sarvamai": "^1.1.4"
   }
 }

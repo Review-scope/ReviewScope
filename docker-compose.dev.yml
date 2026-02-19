@@ -59,6 +59,7 @@ services:
       - DASHBOARD_URL=${DASHBOARD_URL}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SARVAM_API_KEY=${SARVAM_API_KEY}
     command: sh -c "npm install --quiet --legacy-peer-deps && npm run dev -w @reviewscope/worker"
     depends_on:
       - redis

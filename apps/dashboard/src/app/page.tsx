@@ -213,12 +213,12 @@ export default async function LandingPage() {
               <span className="text-sm font-bold tracking-widest text-muted-foreground group-hover:text-gray-500 transition-colors">GITHUB</span>
             </div>
 
-            {/* Vercel (Simulated with text/icon since no svg) or generic "Cloud" */}
+            {/* Sarvam */}
             <div className="flex flex-col items-center gap-4 group cursor-default transition-all duration-500 hover:scale-110 hover:opacity-100">
               <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-purple-500/50 group-hover:shadow-[0_0_30px_-10px_rgba(168,85,247,0.5)] transition-all duration-500">
-                 <Globe className="w-10 h-10 text-foreground grayscale group-hover:grayscale-0 group-hover:text-purple-400 transition-all duration-500" />
+                 <img src="/sarvam-ai.svg" alt="Sarvam AI" className="w-10 h-10 grayscale group-hover:grayscale-0 transition-all duration-500" />
               </div>
-              <span className="text-sm font-bold tracking-widest text-muted-foreground group-hover:text-purple-400 transition-colors">GLOBAL</span>
+              <span className="text-sm font-bold tracking-widest text-muted-foreground group-hover:text-purple-400 transition-colors">SARVAM AI</span>
             </div>
 
           </div>
@@ -252,7 +252,7 @@ export default async function LandingPage() {
               { 
                 icon: <Key className="w-6 h-6" />, 
                 title: "Your Keys, Your Costs", 
-                desc: "We don't markup AI costs. Plug in your own OpenAI or Gemini API key and pay the provider directly. Zero middleman fees."
+                desc: "Free includes Sarvam-M by default. Pro lets you plug in your own OpenAI or Gemini API keys and pay providers directly."
               },
               { 
                 icon: <Sparkles className="w-6 h-6" />, 
@@ -346,7 +346,7 @@ export default async function LandingPage() {
                 { 
                   step: "04", 
                   title: "AI Validation", 
-                  desc: "Gemini or OpenAI validates findings and provides actionable, human-like feedback.",
+                  desc: "Sarvam-M (Free) or Gemini/OpenAI (Pro) validates findings and provides actionable, human-like feedback.",
                   icon: <CheckCircle2 className="w-6 h-6 text-green-500" />
                 }
               ].map((item, i) => (
@@ -407,7 +407,7 @@ export default async function LandingPage() {
                   "AST-based analysis",
                   "Issue-to-PR validation",
                   "Suggested fixes",
-                  "Bring your own API key",
+                  "Sarvam-M included (server-managed)",
                   "Basic noise control",
                   "Works with public & private repos"
                 ],
@@ -427,6 +427,7 @@ export default async function LandingPage() {
                 description: "For serious developers & small teams requiring high-quality reviews.",
                 features: [
                   "Everything in Free, plus:",
+                  "Bring your own Gemini/OpenAI API key",
                   "Unlimited PR reviews",
                   "Smart multi-file batching",
                   "High-precision RAG (8 results)",
@@ -526,7 +527,7 @@ export default async function LandingPage() {
           </div>
           <div className="mt-16 bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-4 shadow-sm">
             <p className="text-sm text-slate-600">
-              <span className="font-bold text-slate-900">ReviewScope runs on your own API keys.</span> You pay for Gemini/OpenAI usage directly—we bill you for our platform orchestration.
+              <span className="font-bold text-slate-900">Free includes Sarvam-M.</span> Pro runs on your own Gemini/OpenAI keys and you pay providers directly.
             </p>
             <p className="text-xs text-slate-500">
               No hidden fees. Cancel anytime. Pricing updates available on <Link href="/pricing" className="text-slate-900 font-bold hover:underline">the pricing page</Link>.
@@ -618,3 +619,6 @@ export default async function LandingPage() {
     </div>
   );
 }
+
+
+

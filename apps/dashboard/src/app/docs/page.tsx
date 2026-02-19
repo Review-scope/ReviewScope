@@ -168,8 +168,8 @@ export default function DocsPage() {
                     <div className="flex items-start gap-4 p-4 bg-amber-50 border border-amber-100 rounded-xl text-amber-900 text-sm">
                       <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                       <p className="font-medium">
-                        ReviewScope uses a <strong>Bring Your Own Key (BYOK)</strong> model. We do not resell AI credits. 
-                        You must configure a valid API key for each installation in the Settings tab.
+                        Free plan uses <strong>Sarvam-M</strong> with a server-managed key. 
+                        Pro plan uses <strong>BYOK</strong>, so you must configure a valid Gemini or OpenAI key in Settings.
                       </p>
                     </div>
 
@@ -181,8 +181,9 @@ export default function DocsPage() {
                         </h5>
                         <ul className="space-y-3">
                           {[
-                            { label: 'Google Gemini', sub: 'Recommended for speed/cost', recommended: true },
-                            { label: 'OpenAI', sub: 'GPT-4o, GPT-3.5 Turbo' }
+                            { label: 'Sarvam-M (Free)', sub: 'Default model on Free plan', recommended: true },
+                            { label: 'Google Gemini (Pro)', sub: 'Bring your own API key' },
+                            { label: 'OpenAI (Pro)', sub: 'Bring your own API key' }
                           ].map((provider) => (
                             <li key={provider.label} className={clsx("flex items-start gap-3 p-3 rounded-lg border", provider ? "bg-zinc-50 border-zinc-100 opacity-60" : "bg-white border-zinc-100 shadow-sm")}>
                               <div className={clsx("mt-1 w-2 h-2 rounded-full", provider ? "bg-zinc-300" : "bg-green-500")} />

@@ -2,8 +2,9 @@ import { GitHubClient } from '../lib/github.js';
 import { RAGRetriever, RAGIndexer } from '@reviewscope/context-engine';
 import { createConfiguredProvider } from '../lib/ai-review.js';
 import { CHAT_SYSTEM_PROMPT } from '@reviewscope/llm-core';
-import { db, repositories, installations } from '../../../api/src/db/index.js';
+import { db, repositories, installations, configs } from '../../../api/src/db/index.js';
 import { eq, and } from 'drizzle-orm';
+import { getTier, PlanTier } from '../lib/plans.js';
 
 export interface ChatJobData {
   installationId: number;
@@ -26,6 +27,7 @@ export async function processChatJob(data: ChatJobData): Promise<void> {
     // 1. Get Context
     const [dbInst] = await db.select().from(installations).where(eq(installations.githubInstallationId, data.installationId));
     const [dbRepo] = await db.select().from(repositories).where(and(eq(repositories.githubRepoId, data.repositoryId), eq(repositories.installationId, dbInst.id)));
+    const [config] = await db.select().from(configs).where(eq(configs.installationId, dbInst.id));
 
     // Enforce Chat limits for Free plan: REMOVED
 
@@ -113,8 +115,15 @@ ${data.userQuestion}
       { role: 'user' as const, content: promptContent } 
     ];
 
+    const defaultModel = getTier(dbInst.planId) === PlanTier.FREE
+      ? 'sarvam-m'
+      : llmProvider.name === 'openai'
+        ? 'gpt-4o'
+        : 'gemini-2.5-flash';
+    const modelName = config?.model || defaultModel;
+
     const response = await llmProvider.chat(messages, {
-      model: 'gemini-2.5-flash',
+      model: modelName,
       temperature: 0.1,
     });
 

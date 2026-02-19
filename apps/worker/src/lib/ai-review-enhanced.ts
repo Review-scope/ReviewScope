@@ -1,5 +1,5 @@
-import { 
-  ContextAssembler, 
+import {
+  ContextAssembler,
   systemGuardrailsLayer,
   repoMetadataLayer,
   issueIntentLayer,
@@ -9,68 +9,69 @@ import {
   userPromptLayer,
   webContextLayer
 } from '@reviewscope/context-engine';
-import { 
-  createProvider, 
-  parseReviewResponse, 
-  type ReviewComment, 
-  type LLMProvider, 
-  REVIEW_SYSTEM_PROMPT, 
-  PR_SUMMARY_SYSTEM_PROMPT, 
-  parsePRSummaryResponse, 
+import {
+  createProvider,
+  parseReviewResponse,
+  type ReviewComment,
+  type LLMProvider,
+  REVIEW_SYSTEM_PROMPT,
+  PR_SUMMARY_SYSTEM_PROMPT,
+  parsePRSummaryResponse,
   type PRSummaryResult,
   selectModel,
   buildReviewPrompt,
   buildPRSummaryPrompt
 } from '@reviewscope/llm-core';
-import { db, configs } from '../../../api/src/db/index.js';
+import { db, configs, installations } from '../../../api/src/db/index.js';
 import { eq } from 'drizzle-orm';
 import { decrypt } from '@reviewscope/security';
 import { ComplexityScore } from './complexity.js';
+import { getTier, PlanTier } from './plans.js';
 
-// Instantiate dependencies once if possible, or per job if config varies
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const GEMINI_API_KEY = process.env.GOOGLE_API_KEY || '';
+const SARVAM_API_KEY = process.env.SARVAM_API_KEY || '';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-dev-key-change-me-12345';
 
 console.warn(`[Enhanced LLM] Encryption Key Status: ${process.env.ENCRYPTION_KEY ? 'LOADED' : 'MISSING (Using Fallback)'}`);
 
-// Factory to get provider based on config
 export async function createConfiguredProvider(installationId?: string): Promise<{ provider: LLMProvider, smartRouting: boolean }> {
-  let smartRouting = false;
-
-  // 1. Try to fetch user-provided config from DB
   if (installationId) {
     console.warn(`[Enhanced LLM] Fetching config for installation: ${installationId}`);
-    const [userConfig] = await db.select().from(configs).where(eq(configs.installationId, installationId));
-    
-    if (userConfig) {
-      smartRouting = userConfig.smartRouting;
 
-      if (userConfig.apiKeyEncrypted) {
-        try {
-          const decryptedKey = decrypt(userConfig.apiKeyEncrypted, ENCRYPTION_KEY);
-          console.warn(`[Enhanced LLM] Using CUSTOM ${userConfig.provider} key for installation ${installationId}`);
-          return {
-            provider: createProvider(userConfig.provider as 'openai' | 'gemini', decryptedKey),
-            smartRouting
-          };
-        } catch (e: unknown) {
-          console.error(`[Enhanced LLM] Failed to decrypt user API key for installation ${installationId}`);
-        }
+    const [installation] = await db.select().from(installations).where(eq(installations.id, installationId));
+    const [userConfig] = await db.select().from(configs).where(eq(configs.installationId, installationId));
+    const tier = getTier(installation?.planId ?? null);
+
+    if (userConfig?.apiKeyEncrypted) {
+      if (tier === PlanTier.PRO && userConfig.provider === 'sarvam') {
+        throw new Error('Sarvam is not available on Pro plan. Use Gemini or OpenAI.');
+      }
+
+      try {
+        const decryptedKey = decrypt(userConfig.apiKeyEncrypted, ENCRYPTION_KEY);
+        console.warn(`[Enhanced LLM] Using CUSTOM ${userConfig.provider} key for installation ${installationId}`);
+        return {
+          provider: createProvider(userConfig.provider as 'openai' | 'gemini' | 'sarvam', decryptedKey),
+          smartRouting: userConfig.smartRouting,
+        };
+      } catch {
+        throw new Error('Failed to decrypt configured API key');
       }
     }
+
+    if (tier === PlanTier.PRO) {
+      throw new Error('Pro plan requires a user API key. Configure Gemini or OpenAI in settings.');
+    }
+
+    if (!SARVAM_API_KEY) {
+      throw new Error('SARVAM_API_KEY is required for Free plan fallback reviews');
+    }
+    return { provider: createProvider('sarvam', SARVAM_API_KEY), smartRouting: false };
   }
 
-  // 2. Fallback to server defaults
-  if (GEMINI_API_KEY) {
-    console.warn(`[Enhanced LLM] Falling back to SERVER DEFAULT gemini key`);
-    return { provider: createProvider('gemini', GEMINI_API_KEY), smartRouting };
+  if (!SARVAM_API_KEY) {
+    throw new Error('SARVAM_API_KEY is required');
   }
-  if (OPENAI_API_KEY) {
-    console.warn(`[Enhanced LLM] Falling back to SERVER DEFAULT openai key`);
-    return { provider: createProvider('openai', OPENAI_API_KEY), smartRouting };
-  }
-  throw new Error('No valid LLM API key found');
+  return { provider: createProvider('sarvam', SARVAM_API_KEY), smartRouting: false };
 }
 
 interface AIReviewInput {
@@ -105,23 +106,16 @@ export interface AIReviewOptions {
   model?: string;
   temperature?: number;
   userGuidelines?: string;
-  generateDetailedSummary?: boolean; // New option to enable detailed PR summary
+  generateDetailedSummary?: boolean;
 }
 
-/**
- * Generate detailed PR summary using separate API call
- */
 async function generatePRSummary(
   input: AIReviewInput,
   provider: LLMProvider,
   modelName: string
 ): Promise<PRSummaryResult> {
-  console.warn(`[Enhanced LLM] Generating detailed PR summary...`);
-  
-  // Build summary-specific context (lighter weight)
+  console.warn('[Enhanced LLM] Generating detailed PR summary...');
 
-
-  // Build summary prompt
   const summaryPrompt = buildPRSummaryPrompt({
     prTitle: input.prTitle,
     prBody: input.prBody,
@@ -130,7 +124,6 @@ async function generatePRSummary(
     issueContext: input.issueContext,
   });
 
-  // Call LLM for summary
   const messages = [
     { role: 'system' as const, content: PR_SUMMARY_SYSTEM_PROMPT },
     { role: 'user' as const, content: summaryPrompt }
@@ -138,51 +131,51 @@ async function generatePRSummary(
 
   const response = await provider.chat(messages, {
     model: modelName,
-    temperature: 0.3, // Slightly higher temp for more conversational tone
+    temperature: 0.3,
     responseFormat: 'json',
   });
 
   return parsePRSummaryResponse(response.content);
 }
 
-/**
- * Enhanced AI review with separate PR summary generation
- */
 export async function runEnhancedAIReview(
   input: AIReviewInput,
   options: AIReviewOptions = {}
 ): Promise<AIReviewResult> {
   const { provider, smartRouting } = await createConfiguredProvider(input.installationId);
-  
-  // Determine model based on complexity
-  let modelName = options.model || 'gemini-2.5-flash';
+
+  let modelName =
+    options.model ||
+    (provider.name === 'sarvam'
+      ? 'sarvam-m'
+      : provider.name === 'openai'
+        ? 'gpt-4o'
+        : 'gemini-2.5-flash');
   const complexityTier = input.complexity?.tier;
-  
-  if (complexityTier && (smartRouting || !options.model)) {
-    const hasGemini = !!(GEMINI_API_KEY || (options.model?.includes('gemini')));
-    const hasOpenAI = !!(OPENAI_API_KEY || (options.model?.includes('gpt')));
-    
-    const route = selectModel({ hasGemini, hasOpenAI }, complexityTier);
+
+  if (complexityTier && provider.name !== 'sarvam' && (smartRouting || !options.model)) {
+    const route = selectModel({
+      hasGemini: provider.name === 'gemini',
+      hasOpenAI: provider.name === 'openai'
+    }, complexityTier);
+
     if (route.model !== 'none') {
       modelName = route.model;
-      console.warn(`[Enhanced Model Routing] Complexity: ${complexityTier} → ${route.model} (${route.reason})`);
+      console.warn(`[Enhanced Model Routing] Complexity: ${complexityTier} -> ${route.model} (${route.reason})`);
     }
   }
-  
+
   let prSummary: PRSummaryResult | undefined;
-  
-  // Generate detailed PR summary if requested
+
   if (options.generateDetailedSummary) {
     try {
       prSummary = await generatePRSummary(input, provider, modelName);
-      console.warn(`[Enhanced LLM] Generated detailed PR summary`);
+      console.warn('[Enhanced LLM] Generated detailed PR summary');
     } catch (error) {
-      console.error(`[Enhanced LLM] Failed to generate PR summary:`, error);
-      // Continue with review even if summary generation fails
+      console.error('[Enhanced LLM] Failed to generate PR summary:', error);
     }
   }
-  
-  // Build full context for code review
+
   const assembler = new ContextAssembler();
   assembler.addLayer(systemGuardrailsLayer);
   assembler.addLayer(repoMetadataLayer);
@@ -208,7 +201,6 @@ export async function runEnhancedAIReview(
 
   console.warn(`[Enhanced LLM] Context assembled: ${assembled.usedTokens} tokens (Budget: ${assembled.budgetTokens})`);
 
-  // Build review prompt
   const reviewPrompt = buildReviewPrompt({
     prTitle: input.prTitle,
     prBody: input.prBody,
@@ -219,7 +211,6 @@ export async function runEnhancedAIReview(
     complexity: input.complexity as any,
   });
 
-  // Call LLM for code review
   const messages = [
     { role: 'system' as const, content: REVIEW_SYSTEM_PROMPT },
     { role: 'user' as const, content: reviewPrompt }
@@ -234,18 +225,17 @@ export async function runEnhancedAIReview(
   const result = parseReviewResponse(response.content);
   console.warn(`[Enhanced LLM] Generated ${result.comments.length} review comments`);
 
-  // Calculate confidence score
   let confidence: 'high' | 'medium' | 'low' = 'high';
-  
+
   if (complexityTier === 'complex' && modelName.includes('flash')) {
     confidence = 'medium';
   }
 
-  const hasExtraContext = (input.ragContext && input.ragContext.length > 0) || 
+  const hasExtraContext = (input.ragContext && input.ragContext.length > 0) ||
                           (input.relatedContext && input.relatedContext.length > 0);
 
   if (!hasExtraContext && complexityTier !== 'trivial') {
-    confidence = confidence === 'high' ? 'medium' : 'low'; 
+    confidence = confidence === 'high' ? 'medium' : 'low';
   }
 
   return {
@@ -255,8 +245,8 @@ export async function runEnhancedAIReview(
     prSummary,
     riskAnalysis: result.riskAnalysis,
     assessment: {
-        ...result.assessment,
-        confidence
+      ...result.assessment,
+      confidence
     },
   };
 }

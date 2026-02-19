@@ -10,10 +10,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import { createProvider } from "@reviewscope/llm-core";
 import { getUserOrgIds } from "@/lib/github";
-import { getPlanLimits } from "../../../../../../worker/src/lib/plans";
+import { getPlanLimits, PlanTier } from "../../../../../../worker/src/lib/plans";
 
 const configSchema = z.object({
-  provider: z.enum(['gemini', 'openai']),
+  provider: z.enum(['sarvam', 'gemini', 'openai']),
   model: z.string().min(1),
   customPrompt: z.string().optional(),
   apiKey: z.string().optional(),
@@ -21,18 +21,27 @@ const configSchema = z.object({
 });
 
 export async function verifyApiKey(provider: string, model: string, apiKey: string = '', installationId?: string) {
+  if (!installationId) return { error: 'Installation context is required' };
+  const installation = await verifyOwnership(installationId);
+  if (!installation) return { error: 'Unauthorized' };
+
+  const limits = getPlanLimits(installation.planId, installation.expiresAt);
+  if (limits.tier === PlanTier.PRO && provider === 'sarvam') {
+    return { error: 'Sarvam is available only on Free plan. Use Gemini or OpenAI on Pro.' };
+  }
+  if (limits.tier === PlanTier.FREE && provider === 'sarvam') {
+    return { success: true };
+  }
+
   let keyToUse = apiKey;
 
   // Utilize stored key if authorized and no new key provided
-  if (!keyToUse && installationId) {
-    const installation = await verifyOwnership(installationId);
-    if (installation) {
-      const [config] = await db.select().from(configs).where(eq(configs.installationId, installationId));
-      if (config?.apiKeyEncrypted) {
-        const secret = process.env.ENCRYPTION_KEY;
-        if (secret) {
-          keyToUse = decrypt(config.apiKeyEncrypted, secret);
-        }
+  if (!keyToUse) {
+    const [config] = await db.select().from(configs).where(eq(configs.installationId, installationId));
+    if (config?.apiKeyEncrypted) {
+      const secret = process.env.ENCRYPTION_KEY;
+      if (secret) {
+        keyToUse = decrypt(config.apiKeyEncrypted, secret);
       }
     }
   }
@@ -41,7 +50,7 @@ export async function verifyApiKey(provider: string, model: string, apiKey: stri
   if (!model || model.trim() === '') return { error: 'Model name is required' };
 
   try {
-    const llm = createProvider(provider as 'openai' | 'gemini', keyToUse);
+    const llm = createProvider(provider as 'openai' | 'gemini' | 'sarvam', keyToUse);
     
     // We try to perform a minimal chat completion with the USER SPECIFIED model
     // to verify both the key AND the model access.
@@ -128,6 +137,7 @@ export async function updateConfig(installationId: string, formData: FormData) {
   }
 
   const { provider, model, customPrompt, apiKey, smartRouting } = validatedFields.data;
+  const limits = getPlanLimits(installation.planId, installation.expiresAt);
 
   try {
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
@@ -146,6 +156,17 @@ export async function updateConfig(installationId: string, formData: FormData) {
       }
       apiKeyEncrypted = encrypt(apiKey, secret);
       apiKeyChanged = true;
+    }
+
+    if (limits.tier === PlanTier.PRO) {
+      if (provider === 'sarvam') return { error: 'Sarvam is available only on Free plan. Choose Gemini or OpenAI.' };
+      if (!apiKeyEncrypted) return { error: 'Pro plan requires an API key before saving configuration.' };
+    } else {
+      if (provider === 'sarvam') {
+        if (model !== 'sarvam-m') return { error: 'Sarvam provider on Free must use sarvam-m.' };
+      } else if (!apiKeyEncrypted) {
+        return { error: 'Gemini/OpenAI on Free plan requires your own API key.' };
+      }
     }
 
     if (existingConfig) {
@@ -172,7 +193,6 @@ export async function updateConfig(installationId: string, formData: FormData) {
     }
 
     // Trigger Indexing if API key was provided/updated
-    const limits = getPlanLimits(installation.planId, installation.expiresAt);
     const shouldIndex = (apiKeyChanged || (!existingConfig?.apiKeyEncrypted && apiKeyEncrypted)) && limits.allowRAG;
     console.warn(`[Config] Update successful. apiKeyChanged: ${apiKeyChanged}, newlyAdded: ${!existingConfig?.apiKeyEncrypted && !!apiKeyEncrypted}, allowRAG: ${limits.allowRAG}, shouldIndex: ${shouldIndex}`);
 

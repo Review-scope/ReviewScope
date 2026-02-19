@@ -7,7 +7,7 @@ Review Scope is an intelligent PR review platform that combines **static analysi
 
 ## Overview
 
-Review Scope analyzes pull requests end-to-end, evaluating code quality, security, performance, and maintainability. It features **smart model routing** to leverage **Free Gemini models** for speed and cost-efficiency, while reserving capable models for complex logic.
+Review Scope analyzes pull requests end-to-end, evaluating code quality, security, performance, and maintainability. Free plan uses **Sarvam-M** by default, while Pro supports **BYOK** with Gemini/OpenAI.
 
 **Key Capabilities:**
 - 🔍 **Static Analysis** – AST-based rule detection (no LLM required, always free)
@@ -15,7 +15,7 @@ Review Scope analyzes pull requests end-to-end, evaluating code quality, securit
 - 📚 **Semantic RAG** – Retrieves relevant code context from your repository's history
 - ⚡ **Smart Batching** – Handles large PRs by intelligently chunking files
 - 🎯 **Rule Validation** – LLM classifies static findings (valid/false-positive/contextual)
-- 💰 **BYO API Keys** – Transparent pricing, you pay only for what you use
+- 💰 **Plan-based key policy** – Free uses server-managed Sarvam; Pro uses your own Gemini/OpenAI keys
 
 ## Technology Stack
 
@@ -30,8 +30,8 @@ Review Scope analyzes pull requests end-to-end, evaluating code quality, securit
 - Redis (caching & rate limiting)
 
 **AI & LLM:**
-- OpenAI GPT-4 class models (for complex reasoning)
-- Gemini Flash models (fast, low-cost reviews)
+- Sarvam-M (Free default)
+- OpenAI and Gemini models (Pro with BYOK)
 - Context Engine (RAG + chunking)
 
 **Integration:**
@@ -68,7 +68,7 @@ ReviewScope/
 - PostgreSQL 14+
 - Redis URL (docker-compose)
 - GitHub App (for webhooks)
-- LLM API keys (Gemini & OpenAI)
+- LLM API keys (`SARVAM_API_KEY` for Free default, user Gemini/OpenAI keys for Pro)
 
 ### 1. Clone & Install
 
@@ -94,7 +94,7 @@ GITHUB_WEBHOOK_SECRET=your_webhook_secret
 ```
 DATABASE_URL=postgresql://user:pass@localhost/reviewscope
 REDIS_URL=https://default:password@redis-url.upstash.io
-GEMINI_API_KEY=your_gemini_key
+SARVAM_API_KEY=your_sarvam_key
 OPENAI_API_KEY=your_openai_key
 ```
 

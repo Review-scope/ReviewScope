@@ -8,6 +8,13 @@
       "when": 1768461416325,
       "tag": "0000_silent_tenebrous",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1771480810187,
+      "tag": "0001_strong_cloak",
+      "breakpoints": true
     }
   ]
 }

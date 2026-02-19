@@ -63,6 +63,7 @@
     "@babel/parser": "^7.28.6",
     "@babel/traverse": "^7.28.6",
     "@qdrant/js-client-rest": "^1.16.2",
+    "sarvamai": "^1.1.4",
     "tree-sitter-c": "^0.24.1",
     "tree-sitter-cpp": "^0.23.4",
     "tree-sitter-go": "^0.25.0",

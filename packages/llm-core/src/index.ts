@@ -25,13 +25,14 @@ export {
 // Providers
 import { OpenAIProvider } from './providers/openai.js';
 import { GeminiProvider } from './providers/gemini.js';
+import { SarvamProvider } from './providers/sarvam.js';
 
-export { OpenAIProvider, GeminiProvider };
+export { OpenAIProvider, GeminiProvider, SarvamProvider };
 
 // Provider factory
 import type { LLMProvider } from './types.js';
 
-export type ProviderName = 'openai' | 'gemini';
+export type ProviderName = 'openai' | 'gemini' | 'sarvam';
 
 export function createProvider(name: ProviderName, apiKey: string): LLMProvider {
   switch (name) {
@@ -39,6 +40,8 @@ export function createProvider(name: ProviderName, apiKey: string): LLMProvider 
       return new OpenAIProvider(apiKey);
     case 'gemini':
       return new GeminiProvider(apiKey);
+    case 'sarvam':
+      return new SarvamProvider(apiKey);
     default:
       throw new Error(`Unknown provider: ${name}`);
   }

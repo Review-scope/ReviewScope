@@ -158,8 +158,8 @@ export const configs = pgTable('configs', {
   installationId: uuid('installation_id').references(() => installations.id, { onDelete: 'cascade' }).notNull(),
   
   // LLM Settings
-  provider: text('provider').default('gemini').notNull(),
-  model: text('model').default('gemini-2.5-flash').notNull(),
+  provider: text('provider').default('sarvam').notNull(),
+  model: text('model').default('sarvam-m').notNull(),
   apiKeyEncrypted: text('api_key_encrypted'), 
   smartRouting: boolean('smart_routing').default(false).notNull(),
   
