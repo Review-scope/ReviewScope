@@ -2,7 +2,7 @@
 import { GitHubClient } from '../lib/github.js';
 import { RAGIndexer } from '@reviewscope/context-engine';
 import { createConfiguredProvider } from '../lib/ai-review.js';
-import { resolveEmbeddingModel } from '../lib/embedding-model.js';
+import { resolveEmbeddingModel, shouldSkipEmbeddings } from '../lib/embedding-model.js';
 import { db, repositories, installations, configs } from '../../../api/src/db/index.js';
 import { eq } from 'drizzle-orm';
 import { getPlanLimits } from '../lib/plans.js';
@@ -85,6 +85,9 @@ export async function processIndexingJob(data: IndexingJobData): Promise<void> {
     
     // 2. Setup RAG Indexer
     const { provider } = await createConfiguredProvider(dbInst.id);
+    if (shouldSkipEmbeddings(provider.name, userConfig?.model)) {
+      return;
+    }
     const embeddingModel = resolveEmbeddingModel(provider);
     console.warn(`[Index] RAG embedding model: ${provider.name}/${embeddingModel}`);
     const indexer = new RAGIndexer(provider, { embeddingModel });

@@ -7,7 +7,7 @@ import { calculateComplexity } from './complexity.js';
 import { runRules } from '@reviewscope/rules-engine';
 import { RAGRetriever, RAGIndexer } from '@reviewscope/context-engine';
 import { createConfiguredProvider } from './ai-review.js';
-import { resolveEmbeddingModel } from './embedding-model.js';
+import { resolveEmbeddingModel, shouldSkipEmbeddings } from './embedding-model.js';
 import { runEnhancedAIReview, AIReviewResult } from './ai-review-enhanced.js';
 import { db, reviews, repositories, installations, configs } from '../../../api/src/db/index.js';
 import { eq, and } from 'drizzle-orm';
@@ -112,7 +112,8 @@ export async function fetchRAGContext(
   dbRepo: typeof repositories.$inferSelect,
   dbInst: typeof installations.$inferSelect,
   limits: PlanLimits,
-  filteredFiles: ParsedFile[]
+  filteredFiles: ParsedFile[],
+  selectedModel?: string
 ): Promise<string> {
   // Guard: Small PRs shouldn't hit vector search
   if (filteredFiles.length < 2) return '';
@@ -120,6 +121,7 @@ export async function fetchRAGContext(
 
   try {
     const { provider } = await createConfiguredProvider(dbInst.id);
+    if (shouldSkipEmbeddings(provider.name, selectedModel)) return '';
     const embeddingModel = resolveEmbeddingModel(provider);
     console.warn(`[Review] RAG embedding model: ${provider.name}/${embeddingModel}`);
     const indexer = new RAGIndexer(provider, { embeddingModel });
