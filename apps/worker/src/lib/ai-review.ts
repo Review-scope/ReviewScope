@@ -29,11 +29,19 @@ export async function createConfiguredProvider(installationId?: string): Promise
     const [userConfig] = await db.select().from(configs).where(eq(configs.installationId, installationId));
     const tier = getTier(installation?.planId ?? null);
 
-    if (userConfig?.apiKeyEncrypted) {
-      if (tier === PlanTier.PRO && userConfig.provider === 'sarvam') {
+    if (userConfig?.provider === 'sarvam') {
+      if (tier === PlanTier.PRO) {
         throw new Error('Sarvam is not available on Pro plan. Use Gemini or OpenAI.');
       }
+      if (!SARVAM_API_KEY) {
+        throw new Error('SARVAM_API_KEY is required for Free plan fallback reviews');
+      }
 
+      console.warn(`[LLM] Using server-managed Sarvam key for installation ${installationId}`);
+      return { provider: createProvider('sarvam', SARVAM_API_KEY), smartRouting: false };
+    }
+
+    if (userConfig?.apiKeyEncrypted) {
       try {
         const decryptedKey = decrypt(userConfig.apiKeyEncrypted, ENCRYPTION_KEY);
         console.warn(`[LLM] Using CUSTOM ${userConfig.provider} key for installation ${installationId} (Prefix: ${decryptedKey.substring(0, 6)}...)`);
