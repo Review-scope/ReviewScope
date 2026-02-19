@@ -3,7 +3,7 @@ import type { LLMProvider, Message, ChatOptions, ChatResponse, EmbeddingProvider
 
 export class GeminiProvider implements LLMProvider, EmbeddingProvider {
   name = 'gemini';
-  defaultModel = 'text-embedding-004';
+  defaultModel = 'text-embedding-001';
   defaultSize = 768;
   supportsStreaming = false as const;
 
