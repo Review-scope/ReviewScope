@@ -20,7 +20,11 @@ import {
   type PRSummaryResult,
   selectModel,
   buildReviewPrompt,
-  buildPRSummaryPrompt
+  buildPRSummaryPrompt,
+  LLMRateLimitError,
+  type ChatOptions,
+  type ChatResponse,
+  type Message
 } from '@reviewscope/llm-core';
 import { db, configs, installations } from '../../../api/src/db/index.js';
 import { eq } from 'drizzle-orm';
@@ -34,6 +38,7 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-dev-key-change-me-
 console.warn(`[Enhanced LLM] Encryption Key Status: ${process.env.ENCRYPTION_KEY ? 'LOADED' : 'MISSING (Using Fallback)'}`);
 
 export async function createConfiguredProvider(installationId?: string): Promise<{ provider: LLMProvider, smartRouting: boolean }> {
+  // ... existing implementation remains same ...
   if (installationId) {
     console.warn(`[Enhanced LLM] Fetching config for installation: ${installationId}`);
 
@@ -117,10 +122,31 @@ export interface AIReviewOptions {
   generateDetailedSummary?: boolean;
 }
 
+/**
+ * Helper to run chat with an immediate model fallback if rate limited
+ */
+async function runWithModelFallback(
+  provider: LLMProvider,
+  messages: Message[],
+  options: ChatOptions,
+  fallbackModel?: string
+): Promise<ChatResponse> {
+  try {
+    return await provider.chat(messages, options);
+  } catch (error) {
+    if (error instanceof LLMRateLimitError && fallbackModel) {
+      console.warn(`[Enhanced LLM] Rate limit hit for ${options.model}. Immediately falling back to ${fallbackModel}...`);
+      return await provider.chat(messages, { ...options, model: fallbackModel });
+    }
+    throw error;
+  }
+}
+
 async function generatePRSummary(
   input: AIReviewInput,
   provider: LLMProvider,
-  modelName: string
+  modelName: string,
+  fallbackModel?: string
 ): Promise<PRSummaryResult> {
   console.warn('[Enhanced LLM] Generating detailed PR summary...');
 
@@ -137,11 +163,11 @@ async function generatePRSummary(
     { role: 'user' as const, content: summaryPrompt }
   ];
 
-  const response = await provider.chat(messages, {
+  const response = await runWithModelFallback(provider, messages, {
     model: modelName,
     temperature: 0.3,
     responseFormat: 'json',
-  });
+  }, fallbackModel);
 
   return parsePRSummaryResponse(response.content);
 }
@@ -159,6 +185,8 @@ export async function runEnhancedAIReview(
       : provider.name === 'openai'
         ? 'gpt-4o'
         : 'gemini-2.5-flash');
+  let fallbackModel: string | undefined;
+  
   const complexityTier = input.complexity?.tier;
 
   if (complexityTier && provider.name !== 'sarvam' && (smartRouting || !options.model)) {
@@ -169,7 +197,8 @@ export async function runEnhancedAIReview(
 
     if (route.model !== 'none') {
       modelName = route.model;
-      console.warn(`[Enhanced Model Routing] Complexity: ${complexityTier} -> ${route.model} (${route.reason})`);
+      fallbackModel = route.fallbackModel;
+      console.warn(`[Enhanced Model Routing] Complexity: ${complexityTier} -> ${route.model} (Fallback: ${fallbackModel || 'none'}) (${route.reason})`);
     }
   }
 
@@ -177,9 +206,10 @@ export async function runEnhancedAIReview(
 
   if (options.generateDetailedSummary) {
     try {
-      prSummary = await generatePRSummary(input, provider, modelName);
+      prSummary = await generatePRSummary(input, provider, modelName, fallbackModel);
       console.warn('[Enhanced LLM] Generated detailed PR summary');
     } catch (error) {
+      if (error instanceof LLMRateLimitError) throw error; // Re-throw to trigger job-level retry
       console.error('[Enhanced LLM] Failed to generate PR summary:', error);
     }
   }
@@ -224,18 +254,18 @@ export async function runEnhancedAIReview(
     { role: 'user' as const, content: reviewPrompt }
   ];
 
-  const response = await provider.chat(messages, {
+  const response = await runWithModelFallback(provider, messages, {
     model: modelName,
     temperature: 0.2,
     responseFormat: 'json',
-  });
+  }, fallbackModel);
 
   const result = parseReviewResponse(response.content);
   console.warn(`[Enhanced LLM] Generated ${result.comments.length} review comments`);
 
   let confidence: 'high' | 'medium' | 'low' = 'high';
 
-  if (complexityTier === 'complex' && modelName.includes('flash')) {
+  if (complexityTier === 'complex' && (modelName.includes('flash') || (fallbackModel && fallbackModel.includes('flash')))) {
     confidence = 'medium';
   }
 
@@ -258,3 +288,4 @@ export async function runEnhancedAIReview(
     },
   };
 }
+

@@ -16,6 +16,7 @@ export type Complexity = 'trivial' | 'simple' | 'complex';
 export interface ModelRoute {
   provider: 'gemini' | 'openai';
   model: string;
+  fallbackModel?: string;
   contextBudget: number;
   reason: string;
 }
@@ -62,7 +63,7 @@ export function selectModel(
 }
 
 /**
- * Select Gemini model based on complexity
+ * Select Gemini model based on complexity with fallback chains
  */
 function selectGeminiModel(complexity: Complexity): ModelRoute {
   switch (complexity) {
@@ -78,6 +79,7 @@ function selectGeminiModel(complexity: Complexity): ModelRoute {
       return {
         provider: 'gemini',
         model: 'gemini-2.5-flash',
+        fallbackModel: 'gemini-2.5-flash-lite',
         contextBudget: getContextBudget('gemini-2.5-flash'),
         reason: 'Simple changes: Gemini Flash sufficient',
       };
@@ -86,6 +88,7 @@ function selectGeminiModel(complexity: Complexity): ModelRoute {
       return {
         provider: 'gemini',
         model: 'gemini-3-flash-preview',
+        fallbackModel: 'gemini-2.5-flash',
         contextBudget: getContextBudget('gemini-3-flash-preview'),
         reason: 'Complex changes: using Gemini 3 Flash for better reasoning',
       };
@@ -93,7 +96,7 @@ function selectGeminiModel(complexity: Complexity): ModelRoute {
 }
 
 /**
- * Select OpenAI model based on complexity
+ * Select OpenAI model based on complexity with fallback chains
  */
 function selectOpenAIModel(complexity: Complexity): ModelRoute {
   switch (complexity) {
@@ -109,6 +112,7 @@ function selectOpenAIModel(complexity: Complexity): ModelRoute {
       return {
         provider: 'openai',
         model: 'gpt-5-mini-2025-08-07',
+        fallbackModel: 'gpt-5-nano-2025-08-07',
         contextBudget: getContextBudget('gpt-5-mini-2025-08-07'),
         reason: 'Simple changes: GPT-5-mini sufficient',
       };
@@ -117,6 +121,7 @@ function selectOpenAIModel(complexity: Complexity): ModelRoute {
       return {
         provider: 'openai',
         model: 'gpt-5.2-2025-12-11',
+        fallbackModel: 'gpt-5-mini-2025-08-07',
         contextBudget: getContextBudget('gpt-5.2-2025-12-11'),
         reason: 'Complex changes: using GPT-5.2 for depth',
       };

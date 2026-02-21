@@ -8,6 +8,13 @@ export interface Message {
   content: string;
 }
 
+export class LLMRateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LLMRateLimitError';
+  }
+}
+
 export interface ChatOptions {
   model: string;
   temperature?: number;

@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { GoogleGenerativeAI, type GenerateContentResult } from '@google/generative-ai';
 import type { LLMProvider, Message, ChatOptions, ChatResponse, EmbeddingProvider, EmbeddingOptions } from '../types.js';
+import { LLMRateLimitError } from '../types.js';
 
 export class GeminiProvider implements LLMProvider, EmbeddingProvider {
   name = 'gemini';
@@ -20,6 +21,9 @@ export class GeminiProvider implements LLMProvider, EmbeddingProvider {
     try {
       return await this.chatViaGenAI(messages, options);
     } catch (error: unknown) {
+      if (this.isRateLimit(error)) {
+        throw new LLMRateLimitError((error as Error).message || 'Gemini Rate Limit Exceeded');
+      }
       if (!this.shouldFallback(error)) throw error;
       console.warn('[GeminiProvider] Falling back to @google/generative-ai for chat due to SDK compatibility issue.');
       return this.chatViaLegacy(messages, options);
@@ -30,6 +34,9 @@ export class GeminiProvider implements LLMProvider, EmbeddingProvider {
     try {
       return await this.embedViaGenAI(text, options);
     } catch (error: unknown) {
+      if (this.isRateLimit(error)) {
+        throw new LLMRateLimitError((error as Error).message || 'Gemini Rate Limit Exceeded');
+      }
       if (!this.shouldFallback(error)) throw error;
       console.warn('[GeminiProvider] Falling back to @google/generative-ai for embeddings due to SDK compatibility issue.');
       return this.embedViaLegacy(text, options);
@@ -49,6 +56,7 @@ export class GeminiProvider implements LLMProvider, EmbeddingProvider {
           try {
             return await this.embed(t, options);
           } catch (e: unknown) {
+            if (e instanceof LLMRateLimitError) throw e;
             if (retries === 0) throw e;
             retries--;
             await new Promise(r => setTimeout(r, 500));
@@ -191,11 +199,23 @@ export class GeminiProvider implements LLMProvider, EmbeddingProvider {
     };
   }
 
+  private isRateLimit(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const maybe = error as { message?: string; status?: number; statusCode?: number };
+    const status = maybe.status || maybe.statusCode;
+    
+    if (status === 429) return true;
+    
+    const message = (maybe.message || '').toLowerCase();
+    return message.includes('rate limit') || message.includes('quota exceeded') || message.includes('429');
+  }
+
   private shouldFallback(error: unknown): boolean {
     if (!error || typeof error !== 'object') return false;
-    const maybe = error as { message?: string; status?: number };
-    const status = maybe.status;
-    if (status === 401 || status === 403 || status === 404) {
+    const maybe = error as { message?: string; status?: number; statusCode?: number };
+    const status = maybe.status || maybe.statusCode;
+    
+    if (status === 401 || status === 403 || status === 404 || status === 429) {
       return false;
     }
 

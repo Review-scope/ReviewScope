@@ -15,7 +15,7 @@ import picomatch from 'picomatch';
 import { getPlanLimits, PlanTier, PlanLimits } from './plans.js';
 import { ReviewJobData } from '../jobs/review.js';
 import { scoreFile } from './scoring.js';
-import { ReviewComment } from '@reviewscope/llm-core';
+import { ReviewComment, LLMRateLimitError } from '@reviewscope/llm-core';
 
 export interface JobContext {
   dbInst: typeof installations.$inferSelect;

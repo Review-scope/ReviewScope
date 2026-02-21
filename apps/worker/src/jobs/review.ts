@@ -8,7 +8,7 @@ import { checkRateLimits, logReviewUsage, RateLimitError } from '../lib/rate-lim
 import { Queue, Job } from 'bullmq';
 import { createHash } from 'crypto';
 
-import { ReviewComment } from '@reviewscope/llm-core';
+import { ReviewComment, LLMRateLimitError } from '@reviewscope/llm-core';
 import { 
   validateJob, 
   filterAndRefineFiles, 
@@ -36,8 +36,8 @@ const getReviewQueue = () => {
       defaultJobOptions: {
         removeOnComplete: true,
         removeOnFail: 100,
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 30000 }
+        attempts: 5,
+        backoff: { type: 'fixed', delay: 300000 } // 5 minutes retry
       }
     });
   }
@@ -294,6 +294,7 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
             assessment = aiResult.assessment;
             riskAnalysis = aiResult.riskAnalysis;
         } catch (e: any) {
+            if (e instanceof LLMRateLimitError) throw e;
             aiError = e instanceof Error ? e : new Error(String(e));
             console.error('[Worker] AI review failed, continuing with static analysis only:', aiError.message || aiError.toString());
         }
