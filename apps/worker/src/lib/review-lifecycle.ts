@@ -15,7 +15,7 @@ import picomatch from 'picomatch';
 import { getPlanLimits, PlanTier, PlanLimits } from './plans.js';
 import { ReviewJobData } from '../jobs/review.js';
 import { scoreFile } from './scoring.js';
-import { ReviewComment, LLMRateLimitError } from '@reviewscope/llm-core';
+import { ReviewComment } from '@reviewscope/llm-core';
 
 export interface JobContext {
   dbInst: typeof installations.$inferSelect;
@@ -304,6 +304,24 @@ export async function runAIReview(
               // Update confidence based on RAG
               if (!ragContext) assessment.confidence = 'medium'; 
             }
+
+            // Verify and Merge Batch Violations
+            if (batchResult.ruleValidations) {
+              const confirmedBatchRules = batchResult.ruleValidations
+                .filter(v => v.status === 'valid' || v.status === 'contextual')
+                .map(v => {
+                  const original = ruleViolations.find(rv => rv.ruleId === v.ruleId && rv.file === v.file && rv.line === v.line);
+                  if (original) {
+                    return {
+                      ...original,
+                      severity: v.severity || original.severity,
+                      message: v.explanation || original.message
+                    };
+                  }
+                  return null;
+                }).filter((v): v is any => v !== null);
+              combinedComments.push(...confirmedBatchRules);
+            }
           }
 
           aiComments = combinedComments;
@@ -344,6 +362,24 @@ export async function runAIReview(
           });
 
           aiComments = aiResult.comments;
+
+          // Verify and Merge Static Rule Violations
+          if (aiResult.ruleValidations) {
+            const confirmedRules = aiResult.ruleValidations
+              .filter(v => v.status === 'valid' || v.status === 'contextual')
+              .map(v => {
+                const original = ruleViolations.find(rv => rv.ruleId === v.ruleId && rv.file === v.file && rv.line === v.line);
+                if (original) {
+                  return {
+                    ...original,
+                    severity: v.severity || original.severity,
+                    message: v.explanation || original.message
+                  };
+                }
+                return null;
+              }).filter((v): v is any => v !== null);
+            aiComments = [...aiComments, ...confirmedRules];
+          }
           
           // Use detailed PR summary if available, otherwise use standard summary
           if (aiResult.prSummary) {

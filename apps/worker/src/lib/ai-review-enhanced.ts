@@ -24,6 +24,7 @@ import {
   LLMRateLimitError,
   type ChatOptions,
   type ChatResponse,
+  type RuleValidation,
   type Message
 } from '@reviewscope/llm-core';
 import { db, configs, installations } from '../../../api/src/db/index.js';
@@ -113,6 +114,7 @@ export interface AIReviewResult {
     mergeReadiness: string;
     confidence: 'high' | 'medium' | 'low';
   };
+  ruleValidations?: RuleValidation[];
 }
 
 export interface AIReviewOptions {
@@ -286,6 +288,7 @@ export async function runEnhancedAIReview(
       ...result.assessment,
       confidence
     },
+    ruleValidations: result.ruleValidations,
   };
 }
 

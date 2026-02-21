@@ -276,6 +276,12 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
         skipReason = 'Repository is not active (AST only)';
     }
 
+    // Force AI review if there are static analysis findings to verify (Senior request: verify AST before posting)
+    if (ruleViolations.length > 0 && limits.allowAI) {
+        console.warn(`[Worker] Forcing AI verification for ${ruleViolations.length} static findings`);
+        skipReason = '';
+    }
+
     if (limits.allowAI && !skipReason) {
         try {
             const aiResult = await runAIReview(
@@ -311,7 +317,8 @@ export async function processReviewJob(data: ReviewJobData, _job?: Job): Promise
     // 6. Deduplication & Persistence (Modular)
     // ---------------------------------------------------------
     // Merge Static Analysis with AI Comments
-    const allComments = [...ruleViolations, ...aiComments];
+    // If AI ran, we trust it to have filtered/merged rules into aiComments (verification step)
+    const allComments = (limits.allowAI && !skipReason) ? aiComments : [...ruleViolations, ...aiComments];
     
     // Deduplicate
     const finalComments = deduplicateComments(allComments);

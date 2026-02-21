@@ -20,6 +20,8 @@ export {
   type ReviewComment,
   type ReviewResult,
   type PRSummaryResult,
+  type RuleValidation,
+  type RuleValidationStatus,
 } from './prompts.js';
 
 // Providers
