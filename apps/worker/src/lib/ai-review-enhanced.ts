@@ -7,7 +7,9 @@ import {
   ragContextLayer,
   prDiffLayer,
   userPromptLayer,
-  webContextLayer
+  webContextLayer,
+  complexityAssessmentLayer,
+  ruleViolationsLayer
 } from '@reviewscope/context-engine';
 import {
   createProvider,
@@ -19,7 +21,6 @@ import {
   parsePRSummaryResponse,
   type PRSummaryResult,
   selectModel,
-  buildReviewPrompt,
   buildPRSummaryPrompt,
   LLMRateLimitError,
   type ChatOptions,
@@ -219,7 +220,9 @@ export async function runEnhancedAIReview(
   const assembler = new ContextAssembler();
   assembler.addLayer(systemGuardrailsLayer);
   assembler.addLayer(repoMetadataLayer);
+  assembler.addLayer(complexityAssessmentLayer);
   assembler.addLayer(issueIntentLayer);
+  assembler.addLayer(ruleViolationsLayer);
   assembler.addLayer(relatedFilesLayer);
   assembler.addLayer(ragContextLayer);
   assembler.addLayer(webContextLayer);
@@ -237,23 +240,14 @@ export async function runEnhancedAIReview(
     ragContext: input.ragContext,
     userPrompt: options.userGuidelines,
     ruleViolations: input.ruleViolations,
+    complexity: input.complexity,
   }, modelName, complexityTier);
 
   console.warn(`[Enhanced LLM] Context assembled: ${assembled.usedTokens} tokens (Budget: ${assembled.budgetTokens})`);
 
-  const reviewPrompt = buildReviewPrompt({
-    prTitle: input.prTitle,
-    prBody: input.prBody,
-    diff: input.diff,
-    issueContext: input.issueContext,
-    userGuidelines: options.userGuidelines,
-    ruleViolations: input.ruleViolations as any,
-    complexity: input.complexity as any,
-  });
-
   const messages = [
     { role: 'system' as const, content: REVIEW_SYSTEM_PROMPT },
-    { role: 'user' as const, content: reviewPrompt }
+    { role: 'user' as const, content: assembled.content }
   ];
 
   const response = await runWithModelFallback(provider, messages, {

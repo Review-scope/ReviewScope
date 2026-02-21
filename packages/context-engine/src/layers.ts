@@ -2,14 +2,18 @@
  * Context Layers - Enforced Order
  */
 export const LAYER_ORDER = [
-  'system-guardrails',  // 1. FIRST - non-overridable
-  'repo-metadata',      // 2. Stack, conventions
-  'issue-intent',       // 3. PR ↔ Issue link
-  'related-files',      // 4. Deterministic imports (Targeted Context)
-  'rag-context',        // 5. Retrieved code (Probabilistic)
-  'web-context',        // 5.5. Dependency & security data
-  'pr-diff',            // 6. Changed files
-  'user-prompt',        // 7. LAST - sandboxed
+  'system-guardrails',     // 1. FIRST - non-overridable
+  'repo-metadata',         // 2. Stack, conventions
+  'complexity-assessment', // 2.5. Resource budgeting context
+  'issue-intent',          // 3. PR ↔ Issue link
+  'rule-violations',       // 3.5. Static analysis findings to verify
+  'related-files',         // 4. Deterministic imports (Targeted Context)
+  'rag-context',           // 5. Retrieved code (Probabilistic)
+  'web-context',           // 5.5. Dependency & security data
+  'focused-context',       // 5.7. Targeted context for chat/replies
+  'pr-diff',               // 6. Changed files
+  'user-prompt',           // 7. Guidelines
+  'user-question',         // 8. The actual chat question (last)
 ] as const;
 
 export type LayerName = typeof LAYER_ORDER[number];
@@ -35,6 +39,9 @@ export interface ContextInput {
   ragContext?: string;
   webContext?: string;
   userPrompt?: string;
+  userQuestion?: string; // The specific question for chat
+  focusedContext?: string; // Targeted context for chat (e.g. parent comment)
   ruleViolations?: unknown[]; // Static rule violations for LLM validation
+  complexity?: any; // Complexity assessment result
   indexedAt?: Date | null;
 }

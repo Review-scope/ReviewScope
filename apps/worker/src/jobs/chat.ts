@@ -1,5 +1,5 @@
 import { GitHubClient } from '../lib/github.js';
-import { RAGRetriever, RAGIndexer } from '@reviewscope/context-engine';
+import { RAGRetriever, RAGIndexer, ContextAssembler, systemGuardrailsLayer, repoMetadataLayer, complexityAssessmentLayer, issueIntentLayer, ruleViolationsLayer, relatedFilesLayer, ragContextLayer, webContextLayer, focusedContextLayer, prDiffLayer, userPromptLayer, userQuestionLayer } from '@reviewscope/context-engine';
 import { createConfiguredProvider } from '../lib/ai-review.js';
 import { resolveEmbeddingModel, shouldSkipEmbeddings } from '../lib/embedding-model.js';
 import { CHAT_SYSTEM_PROMPT } from '@reviewscope/llm-core';
@@ -85,47 +85,49 @@ ${parentComment.body}
       }
     }
 
-    // 4. Construct Prompt
-    let promptContent = '';
-    
-    if (specificContext) {
-        // Focused Prompt
-        promptContent = `
-${specificContext}
+    // 4. Assemble Context using Context Engineering layers (Unified)
+    const assembler = new ContextAssembler();
+    assembler.addLayer(systemGuardrailsLayer);
+    assembler.addLayer(repoMetadataLayer);
+    assembler.addLayer(complexityAssessmentLayer);
+    assembler.addLayer(issueIntentLayer);
+    assembler.addLayer(ruleViolationsLayer);
+    assembler.addLayer(relatedFilesLayer);
+    assembler.addLayer(ragContextLayer);
+    assembler.addLayer(webContextLayer);
+    assembler.addLayer(focusedContextLayer);
+    assembler.addLayer(prDiffLayer);
+    assembler.addLayer(userPromptLayer);
+    assembler.addLayer(userQuestionLayer);
 
-## RAG Context (Reference)
-${ragContext}
-
-## User Question
-${data.userQuestion}
-`;
-    } else {
-        // General Prompt (Full PR Context)
-        promptContent = `
-## PR Diff
-${fullDiff}
-
-## RAG Context
-${ragContext}
-
-## User Question
-${data.userQuestion}
-`;
-    }
-
-    // 5. Call LLM
     const { provider: llmProvider } = await createConfiguredProvider(dbInst.id);
-    const messages = [
-      { role: 'system' as const, content: CHAT_SYSTEM_PROMPT },
-      { role: 'user' as const, content: promptContent } 
-    ];
-
     const defaultModel = getTier(dbInst.planId) === PlanTier.FREE
       ? 'sarvam-m'
       : llmProvider.name === 'openai'
         ? 'gpt-4o'
         : 'gemini-2.5-flash';
     const modelName = config?.model || defaultModel;
+
+    const assembled = await assembler.assemble({
+        repositoryFullName: data.repositoryFullName,
+        prNumber: data.prNumber,
+        prTitle: '', // Optional for chat
+        prBody: '', // Optional for chat
+        diff: fullDiff,
+        ragContext: ragContext,
+        focusedContext: specificContext,
+        userQuestion: data.userQuestion,
+    }, modelName);
+
+    console.warn(`[Chat] Context assembled: ${assembled.usedTokens} tokens (Budget: ${assembled.budgetTokens})`);
+
+    // 5. Call LLM
+    const messages = [
+      { role: 'system' as const, content: CHAT_SYSTEM_PROMPT },
+      { role: 'user' as const, content: assembled.content } 
+    ];
+
+
 
     const response = await llmProvider.chat(messages, {
       model: modelName,

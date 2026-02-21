@@ -7,7 +7,9 @@ import {
   ragContextLayer,
   prDiffLayer,
   userPromptLayer,
-  webContextLayer
+  webContextLayer,
+  complexityAssessmentLayer,
+  ruleViolationsLayer
 } from '@reviewscope/context-engine';
 import { createProvider, parseReviewResponse, type ReviewComment, type LLMProvider, REVIEW_SYSTEM_PROMPT } from '@reviewscope/llm-core';
 import { selectModel } from '@reviewscope/llm-core';
@@ -133,7 +135,9 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
   const assembler = new ContextAssembler();
   assembler.addLayer(systemGuardrailsLayer);
   assembler.addLayer(repoMetadataLayer);
+  assembler.addLayer(complexityAssessmentLayer);
   assembler.addLayer(issueIntentLayer);
+  assembler.addLayer(ruleViolationsLayer);
   assembler.addLayer(relatedFilesLayer);
   assembler.addLayer(ragContextLayer);
   assembler.addLayer(webContextLayer);
@@ -151,7 +155,8 @@ export async function runAIReview(input: AIReviewInput, options: AIReviewOptions
     ragContext: input.ragContext,
     userPrompt: options.userGuidelines,
     ruleViolations: input.ruleViolations,
-  }, modelName, input.complexity);
+    complexity: input.complexity,
+  }, modelName, (input.complexity as any)?.tier || input.complexity);
 
   console.warn(`Context assembled: ${assembled.usedTokens} tokens (Budget: ${assembled.budgetTokens})`);
 
