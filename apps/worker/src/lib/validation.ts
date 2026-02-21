@@ -24,6 +24,7 @@ export function isNoOpSuggestion(currentCode: string, suggestion: string): boole
  * Check if the file should be ignored based on rigorous patterns
  */
 export function isIgnoredFile(path: string): boolean {
+  // 1. Mandatory Skips (Noise, Generated, Docs)
   const IGNORE_PATTERNS = [
     /node_modules\//,
     /^dist\//,
@@ -37,8 +38,31 @@ export function isIgnoredFile(path: string): boolean {
     /\.min\.css$/,
     /\.map$/,
     /\.d\.ts$/,
+    /\.md$/,       // Skip Markdown
+    /\.markdown$/, // Skip Markdown
   ];
-  return IGNORE_PATTERNS.some(p => p.test(path));
+
+  if (IGNORE_PATTERNS.some(p => p.test(path))) return true;
+
+  // 2. Generic JSON Skip
+  // We keep critical config JSONs, but skip data/locale/manifest/log JSONs
+  if (path.toLowerCase().endsWith('.json')) {
+    const CRITICAL_JSONS = [
+      'package.json',
+      'tsconfig.json',
+      'vercel.json',
+      'netlify.json',
+      'composer.json',
+      'appsettings.json',
+      'firebase.json'
+    ];
+    const filename = path.split('/').pop() || '';
+    if (!CRITICAL_JSONS.includes(filename)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
