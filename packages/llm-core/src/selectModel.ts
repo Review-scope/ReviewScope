@@ -85,8 +85,8 @@ function selectGeminiModel(complexity: Complexity): ModelRoute {
     case 'complex':
       return {
         provider: 'gemini',
-        model: 'gemini-3-flash',
-        contextBudget: getContextBudget('gemini-3-flash'),
+        model: 'gemini-3-flash-preview',
+        contextBudget: getContextBudget('gemini-3-flash-preview'),
         reason: 'Complex changes: using Gemini 3 Flash for better reasoning',
       };
   }
@@ -159,7 +159,7 @@ export function estimateCost(
       costPerMTok = 0.30; // Paid pricing (free tier available)
       break;
       
-    case 'gemini-3-flash':
+    case 'gemini-3-flash-preview':
       costPerMTok = 0.50; // Paid pricing (free tier available)
       break;
       

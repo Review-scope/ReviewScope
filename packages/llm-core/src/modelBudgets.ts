@@ -9,7 +9,7 @@ export const MODEL_CONTEXT_BUDGET: Record<string, number> = {
   // Gemini models (Free tier preferred)
   'gemini-2.5-flash-lite': 1000000,
   'gemini-2.5-flash': 1000000,
-  'gemini-3-flash': 1000000,
+  'gemini-3-flash-preview': 1000000,
 
   // OpenAI models
   'gpt-4o': 128000,
