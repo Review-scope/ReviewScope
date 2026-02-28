@@ -78,6 +78,12 @@ export default function RootLayout({
           data-website-id="aad390a0-befb-424e-a755-6ef57aa9157f"
           strategy="afterInteractive"
         />
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9538366043355778"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
         <Providers>
           <AppShell>
             {children}
