@@ -175,6 +175,36 @@ async function generatePRSummary(
   return parsePRSummaryResponse(response.content);
 }
 
+export async function generateGlobalSummary(
+  input: {
+    prTitle: string;
+    prBody: string;
+    author: string;
+    batchSummaries: string[];
+    installationId?: string;
+  }
+): Promise<PRSummaryResult> {
+  const { provider } = await createConfiguredProvider(input.installationId);
+  const modelName = provider.name === 'sarvam' ? 'sarvam-m' : provider.name === 'openai' ? 'gpt-4o' : 'gemini-2.5-flash';
+
+  console.warn('[Enhanced LLM] Generating global PR summary from batch findings...');
+
+  const summaryPrompt = `PR Title: ${input.prTitle}\nPR Body: ${input.prBody}\nAuthor: ${input.author}\n\nBelow are summaries from different parts of the PR review. Please synthesize them into one cohesive PR summary.\n\n${input.batchSummaries.map((s, i) => `Batch ${i + 1}:\n${s}`).join('\n\n')}`;
+
+  const messages = [
+    { role: 'system' as const, content: PR_SUMMARY_SYSTEM_PROMPT },
+    { role: 'user' as const, content: summaryPrompt }
+  ];
+
+  const response = await provider.chat(messages, {
+    model: modelName,
+    temperature: 0.3,
+    responseFormat: 'json',
+  });
+
+  return parsePRSummaryResponse(response.content);
+}
+
 export async function runEnhancedAIReview(
   input: AIReviewInput,
   options: AIReviewOptions = {}

@@ -8,11 +8,11 @@ import { runRules } from '@reviewscope/rules-engine';
 import { RAGRetriever, RAGIndexer } from '@reviewscope/context-engine';
 import { createConfiguredProvider } from './ai-review.js';
 import { resolveEmbeddingModel, shouldSkipEmbeddings } from './embedding-model.js';
-import { runEnhancedAIReview, AIReviewResult } from './ai-review-enhanced.js';
+import { runEnhancedAIReview, generateGlobalSummary } from './ai-review-enhanced.js';
 import { db, reviews, repositories, installations, configs } from '../../../api/src/db/index.js';
 import { eq, and } from 'drizzle-orm';
 import picomatch from 'picomatch';
-import { getPlanLimits, PlanTier, PlanLimits } from './plans.js';
+import { getPlanLimits, PlanLimits } from './plans.js';
 import { ReviewJobData } from '../jobs/review.js';
 import { scoreFile } from './scoring.js';
 import { ReviewComment } from '@reviewscope/llm-core';
@@ -243,28 +243,39 @@ export async function runAIReview(
     let riskAnalysis: string | undefined;
     let assessment = { riskLevel: 'low', mergeReadiness: 'ready', confidence: 'high' };
     
-    // Calculate Complexity
+    // Calculate Complexity and decide on batching
     const filesData = aiReviewFiles.map(file => ({
         path: file.path,
         additions: file.additions.map(add => add.content)
     }));
     const complexity = calculateComplexity(aiReviewFiles.length, filesData);
     
+    const totalAdditions = aiReviewFiles.reduce((acc, f) => acc + f.additions.length, 0);
+    const totalChars = aiReviewFiles.reduce((acc, f) => acc + f.path.length + f.additions.reduce((a, b) => a + b.content.length, 0), 0);
+    const estimatedTokens = Math.ceil(totalChars / 3.5);
+
+    // Smart Batching Trigger: File count, large diff, or small model context
+    const BATCH_SIZE = 8;
+    const TOKEN_THRESHOLD = 6000; // Trigger batching if we approach Sarvam's limit or for general efficiency
+    const shouldBatch = aiReviewFiles.length > BATCH_SIZE || estimatedTokens > TOKEN_THRESHOLD || totalAdditions > 400;
+
     const relatedContext = ''; // Placeholder for future expansion
 
     if (limits.allowAI) {
-        // Pro Tier Batching Logic
-        if (limits.tier === PlanTier.PRO && aiReviewFiles.length > 10) {
-          const BATCH_SIZE = 10;
+        if (shouldBatch) {
           const batches = [];
           for (let i = 0; i < aiReviewFiles.length; i += BATCH_SIZE) {
             batches.push(aiReviewFiles.slice(i, i + BATCH_SIZE));
           }
 
           const combinedComments: ReviewComment[] = [];
-          let combinedSummary = '';
+          const batchSummaries: string[] = [];
+          const batchRiskAnalyses: string[] = [];
+          let finalRiskLevel = 'low';
+          let finalMergeReadiness = 'ready';
+          let finalConfidence: 'high' | 'medium' | 'low' = 'high';
 
-          let lastBatchResult: AIReviewResult | undefined;
+          console.info(`[Review] Processing large PR in ${batches.length} batches (${aiReviewFiles.length} files, ~${estimatedTokens} tokens)`);
 
           for (let i = 0; i < batches.length; i++) {
             const batchFiles = batches[i];
@@ -283,27 +294,29 @@ export async function runAIReview(
               diff: batchDiff,
               issueContext: issueContext,
               relatedContext: relatedContext,
-              ragContext: ragContext, // Note: RAG might be global, passed to all batches
-              ruleViolations: ruleViolations.filter(v => batchFiles.some(f => f.path === v.file)), // Filter violations for this batch
+              ragContext: ragContext,
+              ruleViolations: ruleViolations.filter(v => batchFiles.some(f => f.path === v.file)),
               complexity: complexity,
             }, {
-            model: config?.ai?.model,
-            temperature: config?.ai?.temperature,
-            userGuidelines: limits.allowCustomPrompts ? config?.ai?.guidelines : undefined,
-            generateDetailedSummary: true, // Enable detailed PR summary generation
-          });
-
-            lastBatchResult = batchResult;
+              model: config?.ai?.model,
+              temperature: config?.ai?.temperature,
+              userGuidelines: limits.allowCustomPrompts ? config?.ai?.guidelines : undefined,
+              generateDetailedSummary: false, // Don't generate detailed PR summary for intermediate batches
+            });
 
             combinedComments.push(...batchResult.comments);
-            combinedSummary += `\n\n### Batch ${i + 1} Review\n${batchResult.summary}`;
-            
-            if (i === batches.length - 1) {
-              assessment = batchResult.assessment;
-              riskAnalysis = batchResult.riskAnalysis;
-              // Update confidence based on RAG
-              if (!ragContext) assessment.confidence = 'medium'; 
-            }
+            batchSummaries.push(batchResult.summary);
+            if (batchResult.riskAnalysis) batchRiskAnalyses.push(batchResult.riskAnalysis);
+
+            // Merge Assessment
+            if (batchResult.assessment.riskLevel === 'high') finalRiskLevel = 'high';
+            else if (batchResult.assessment.riskLevel === 'medium' && finalRiskLevel !== 'high') finalRiskLevel = 'medium';
+
+            if (batchResult.assessment.mergeReadiness === 'not_ready') finalMergeReadiness = 'not_ready';
+            else if (batchResult.assessment.mergeReadiness === 'needs_improvement' && finalMergeReadiness !== 'not_ready') finalMergeReadiness = 'needs_improvement';
+
+            if (batchResult.assessment.confidence === 'low') finalConfidence = 'low';
+            else if (batchResult.assessment.confidence === 'medium' && finalConfidence !== 'low') finalConfidence = 'medium';
 
             // Verify and Merge Batch Violations
             if (batchResult.ruleValidations) {
@@ -325,14 +338,29 @@ export async function runAIReview(
           }
 
           aiComments = combinedComments;
+          assessment = { riskLevel: finalRiskLevel, mergeReadiness: finalMergeReadiness, confidence: finalConfidence };
+          riskAnalysis = batchRiskAnalyses.join('\n\n---\n\n');
           
-          const finalPrSummary = lastBatchResult?.prSummary;
-
-          // Use detailed PR summary if available, otherwise use standard summary
-          if (finalPrSummary) {
-            aiSummary = `### Summary of Changes\n${finalPrSummary.summary}\n\n### Highlights\n${finalPrSummary.keyPoints.map(point => `- ${point}`).join('\n')}\n\n**Complexity:** ${finalPrSummary.complexity}\n\n---\n\n### 🚀 Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
+          // Generate a final summary combining all batch findings
+          if (batchSummaries.length > 1) {
+            try {
+              const globalSummary = await generateGlobalSummary({
+                prTitle: data.prTitle,
+                prBody: data.prBody,
+                author: author,
+                batchSummaries: batchSummaries,
+                installationId: dbInst.id,
+              });
+              
+              aiSummary = `### Summary of Changes\n${globalSummary.summary}\n\n### Highlights\n${globalSummary.keyPoints.map(point => `- ${point}`).join('\n')}\n\n**Complexity:** ${globalSummary.complexity}\n\n---\n\n### 🚀 Smart Batching Review\nAnalyzed ${aiReviewFiles.length} files in ${batches.length} chunks. Below are detailed findings per batch:\n\n` + 
+                batchSummaries.map((s, idx) => `#### Batch ${idx + 1}\n${s}`).join('\n\n');
+            } catch (err) {
+              console.error('[Review] Failed to generate global summary:', err);
+              aiSummary = `### 🚀 Smart Batching Review\nAnalyzed ${aiReviewFiles.length} files in ${batches.length} chunks.\n\n` + 
+                batchSummaries.map((s, idx) => `#### Batch ${idx + 1}\n${s}`).join('\n\n');
+            }
           } else {
-            aiSummary = `### 🚀 Smart Batching Review\nAutomated review for ${aiReviewFiles.length} files split into ${batches.length} logical chunks.\n${combinedSummary}`;
+            aiSummary = batchSummaries[0];
           }
         } else {
           // Standard Review (Free/Pro or Single-Batch Team)

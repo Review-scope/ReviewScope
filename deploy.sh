@@ -7,15 +7,11 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-echo "🚀 Starting deployment..."
+echo "🚀 Starting rolling deployment..."
 
-# Stop existing containers
-echo "⬇️ Stopping existing containers..."
-docker compose -f docker-compose.prod.yml down
-
-# Build and start
+# Build and start (recreates only updated containers)
 echo "🏗️ Building and starting services..."
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
 
 echo "✅ Deployment complete!"
 echo "   - Dashboard: http://localhost:3000"
