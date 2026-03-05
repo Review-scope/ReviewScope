@@ -22,21 +22,12 @@ services:
     restart: always
     ports:
       - "3001:3000" # Map host 3001 to container 3000
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=production
       - PORT=3000
       - REDIS_URL=redis://redis:6379
-      # Pass through other env vars
-      - DATABASE_URL=${DATABASE_URL}
-      - GITHUB_APP_ID=${GITHUB_APP_ID}
-      - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
-      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - QDRANT_URL=${QDRANT_URL}
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - DASHBOARD_URL=${DASHBOARD_URL}
-      - DODO_WEBHOOK_SECRET=${DODO_WEBHOOK_SECRET}
     depends_on:
       - redis
 
@@ -47,18 +38,11 @@ services:
       target: worker
     container_name: reviewscope-worker
     restart: always
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=${DATABASE_URL}
-      - GITHUB_APP_ID=${GITHUB_APP_ID}
-      - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - SARVAM_API_KEY=${SARVAM_API_KEY}
-      - QDRANT_URL=${QDRANT_URL}
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - DASHBOARD_URL=${DASHBOARD_URL}
     depends_on:
       - redis
 
@@ -71,24 +55,14 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=production
       - PORT=3000
       - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=${DATABASE_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXTAUTH_URL=${NEXTAUTH_URL} # Ensure this is set to your production URL in .env
-      - GITHUB_APP_ID=${GITHUB_APP_ID}
-      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
-      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - INTERNAL_API_URL=http://api:3000
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - QDRANT_URL=${QDRANT_URL}
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
       - NEXT_PUBLIC_NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXT_PUBLIC_DODO_PAYMENT_LINK_PRO=${NEXT_PUBLIC_DODO_PAYMENT_LINK_PRO}
-      - NEXT_PUBLIC_DODO_CUSTOMER_PORTAL=${NEXT_PUBLIC_DODO_CUSTOMER_PORTAL}
     depends_on:
       - redis
       - api
