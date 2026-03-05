@@ -87,20 +87,25 @@ export async function filterAndRefineFiles(
   // Apply .reviewscopeignore
   if (ignoredPatterns.length > 0) {
     const isMatch = picomatch(ignoredPatterns, { dot: true });
-    filteredFiles = parsedFiles.filter(f => !isMatch(f.path));
+    filteredFiles = filteredFiles.filter(f => !isMatch(f.path));
   }
 
-  // SMART STRATEGY: Conditional Filtering
-  // If we have actual logic/config files, ignore documentation and tests to save budget.
-  // But if the PR is ONLY documentation/tests, we keep them.
+  // Unconditionally exclude documentation and configuration files
+  const excludedExtensions = ['.md', '.markdown', '.toml'];
+  filteredFiles = filteredFiles.filter(f => 
+    !excludedExtensions.some(ext => f.path.endsWith(ext))
+  );
+
+  // SMART STRATEGY: Conditional Filtering for Tests
+  // If we have actual logic/config files, ignore tests to save budget.
+  // But if the PR is ONLY tests, we keep them.
   const hasCoreCode = filteredFiles.some(f => scoreFile(f) >= 3); // 3+ is logic/infra
   
   if (hasCoreCode) {
-      // Drop Markdown/Docs and Tests if we have real code to review
+      // Drop Tests if we have real code to review
       filteredFiles = filteredFiles.filter(f => {
-          const isDoc = f.path.endsWith('.md') || f.path.endsWith('.markdown');
           const isTest = f.path.includes('.test.') || f.path.includes('.spec.') || f.path.includes('/tests/') || f.path.includes('__tests__/');
-          return !isDoc && !isTest;
+          return !isTest;
       });
   }
 
