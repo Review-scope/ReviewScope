@@ -40,8 +40,8 @@ export function ConfigForm({
   const router = useRouter();
   const isFreePlan = plan === 'Free';
 
-  const [provider, setProvider] = useState(initialConfig?.provider || 'sarvam');
-  const [model, setModel] = useState(initialConfig?.model || 'sarvam-m');
+  const [provider, setProvider] = useState(initialConfig?.provider || 'gemini'); // Default to Gemini
+  const [model, setModel] = useState(initialConfig?.model || 'gemini-2.5-flash-lite');
   const [smartRouting, setSmartRouting] = useState(initialConfig?.smartRouting ?? false);
   const [apiKey, setApiKey] = useState('');
   const [verifyStatus, setVerifyStatus] = useState<
@@ -277,59 +277,58 @@ export function ConfigForm({
 
         <Section
           title="API Configuration"
-          description={provider === 'sarvam' ? 'Sarvam on Free can use ReviewScope server key. Gemini/OpenAI always require your key.' : 'Enter your API key to enable the selected provider.'}
+          description={provider === 'sarvam' ? 'Sarvam requires a user-provided API key.' : 'Enter your API key to enable the selected provider.'}
           icon={<Key className="w-5 h-5 text-emerald-600" />}
         >
-          {provider === 'sarvam' ? (
-            <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50 text-sm text-emerald-800 font-medium">
-              {isFreePlan ? 'Using server-managed Sarvam key by default.' : 'Sarvam is not available on Pro.'}
-            </div>
-          ) : (
-            <div className="flex gap-3">
-              <div className="relative flex-1 group">
-                <input
-                  name="apiKey"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => {
-                    setApiKey(e.target.value);
-                    setVerifyStatus('idle');
-                  }}
-                  className="w-full h-12 rounded-xl px-4 border border-zinc-200 bg-white text-sm transition-all focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-mono"
-                  placeholder={initialConfig?.apiKeyEncrypted ? '****************' : 'sk-...'}
-                />
-                {initialConfig?.apiKeyEncrypted && !apiKey && (
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none select-none">
-                    <span className="text-[10px] font-black tracking-widest text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/50">ENCRYPTED</span>
-                  </div>
-                )}
-                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  {verifyStatus === 'verifying' && <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />}
-                  {verifyStatus === 'valid' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-                  {verifyStatus === 'invalid' && <XCircle className="w-4 h-4 text-red-500" />}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleVerify}
-                className="h-12 px-6 bg-zinc-900 text-white rounded-xl font-bold text-sm hover:bg-zinc-800 transition-all shadow-lg hover:shadow-xl active:scale-95 cursor-pointer"
-              >
-                Verify
-              </button>
-
-              {initialConfig?.apiKeyEncrypted && (
-                <button
-                  type="button"
-                  onClick={handleDeleteKey}
-                  className="h-12 w-12 flex items-center justify-center bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors cursor-pointer"
-                  title="Remove API Key"
-                >
-                  <XCircle className="w-5 h-5" />
-                </button>
-              )}
+          {provider === 'sarvam' && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">To use Sarvam, you must provide your own API key.</p>
             </div>
           )}
+          <div className="flex gap-3">
+            <div className="relative flex-1 group">
+              <input
+                name="apiKey"
+                type="password"
+                value={apiKey}
+                onChange={(e) => {
+                  setApiKey(e.target.value);
+                  setVerifyStatus('idle');
+                }}
+                className="w-full h-12 rounded-xl px-4 border border-zinc-200 bg-white text-sm transition-all focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-mono"
+                placeholder={initialConfig?.apiKeyEncrypted ? '****************' : 'sk-...'}
+              />
+              {initialConfig?.apiKeyEncrypted && !apiKey && (
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none select-none">
+                  <span className="text-[10px] font-black tracking-widest text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/50">ENCRYPTED</span>
+                </div>
+              )}
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                {verifyStatus === 'verifying' && <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />}
+                {verifyStatus === 'valid' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                {verifyStatus === 'invalid' && <XCircle className="w-4 h-4 text-red-500" />}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleVerify}
+              className="h-12 px-6 bg-zinc-900 text-white rounded-xl font-bold text-sm hover:bg-zinc-800 transition-all shadow-lg hover:shadow-xl active:scale-95 cursor-pointer"
+            >
+              Verify
+            </button>
+
+            {initialConfig?.apiKeyEncrypted && (
+              <button
+                type="button"
+                onClick={handleDeleteKey}
+                className="h-12 w-12 flex items-center justify-center bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors cursor-pointer"
+                title="Remove API Key"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            )}
+          </div>
 
           {verifyStatus === 'invalid' && verifyError && (
             <div className="flex items-center gap-2 text-xs text-red-600 font-medium bg-red-50/50 p-3 rounded-lg border border-red-100 animate-in fade-in slide-in-from-top-1">

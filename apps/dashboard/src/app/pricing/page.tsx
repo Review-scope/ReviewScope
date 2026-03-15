@@ -64,7 +64,7 @@ export default async function PricingPage() {
         pro: process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK_PRO,
         portal: process.env.NEXT_PUBLIC_DODO_CUSTOMER_PORTAL,
       }}
-      freePlanDefaultModel="Sarvam-M"
+      freePlanDefaultModel="Gemini" // Updated default model
     />
   );
 }

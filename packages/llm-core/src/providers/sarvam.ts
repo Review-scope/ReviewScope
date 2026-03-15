@@ -10,6 +10,9 @@ export class SarvamProvider implements LLMProvider, EmbeddingProvider {
   private client: SarvamAIClient;
 
   constructor(apiKey: string) {
+    if (!apiKey) {
+      throw new Error('SarvamProvider requires a user-provided API key.');
+    }
     this.client = new SarvamAIClient({ apiSubscriptionKey: apiKey });
   }
 

@@ -13,65 +13,29 @@ import {
 } from '@reviewscope/context-engine';
 import { createProvider, parseReviewResponse, type ReviewComment, type LLMProvider, REVIEW_SYSTEM_PROMPT } from '@reviewscope/llm-core';
 import { selectModel } from '@reviewscope/llm-core';
-import { db, configs, installations } from '../../../api/src/db/index.js';
+import { db, configs } from '../../../api/src/db/index.js';
 import { eq } from 'drizzle-orm';
 import { decrypt } from '@reviewscope/security';
-import { getTier, PlanTier } from './plans.js';
 
-const SARVAM_API_KEY = process.env.SARVAM_API_KEY || '';
+
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-dev-key-change-me-12345';
 
 console.warn(`[LLM] Encryption Key Status: ${process.env.ENCRYPTION_KEY ? 'LOADED' : 'MISSING (Using Fallback)'}`);
 
 export async function createConfiguredProvider(installationId?: string): Promise<{ provider: LLMProvider, smartRouting: boolean }> {
   if (installationId) {
-    console.warn(`[LLM] Fetching config for installation: ${installationId}`);
-
-    const [installation] = await db.select().from(installations).where(eq(installations.id, installationId));
+    // const [installation] = await db.select().from(installations).where(eq(installations.id, installationId));
     const [userConfig] = await db.select().from(configs).where(eq(configs.installationId, installationId));
-    const tier = getTier(installation?.planId ?? null);
 
     if (userConfig?.provider === 'sarvam') {
-      if (tier === PlanTier.PRO) {
-        throw new Error('Sarvam is not available on Pro plan. Use Gemini or OpenAI.');
+      if (!userConfig.apiKeyEncrypted) {
+        throw new Error('Sarvam requires a user-provided API key.');
       }
-      if (!SARVAM_API_KEY) {
-        throw new Error('SARVAM_API_KEY is required for Free plan fallback reviews');
-      }
-
-      console.warn(`[LLM] Using server-managed Sarvam key for installation ${installationId}`);
-      return { provider: createProvider('sarvam', SARVAM_API_KEY), smartRouting: false };
+      const decryptedKey = decrypt(userConfig.apiKeyEncrypted, ENCRYPTION_KEY);
+      return { provider: createProvider('sarvam', decryptedKey), smartRouting: userConfig.smartRouting };
     }
-
-    if (userConfig?.apiKeyEncrypted) {
-      try {
-        const decryptedKey = decrypt(userConfig.apiKeyEncrypted, ENCRYPTION_KEY);
-        console.warn(`[LLM] Using CUSTOM ${userConfig.provider} key for installation ${installationId} (Prefix: ${decryptedKey.substring(0, 6)}...)`);
-        return {
-          provider: createProvider(userConfig.provider as 'openai' | 'gemini' | 'sarvam', decryptedKey),
-          smartRouting: userConfig.smartRouting,
-        };
-      } catch (e: unknown) {
-        console.error(`[LLM] Failed to decrypt user API key for installation ${installationId}. Error: ${(e as Error).message}`);
-        throw new Error('Failed to decrypt configured API key');
-      }
-    }
-
-    if (tier === PlanTier.PRO) {
-      throw new Error('Pro plan requires a user API key. Configure Gemini or OpenAI in settings.');
-    }
-
-    if (!SARVAM_API_KEY) {
-      throw new Error('SARVAM_API_KEY is required for Free plan fallback reviews');
-    }
-    return { provider: createProvider('sarvam', SARVAM_API_KEY), smartRouting: false };
   }
-
-  console.warn('[LLM] No installationId provided to createConfiguredProvider');
-  if (!SARVAM_API_KEY) {
-    throw new Error('SARVAM_API_KEY is required');
-  }
-  return { provider: createProvider('sarvam', SARVAM_API_KEY), smartRouting: false };
+  throw new Error('Provider configuration is missing or invalid.');
 }
 
 interface AIReviewInput {
