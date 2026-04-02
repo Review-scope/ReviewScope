@@ -9,12 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@qdrant/js-client-rest": "^1.16.2",
     "@reviewscope/llm-core": "^0.0.1",
     "@reviewscope/security": "^0.0.1",
+    "bullmq": "^5.0.0",
     "clsx": "^2.1.0",
     "date-fns": "^4.1.0",
     "drizzle-kit": "0.31.9",
     "drizzle-orm": "^0.29.0",
+    "ioredis": "^5.4.0",
     "lucide-react": "^0.460.0",
     "next": "^16.1.1",
     "next-auth": "^4.24.5",
@@ -24,17 +27,17 @@
     "react-dom": "^19.2.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.2.0",
+    "tailwindcss": "^4",
+    "@tailwindcss/postcss": "^4",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.1",
-    "tailwindcss": "^4",
     "typescript": "^5"
   }
 }
