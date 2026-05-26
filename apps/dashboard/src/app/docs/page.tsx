@@ -332,7 +332,7 @@ export default function DocsPage() {
                       <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-purple-500 ring-4 ring-zinc-900"></div>
                       <h4 className="text-sm font-bold text-zinc-100 mb-3">2. Manual Trigger</h4>
                       <div className="bg-black/50 rounded-lg p-3 font-mono text-xs text-zinc-300 border border-zinc-800 inline-block mb-2">
-                        <span className="text-purple-400">@Review-scope</span> re-review
+                        <span className="text-purple-400">@reviewscope</span> review
                       </div>
                       <p className="text-xs text-zinc-500">Use this to force a re-scan after pushing commits.</p>
                     </div>
@@ -342,7 +342,7 @@ export default function DocsPage() {
                       <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-pink-500 ring-4 ring-zinc-900"></div>
                       <h4 className="text-sm font-bold text-zinc-100 mb-3">3. Interactive Chat</h4>
                       <div className="bg-black/50 rounded-lg p-3 font-mono text-xs text-zinc-300 border border-zinc-800 inline-block mb-2">
-                        <span className="text-purple-400">@Review-scope</span> Why is this variable nullable?
+                        <span className="text-purple-400">@reviewscope</span> Why is this variable nullable?
                       </div>
                       <p className="text-xs text-zinc-500">ReviewScope replies with context-aware answers.</p>
                     </div>

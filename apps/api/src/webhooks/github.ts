@@ -267,7 +267,7 @@ githubWebhook.post('/', async (c) => {
     }
 
     const body = comment.body.toLowerCase();
-    if (!body.includes('@review-scope')) {
+    if (!body.includes('@review-scope') && !body.includes('@reviewscope') && !body.includes('/reviewscope')) {
       return c.json({ status: 'ignored', reason: 'no_mention' });
     }
 
@@ -295,7 +295,7 @@ githubWebhook.post('/', async (c) => {
     const limits = getPlanLimits(dbInst.planId);
 
     try {
-      if (body.includes('re-review')) {
+      if (/(@reviewscope|@review-scope|\/reviewscope)\s+(re-)?review\b/.test(body)) {
         const [config] = await db.select().from(configs).where(eq(configs.installationId, dbInst.id)).limit(1);
         if (limits.tier === 'PRO' && !config?.apiKeyEncrypted) {
           const [owner, repoName] = repo.full_name.split('/');
@@ -304,7 +304,7 @@ githubWebhook.post('/', async (c) => {
             owner,
             repoName,
             issue.number,
-            '## Re-review Blocked\n\nPro plan requires your own API key. Add a Gemini or OpenAI key in Settings first.'
+            '## Review Blocked\n\nPro plan requires your own API key. Add a Gemini or OpenAI key in Settings first.'
           );
           return c.json({ status: 'blocked_missing_api_key' });
         }
@@ -315,7 +315,7 @@ githubWebhook.post('/', async (c) => {
             owner,
             repoName,
             issue.number,
-            '## Re-review Blocked\n\nSarvam is available only on Free plan. On Pro, configure Gemini or OpenAI in Settings.'
+            '## Review Blocked\n\nSarvam is available only on Free plan. On Pro, configure Gemini or OpenAI in Settings.'
           );
           return c.json({ status: 'blocked_invalid_provider' });
         }
@@ -339,7 +339,7 @@ githubWebhook.post('/', async (c) => {
           baseSha: pr.base.sha,
           deliveryId: `re-review-${Date.now()}`,
         });
-        console.warn(`[Webhook] Re-review enqueued for PR #${issue.number}`);
+        console.warn(`[Webhook] Review enqueued for PR #${issue.number}`);
       } else {
         // 💬 CHAT MODE: Treat as a question
         await enqueueChatJob({
@@ -375,7 +375,7 @@ githubWebhook.post('/', async (c) => {
     }
 
     const body = comment.body.toLowerCase();
-    const hasMention = body.includes('@review-scope');
+    const hasMention = body.includes('@review-scope') || body.includes('@reviewscope') || body.includes('/reviewscope');
     let isReplyToBot = false;
 
     // Smart Reply Detection: If no mention, check if replying to bot thread
