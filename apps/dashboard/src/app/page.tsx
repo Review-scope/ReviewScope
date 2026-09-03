@@ -1,12 +1,11 @@
 import { Github, CheckCircle2, ArrowRight, Key, Zap, Globe, Lock, MessagesSquare, Sparkles, X } from "lucide-react";
-import { getServerSession } from "next-auth";
-import { authOptions } from "./api/auth/[...nextauth]/authOptions";
+import { getCurrentSession } from "@/lib/auth";
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 
 export default async function LandingPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
 
   return (
     <div className="flex flex-col items-center pb-20 overflow-x-hidden bg-background">

@@ -18,7 +18,7 @@ function readEnv(env: Env, key: string, aliases: string[] = []) {
 export function getAuthEnvironment(env: Env = process.env): AuthEnvironment {
   const githubClientId = readEnv(env, "GITHUB_CLIENT_ID", ["GITHUB_ID"]);
   const githubClientSecret = readEnv(env, "GITHUB_CLIENT_SECRET", ["GITHUB_SECRET"]);
-  const nextAuthSecret = readEnv(env, "NEXTAUTH_SECRET");
+  const nextAuthSecret = readEnv(env, "NEXTAUTH_SECRET", ["AUTH_SECRET"]);
 
   return {
     githubClientId: githubClientId ?? "",

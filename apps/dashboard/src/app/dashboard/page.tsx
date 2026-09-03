@@ -1,7 +1,6 @@
 import { db, repositories, installations, configs, reviews } from "@/lib/db";
 import { Github, CheckCircle2, AlertCircle, Clock, ArrowRight, Key, Sparkles, Lock, Zap, Activity, MoreHorizontal, Calendar } from "lucide-react";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../api/auth/[...nextauth]/authOptions";
+import { getCurrentSession } from "@/lib/auth";
 import { eq, isNotNull, and, inArray, sql, desc } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -22,7 +21,7 @@ export default async function DashboardPage({
   const query = params.q || '';
   const accountFilter = params.account;
   const normalizedQuery = query.trim().toLowerCase();
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
 
   if (!session?.user) {
     redirect('/');

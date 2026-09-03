@@ -28,6 +28,16 @@ describe("getAuthEnvironment", () => {
     });
   });
 
+  it("falls back to AUTH_SECRET for deployments using the newer Auth.js env name", () => {
+    expect(
+      getAuthEnvironment({
+        AUTH_SECRET: "auth-secret",
+      }),
+    ).toMatchObject({
+      nextAuthSecret: "auth-secret",
+    });
+  });
+
   it("prefers primary names over legacy aliases", () => {
     expect(
       getAuthEnvironment({

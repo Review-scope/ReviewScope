@@ -18,6 +18,7 @@ export const authOptions: NextAuthOptions = {
     GithubProvider({
       clientId: authEnv.githubClientId,
       clientSecret: authEnv.githubClientSecret,
+      issuer: "https://github.com/login/oauth",
       authorization: {
         params: {
           scope: "read:user user:email read:org",
