@@ -1,12 +1,23 @@
 import type { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
+import { getAuthEnvironment } from "./authEnv";
+
+const authEnv = getAuthEnvironment();
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: authEnv.nextAuthSecret,
+  logger: {
+    error(code, metadata) {
+      console.error("[NextAuth]", code, metadata);
+    },
+    warn(code) {
+      console.warn("[NextAuth]", code);
+    },
+  },
   providers: [
     GithubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID ?? "",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+      clientId: authEnv.githubClientId,
+      clientSecret: authEnv.githubClientSecret,
       authorization: {
         params: {
           scope: "read:user user:email read:org",

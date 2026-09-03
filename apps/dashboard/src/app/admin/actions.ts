@@ -318,9 +318,12 @@ export async function getSystemConfigStatus() {
     REDIS_URL: !!process.env.REDIS_URL,
     QDRANT_URL: !!process.env.QDRANT_URL,
     GITHUB_APP_ID: !!process.env.GITHUB_APP_ID,
-    GITHUB_PRIVATE_KEY: !!process.env.GITHUB_PRIVATE_KEY,
+    GITHUB_APP_PRIVATE_KEY: !!process.env.GITHUB_APP_PRIVATE_KEY,
+    GITHUB_CLIENT_ID: !!(process.env.GITHUB_CLIENT_ID || process.env.GITHUB_ID),
+    GITHUB_CLIENT_SECRET: !!(process.env.GITHUB_CLIENT_SECRET || process.env.GITHUB_SECRET),
     ENCRYPTION_KEY: !!process.env.ENCRYPTION_KEY,
     NEXTAUTH_SECRET: !!process.env.NEXTAUTH_SECRET,
+    NEXTAUTH_URL: !!process.env.NEXTAUTH_URL,
     GOOGLE_API_KEY: !!process.env.GOOGLE_API_KEY,
     OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
   };

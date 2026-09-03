@@ -111,8 +111,8 @@ OPENAI_API_KEY=your_openai_key
 DATABASE_URL=postgresql://user:pass@localhost/reviewscope
 NEXTAUTH_SECRET=generate_with_openssl_rand_base64_32
 NEXTAUTH_URL=http://localhost:3000
-GITHUB_ID=your_github_app_client_id
-GITHUB_SECRET=your_github_app_secret
+GITHUB_CLIENT_ID=your_github_app_client_id
+GITHUB_CLIENT_SECRET=your_github_app_client_secret
 ```
 
 ### 3. Database Setup

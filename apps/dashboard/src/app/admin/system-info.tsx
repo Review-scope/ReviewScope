@@ -47,7 +47,8 @@ export function SystemInfo({
           <StatusBadge label="Database" status={config.DATABASE_URL ? 'connected' : 'disconnected'} />
           <StatusBadge label="Redis Queue" status={config.REDIS_URL ? 'connected' : 'disconnected'} />
           <StatusBadge label="Vector DB" status={config.QDRANT_URL ? 'connected' : 'disconnected'} />
-          <StatusBadge label="GitHub API" status={config.GITHUB_APP_ID && config.GITHUB_PRIVATE_KEY ? 'connected' : 'disconnected'} />
+          <StatusBadge label="GitHub API" status={config.GITHUB_APP_ID && config.GITHUB_APP_PRIVATE_KEY ? 'connected' : 'disconnected'} />
+          <StatusBadge label="GitHub OAuth" status={config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET ? 'connected' : 'disconnected'} />
         </div>
       </div>
 
@@ -59,9 +60,12 @@ export function SystemInfo({
           <EnvCheck label="REDIS_URL" isSet={config.REDIS_URL} />
           <EnvCheck label="QDRANT_URL" isSet={config.QDRANT_URL} />
           <EnvCheck label="GITHUB_APP_ID" isSet={config.GITHUB_APP_ID} />
-          <EnvCheck label="GITHUB_PRIVATE_KEY" isSet={config.GITHUB_PRIVATE_KEY} />
+          <EnvCheck label="GITHUB_APP_PRIVATE_KEY" isSet={config.GITHUB_APP_PRIVATE_KEY} />
+          <EnvCheck label="GITHUB_CLIENT_ID" isSet={config.GITHUB_CLIENT_ID} />
+          <EnvCheck label="GITHUB_CLIENT_SECRET" isSet={config.GITHUB_CLIENT_SECRET} />
           <EnvCheck label="ENCRYPTION_KEY" isSet={config.ENCRYPTION_KEY} />
           <EnvCheck label="NEXTAUTH_SECRET" isSet={config.NEXTAUTH_SECRET} />
+          <EnvCheck label="NEXTAUTH_URL" isSet={config.NEXTAUTH_URL} />
           <EnvCheck label="GOOGLE_API_KEY" isSet={config.GOOGLE_API_KEY} />
           <EnvCheck label="OPENAI_API_KEY" isSet={config.OPENAI_API_KEY} />
         </div>
