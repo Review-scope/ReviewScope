@@ -6,7 +6,6 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
-    "ignoreDeprecations": "6.0",
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -14,16 +13,15 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "baseUrl": "../../",
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./apps/dashboard/src/*"],
-      "@reviewscope/api": ["./apps/api/src/index.ts"],
-      "@reviewscope/api/*": ["./apps/api/src/*"]
+      "@/*": ["./src/*"],
+      "@reviewscope/api": ["../api/src/index.ts"],
+      "@reviewscope/api/*": ["../api/src/*"]
     }
   },
   "include": [
