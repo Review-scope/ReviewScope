@@ -36,11 +36,11 @@ ReviewScope works automatically in the background.
 
 ### Manual Triggers & Chat
 
-You can interact with ReviewScope by commenting on the Pull Request. You must mention **@review-scope** for the bot to respond.
+You can interact with ReviewScope by commenting on the Pull Request. You must mention **@reviewscope** or use **/reviewscope** for the bot to respond.
 
 Example commands:
 ```
-    @review-scope re-review
+    @reviewscope review
 ```
 
 ### Asking Questions
@@ -48,8 +48,8 @@ Example commands:
 You can also ask specific questions about the code changes:
 
 ```
-    @review-scope Why is this change necessary?
-    @review-scope Can you explain the logic in the auth module?
+    @reviewscope Why is this change necessary?
+    @reviewscope Can you explain the logic in the auth module?
 ```
 
 ## Understanding the Feedback
